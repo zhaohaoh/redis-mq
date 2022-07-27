@@ -32,4 +32,6 @@ public @interface RedisListener {
 
     //名称完全对应的topic  发布订阅使用
     int virtual() default -1;
+
+    int queueMaxSize() default 10000;
 }

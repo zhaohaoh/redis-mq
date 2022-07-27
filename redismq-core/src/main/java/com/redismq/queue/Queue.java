@@ -35,6 +35,19 @@ public class Queue {
      */
     private Integer virtual ;
 
+    /**
+     * 虚拟队列数量
+     */
+    private Integer queueMaxSize;
+
+    public Integer getQueueMaxSize() {
+        return queueMaxSize;
+    }
+
+    public void setQueueMaxSize(Integer queueMaxSize) {
+        this.queueMaxSize = queueMaxSize;
+    }
+
     public boolean isDelayState() {
         return delayState;
     }

@@ -121,6 +121,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.virtual() > 0) {
             queue.setVirtual(redisListener.virtual());
         }
+        queue.setQueueMaxSize(redisListener.queueMaxSize());
         //注册的queue
         Queue registerQueue = QueueManager.registerQueue(queue);
         //反射获取方法

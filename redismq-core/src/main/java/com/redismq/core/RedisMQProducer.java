@@ -45,8 +45,8 @@ public class RedisMQProducer {
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queue) {
-        hasQueue(queue);
+    public boolean sendMessage(Object obj, String queueName) {
+        Queue queue = hasQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
         return sendMessage(queue, message, null);
@@ -55,8 +55,8 @@ public class RedisMQProducer {
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queue, String tag) {
-        hasQueue(queue);
+    public boolean sendMessage(Object obj, String queueName, String tag) {
+        Queue queue = hasQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
         message.setTag(tag);
@@ -66,8 +66,8 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String queue, Integer delayTime) {
-        hasDelayQueue(queue);
+    public boolean sendDelayMessage(Object obj, String queueName, Integer delayTime) {
+        Queue queue = hasDelayQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
         long executorTime = System.currentTimeMillis() + (delayTime * 1000);
@@ -77,14 +77,14 @@ public class RedisMQProducer {
     /**
      * 发送定时消息
      */
-    public boolean sendTimingMessage(Object obj, String queue, Long executorTime) {
-        hasDelayQueue(queue);
+    public boolean sendTimingMessage(Object obj, String queueName, Long executorTime) {
+        Queue queue = hasDelayQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
         return RedisMQProducer.this.sendMessage(queue, message, executorTime);
     }
 
-    private boolean sendMessage(String queue, Message message, Long executorTime) {
+    private boolean sendMessage(Queue queue, Message message, Long executorTime) {
         try {
             int i = this.i.updateAndGet(x -> {
                 if (x >= Integer.MAX_VALUE) {
@@ -101,7 +101,7 @@ public class RedisMQProducer {
             pushMessage.setTimestamp(executorTime);
             pushMessage.setQueue(queue + SPLITE + num);
             String s = "local size = redis.call('zcard', KEYS[1]);\n" +
-                    "if size and tonumber(size) >= 10000 then  \n" +
+                    "if size and tonumber(size) >=" + queue.getQueueMaxSize() + " then  \n" +
                     "return -1;\n" +
                     "end\n" +
                     "redis.call('zadd', KEYS[1], ARGV[3], ARGV[2]);\n" +
@@ -144,7 +144,7 @@ public class RedisMQProducer {
     }
 
 
-    private void hasQueue(String name) {
+    private Queue hasQueue(String name) {
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
@@ -152,9 +152,10 @@ public class RedisMQProducer {
         if (queue.getDelayState()) {
             throw new RedisMqException("Redismq Queue type mismatch");
         }
+        return queue;
     }
 
-    private void hasDelayQueue(String name) {
+    private Queue hasDelayQueue(String name) {
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
@@ -162,6 +163,7 @@ public class RedisMQProducer {
         if (!queue.getDelayState()) {
             throw new RedisMqException("Redismq Queue type mismatch");
         }
+        return queue;
     }
 
 }
