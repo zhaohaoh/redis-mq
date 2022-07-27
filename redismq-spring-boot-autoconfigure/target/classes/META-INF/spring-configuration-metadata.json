@@ -1,0 +1,68 @@
+{
+  "groups": [
+    {
+      "name": "spring.redismq",
+      "type": "com.redismq.autoconfigure.RedisMqProperties",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties"
+    }
+  ],
+  "properties": [
+    {
+      "name": "spring.redismq.ack-mode",
+      "type": "java.lang.String",
+      "description": "ack模式",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": "auto"
+    },
+    {
+      "name": "spring.redismq.concurrency",
+      "type": "java.lang.Integer",
+      "description": "消费者 此处得消费对应得是每个队列得消费者。假如有5个队列。就会有5个线程池。分别最小消费者是1. 会被注解redis监听替换",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "spring.redismq.consume-retry-max",
+      "type": "java.lang.Integer",
+      "description": "消费者重试次数",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "spring.redismq.max-concurrency",
+      "type": "java.lang.Integer",
+      "description": "最大消费者",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "spring.redismq.producer-retry-interval",
+      "type": "java.lang.Integer",
+      "description": "发送者重试时间",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 200
+    },
+    {
+      "name": "spring.redismq.producer-retry-max",
+      "type": "java.lang.Integer",
+      "description": "生产者重试次数",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1
+    },
+    {
+      "name": "spring.redismq.retry-interval",
+      "type": "java.lang.Integer",
+      "description": "消费者重试时间",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1000
+    },
+    {
+      "name": "spring.redismq.virtual",
+      "type": "java.lang.Integer",
+      "description": "虚拟队列数量",
+      "sourceType": "com.redismq.autoconfigure.RedisMqProperties",
+      "defaultValue": 1
+    }
+  ],
+  "hints": []
+}
