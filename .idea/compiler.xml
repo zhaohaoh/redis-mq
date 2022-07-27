@@ -2,22 +2,11 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <annotationProcessing>
-      <profile name="Annotation profile for redis-mq" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$PROJECT_DIR$/../../../repo/org/projectlombok/lombok/1.18.16/lombok-1.18.16.jar" />
-          <entry name="$PROJECT_DIR$/../../../repo/org/mapstruct/mapstruct-processor/1.4.1.Final/mapstruct-processor-1.4.1.Final.jar" />
-          <entry name="$PROJECT_DIR$/../../../repo/org/mapstruct/mapstruct/1.4.1.Final/mapstruct-1.4.1.Final.jar" />
-          <entry name="$PROJECT_DIR$/../../../repo/org/springframework/boot/spring-boot-configuration-processor/2.6.3/spring-boot-configuration-processor-2.6.3.jar" />
-        </processorPath>
-        <module name="redismq-spring-boot-autoconfigure" />
-      </profile>
       <profile name="Maven default annotation processors profile" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="redismq-spring-boot-autoconfigure" />
         <module name="redismq-spring-boot-starter" />
         <module name="redismq-core" />
       </profile>
