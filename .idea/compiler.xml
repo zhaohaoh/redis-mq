@@ -11,12 +11,6 @@
         <module name="redismq-core" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8">
-      <module name="framework-redismq" target="1.8" />
-      <module name="redismq-dependencies" target="1.8" />
-      <module name="redismq-manager" target="8" />
-      <module name="redismq-spring" target="8" />
-      <module name="redismq-spring-boot-samples" target="8" />
-    </bytecodeTargetLevel>
+    <bytecodeTargetLevel target="8" />
   </component>
 </project>

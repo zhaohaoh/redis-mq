@@ -1,5 +1,0 @@
-com\redismq\autoconfigure\EnableRedisMq.class
-META-INF\spring-autoconfigure-metadata.properties
-com\redismq\autoconfigure\RedisMqProperties.class
-META-INF\spring-configuration-metadata.json
-com\redismq\autoconfigure\RedisMqAutoConfiguration.class
