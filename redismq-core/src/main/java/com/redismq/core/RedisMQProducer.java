@@ -66,10 +66,11 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String queueName, Integer delayTime) {
+    public boolean sendDelayMessage(Object obj, String queueName, String tag, Integer delayTime) {
         Queue queue = hasDelayQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
+        message.setTag(tag);
         long executorTime = System.currentTimeMillis() + (delayTime * 1000);
         return RedisMQProducer.this.sendMessage(queue, message, executorTime);
     }
@@ -77,10 +78,11 @@ public class RedisMQProducer {
     /**
      * 发送定时消息
      */
-    public boolean sendTimingMessage(Object obj, String queueName, Long executorTime) {
+    public boolean sendTimingMessage(Object obj, String queueName, String tag, Long executorTime) {
         Queue queue = hasDelayQueue(queueName);
         Message message = new Message();
         message.setContent(obj);
+        message.setTag(tag);
         return RedisMQProducer.this.sendMessage(queue, message, executorTime);
     }
 

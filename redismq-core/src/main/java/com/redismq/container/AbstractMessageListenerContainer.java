@@ -5,6 +5,7 @@ import com.redismq.Message;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.QueueConstant;
+import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.queue.Queue;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -27,7 +28,7 @@ public abstract class AbstractMessageListenerContainer {
      * 队列名
      */
     protected String queueName;
-    protected String id;
+
     /**
      * redis
      */
@@ -78,7 +79,6 @@ public abstract class AbstractMessageListenerContainer {
 
     public AbstractMessageListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue queue) {
         this.queueName = queue.getQueueName();
-        this.id = queue.getQueueName();
         this.redisTemplate = redisListenerContainerFactory.getRedisTemplate();
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
@@ -114,13 +114,6 @@ public abstract class AbstractMessageListenerContainer {
         this.queueName = queueName;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
 
     public RedisTemplate<String, Object> getRedisTemplate() {
         return redisTemplate;
@@ -184,6 +177,9 @@ public abstract class AbstractMessageListenerContainer {
 
     protected RedisListenerRunnable createRedisListenerRunnable(String id, Object message) {
         RedisListenerEndpoint redisListenerEndpoint = redisListenerEndpointMap.get(id);
+        if (redisListenerEndpoint == null) {
+            throw new RedisMqException("not found RedisListenerEndpoint check your queue or tag");
+        }
         RedisListenerRunnable runnable = new RedisListenerRunnable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
                 this.getRetryMax(), this.getSemaphore(),
                 this.getRedisTemplate());

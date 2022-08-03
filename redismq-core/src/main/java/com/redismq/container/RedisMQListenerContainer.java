@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author hzh
  * @date 2021/8/10
- * redis延时队列实现   通过发布订阅和时间轮实现高性能。
+ * redis延时队列实现   通过发布订阅和时间轮实现高性能。  一个queue对应一个端点对应多个queue:tag
  */
 public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     protected static final Logger log = LoggerFactory.getLogger(RedisMQListenerContainer.class);
@@ -144,7 +144,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         redisTemplate.opsForZSet().remove(queueName, value);
                     }
                     try {
-                        String id = super.getRunableKey("");
+                        String id = super.getRunableKey(value.getTag());
                         RedisListenerRunnable runnable = super.createRedisListenerRunnable(id, value);
                         if (runnable == null) {
                             throw new RedisMqException("redismq not found tag runnable");

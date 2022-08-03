@@ -150,7 +150,7 @@ public class RedisListenerRunnable implements Runnable {
                 this.method.invoke(this.target, clone.getContent());
             }
             state.finsh();
-            log.debug("redismq消息消费成功 路由键:{}", message.getTag());
+            log.debug("redismq消息消费成功 tag:{}", message.getTag());
         } catch (Exception e) {
             log.error("redismq 执行失败", e);
             if (AckMode.MAUAL.equals(ackMode) && i > retryMax) {

@@ -24,6 +24,7 @@ public class RedisListenerContainerManager {
     private final LinkedBlockingQueue<PushMessage> delayBlockingQueue = new LinkedBlockingQueue<>(65536);
     private final LinkedBlockingQueue<String> linkedBlockingQueue = new LinkedBlockingQueue<>(1024);
     private ThreadPoolExecutor boss;
+    // 队列的容器
     private final Map<String, AbstractMessageListenerContainer> redisDelayListenerContainerMap = new ConcurrentHashMap<>();
     private volatile StateEnum state = StateEnum.CREATED;
 
@@ -100,8 +101,8 @@ public class RedisListenerContainerManager {
             running();
             while (isActive()) {
                 try {
-                    String pushMessage = linkedBlockingQueue.take();
-                    RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(pushMessage);
+                    String queueName = linkedBlockingQueue.take();
+                    RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(queueName);
                     container.start(System.currentTimeMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -127,7 +128,8 @@ public class RedisListenerContainerManager {
 
     public void registerContainer(AbstractMessageListenerContainer listenerContainer, List<RedisListenerEndpoint> redisListenerEndpoints) {
         //id是队列的名称
-        AbstractMessageListenerContainer container = redisDelayListenerContainerMap.computeIfAbsent(listenerContainer.getId(), c -> listenerContainer);
+        AbstractMessageListenerContainer container = redisDelayListenerContainerMap.computeIfAbsent(listenerContainer.getQueueName(), c -> listenerContainer);
+        // 端点的容器
         Map<String, RedisListenerEndpoint> redisListenerEndpointMap = redisListenerEndpoints.stream().collect(
                 Collectors.toMap(RedisListenerEndpoint::getId, r -> r));
         container.setRedisListenerEndpointMap(redisListenerEndpointMap);

@@ -31,19 +31,29 @@ public class RedisMqTemplate {
         return redisMQProducer.sendMessage(obj, queue, tag);
     }
 
+    public boolean sendDelayMessage(Object obj, String queue, String tag, Integer delayTime) {
+        redisMQProducer.sendDelayMessage(obj, queue, tag, delayTime);
+        return true;
+    }
+
     /**
      * 延迟消息
      */
     public boolean sendDelayMessage(Object obj, String queue, Integer delayTime) {
-        redisMQProducer.sendDelayMessage(obj, queue, delayTime);
+        redisMQProducer.sendDelayMessage(obj, queue, "", delayTime);
         return true;
     }
 
     /**
      * 定时消息
      */
+    public boolean sendTimingMessage(Object obj, String queue,String tag, Long executorTime) {
+        redisMQProducer.sendTimingMessage(obj, queue, tag,executorTime);
+        return true;
+    }
+
     public boolean sendTimingMessage(Object obj, String queue, Long executorTime) {
-        redisMQProducer.sendTimingMessage(obj, queue, executorTime);
+        redisMQProducer.sendTimingMessage(obj, queue, "",executorTime);
         return true;
     }
 

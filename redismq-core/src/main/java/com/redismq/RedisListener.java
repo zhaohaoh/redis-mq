@@ -30,8 +30,9 @@ public @interface RedisListener {
     //名称完全对应的topic  发布订阅使用
     String topic() default "";
 
-    //名称完全对应的topic  发布订阅使用
+    // 虚拟队列数量 默认-1
     int virtual() default -1;
 
+    //队列最大长度
     int queueMaxSize() default 10000;
 }
