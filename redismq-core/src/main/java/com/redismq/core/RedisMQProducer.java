@@ -112,7 +112,7 @@ public class RedisMQProducer {
             DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(s, Long.class);
             List<String> list = new ArrayList<>();
             list.add(queue.getQueueName() + SPLITE + num);
-            list.add(PublishContant.REBALANCE_TOPIC);
+            list.add(PublishContant.TOPIC);
             message.setQueueName(queue.getQueueName() + SPLITE + num);
             Long size = -1L;
             int count = 0;
