@@ -23,7 +23,7 @@ public class RedisMqClient {
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final RedisListenerContainerManager redisListenerContainerManager;
     private static final String CLIENT_KEY = "REDIS_MQ_CLIENT";
-    private RedisTemplate<String, Object> redisTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
 
@@ -71,7 +71,7 @@ public class RedisMqClient {
             repush();
         }
     }
-
+    //启动时对任务重新进行拉取
     private void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
         queues.forEach((k, v) -> {

@@ -8,8 +8,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.Message;
+
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
+
 import static com.redismq.constant.QueueConstant.SPLITE;
 
 
@@ -20,6 +22,7 @@ import static com.redismq.constant.QueueConstant.SPLITE;
  */
 public class RedisPushListener extends AbstractRedisPushListener {
     protected static final Logger log = LoggerFactory.getLogger(RedisPushListener.class);
+
     public RedisPushListener(RedisMqClient redisMqClient) {
         super(redisMqClient);
     }
