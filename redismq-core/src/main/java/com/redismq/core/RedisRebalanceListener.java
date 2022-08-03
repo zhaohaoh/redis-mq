@@ -23,6 +23,7 @@ public class RedisRebalanceListener implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
+        log.info("RedisRebalanceListener clientId:{}", redisMqClient.getClientId());
         byte[] body = message.getBody();
         String clientId = RedisMQObjectMapper.toBean(body, String.class);
         // 发起服务不执行

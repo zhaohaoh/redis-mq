@@ -55,12 +55,14 @@ public class RedisMqClient {
     public void destory() {
         redisTemplate.opsForSet().remove(CLIENT_KEY, clientId);
         log.info("redismq client remove");
+        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
         //停止任务
         redisListenerContainerManager.stopAll();
     }
 
     public void start() {
         rebalance();
+        rebalanceSubscribe();
         redisTemplate.delete(CLIENT_KEY);
         redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
         if (QueueManager.hasSubscribe()) {
@@ -104,7 +106,10 @@ public class RedisMqClient {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
         ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
+    }
 
+    public void rebalanceSubscribe() {
+        RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
         ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.REBALANCE_TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
     }
