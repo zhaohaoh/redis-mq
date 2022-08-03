@@ -164,6 +164,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     log.error("redismq [ERROR] queue not is zset type。 cancel pop");
                     stop();
                 }
+//                if (e instanceof ClassCastException){
+//                    log.error("redismq [ERROR] ClassCastException",e);
+//                    stop();
+//                }
                 semaphore.release();
             }
         }

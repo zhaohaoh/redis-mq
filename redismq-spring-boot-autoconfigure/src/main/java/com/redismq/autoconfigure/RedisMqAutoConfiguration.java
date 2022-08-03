@@ -1,6 +1,7 @@
 package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redismq.constant.PushMessage;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
@@ -9,13 +10,17 @@ import com.redismq.rebalance.AllocateMessageQueueAveragely;
 import com.redismq.rebalance.RebalanceImpl;
 import com.redismq.utils.RedisMQObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
+import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -23,23 +28,25 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import javax.annotation.Resource;
 import java.util.concurrent.ThreadPoolExecutor;
+
+import static com.redismq.constant.QueueConstant.SPLITE;
 
 /**
  * @author hzh
  */
-
+@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
 @ComponentScan("com.redismq")
 @Configuration
 @EnableConfigurationProperties({RedisMqProperties.class, RedisProperties.class})
-@ConditionalOnClass
 @EnableRedisMq
 public class RedisMqAutoConfiguration {
     @Autowired
     private RedisMqProperties redisMqProperties;
     @Autowired
     private RedisProperties redisProperties;
-    @Autowired
+    @Resource(name = "redisMqRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
 
     @Bean
@@ -81,6 +88,7 @@ public class RedisMqAutoConfiguration {
 
     //    //spring的redis发布订阅模式
     @Bean
+    @ConditionalOnMissingBean(value = RedisMessageListenerContainer.class)
     public RedisMessageListenerContainer container(RedisConnectionFactory redisConnectionFactory) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
@@ -105,8 +113,7 @@ public class RedisMqAutoConfiguration {
         return redisMessageListenerContainer;
     }
 
-    @ConditionalOnMissingBean(RedisTemplate.class)
-    @Bean(name = "redisTemplate")
+    @Bean(name = "redisMqRedisTemplate")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         // 配置连接工厂
@@ -126,5 +133,6 @@ public class RedisMqAutoConfiguration {
         template.afterPropertiesSet();
         return template;
     }
+
 
 }

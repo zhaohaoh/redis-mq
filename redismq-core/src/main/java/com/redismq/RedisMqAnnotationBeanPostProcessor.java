@@ -154,7 +154,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         Map<String, Queue> queues = QueueManager.getAllQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
         DefaultRedisListenerContainerFactory containerFactory = applicationContext.getBean(DefaultRedisListenerContainerFactory.class);
-        RedisTemplate<String, Object> redisTemplate = applicationContext.getBean("redisTemplate", RedisTemplate.class);
+        RedisTemplate<String, Object> redisTemplate = applicationContext.getBean("redisMqRedisTemplate", RedisTemplate.class);
         containerFactory.setRedisTemplate(redisTemplate);
         //没有配置取全局配置
         queues.forEach((k, queue) -> {

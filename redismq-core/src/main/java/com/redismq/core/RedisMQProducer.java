@@ -101,7 +101,7 @@ public class RedisMQProducer {
             int num = i % QueueManager.VIRTUAL_QUEUES_NUM;
             PushMessage pushMessage = new PushMessage();
             pushMessage.setTimestamp(executorTime);
-            pushMessage.setQueue(queue + SPLITE + num);
+            pushMessage.setQueue(queue.getQueueName() + SPLITE + num);
             String s = "local size = redis.call('zcard', KEYS[1]);\n" +
                     "if size and tonumber(size) >=" + queue.getQueueMaxSize() + " then  \n" +
                     "return -1;\n" +
@@ -111,9 +111,9 @@ public class RedisMQProducer {
                     "return size";
             DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(s, Long.class);
             List<String> list = new ArrayList<>();
-            list.add(queue + SPLITE + num);
+            list.add(queue.getQueueName() + SPLITE + num);
             list.add(PublishContant.TOPIC);
-            message.setQueueName(queue + SPLITE + num);
+            message.setQueueName(queue.getQueueName() + SPLITE + num);
             Long size = -1L;
             int count = 0;
             // 发送的重试 如果redis中数量超过1万也会重试.
