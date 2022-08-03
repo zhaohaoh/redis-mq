@@ -7,4 +7,5 @@ package com.redismq.constant;
  */
 public class PublishContant {
     public static final String TOPIC = "redis-mq-push";
+    public static final String REBALANCE_TOPIC = "REBALANCE_TOPIC";
 }

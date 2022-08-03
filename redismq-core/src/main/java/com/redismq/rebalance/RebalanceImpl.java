@@ -2,11 +2,13 @@ package com.redismq.rebalance;
 
 
 import com.redismq.queue.QueueManager;
+import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -38,5 +40,21 @@ public class RebalanceImpl {
             QueueManager.CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
         }
     }
+
+    public static void main(String[] args) {
+        List<String> virtualQueues = new ArrayList<>();
+        virtualQueues.add("aa");
+        virtualQueues.add("bb");
+        virtualQueues.add("cc");
+
+        List<String> virtualQueues1 = new ArrayList<>();
+        virtualQueues1.add("1123");
+        virtualQueues1.add("123");
+        virtualQueues1.add("444");
+        AllocateMessageQueueAveragely allocateMessageQueueAveragely = new AllocateMessageQueueAveragely();
+        List<String> vQueues = allocateMessageQueueAveragely.allocate("1123", virtualQueues, new ArrayList<>(virtualQueues1));
+        System.out.println(vQueues);
+    }
+
 
 }

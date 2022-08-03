@@ -19,7 +19,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 
 public class RedisMqClient {
-
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final RedisListenerContainerManager redisListenerContainerManager;
     private static final String CLIENT_KEY = "REDIS_MQ_CLIENT";
@@ -32,7 +31,10 @@ public class RedisMqClient {
         this.clientId = ClientConfig.getLocalAddress();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
-        registerClient();
+    }
+
+    public String getClientId() {
+        return clientId;
     }
 
     public RedisListenerContainerManager getRedisListenerContainerManager() {
@@ -41,17 +43,16 @@ public class RedisMqClient {
 
 
     public void registerClient() {
-        //已分配的队列,真实的队列名和已分配的队列
+        //注册客户端
         redisTemplate.opsForSet().add(CLIENT_KEY, clientId);
     }
 
     public Set<String> allClient() {
-        //已分配的队列,真实的队列名和已分配的队列
+        // 所有客户端
         return redisTemplate.opsForSet().members(CLIENT_KEY).stream().map(Object::toString).collect(Collectors.toSet());
     }
 
     public void destory() {
-        //已分配的队列,真实的队列名和已分配的队列
         redisTemplate.opsForSet().remove(CLIENT_KEY, clientId);
         log.info("redismq client remove");
         //停止任务
@@ -59,8 +60,9 @@ public class RedisMqClient {
     }
 
     public void start() {
-        //重新负载均衡
-        rebalance.rebalance(allClient(), clientId);
+        rebalance();
+        redisTemplate.delete(CLIENT_KEY);
+        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
         if (QueueManager.hasSubscribe()) {
             //订阅push消息
             subscribe();
@@ -71,6 +73,11 @@ public class RedisMqClient {
             repush();
         }
     }
+
+    public void rebalance() {
+        rebalance.rebalance(allClient(), clientId);
+    }
+
     //启动时对任务重新进行拉取
     private void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
@@ -97,6 +104,9 @@ public class RedisMqClient {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
         ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
+
+        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.REBALANCE_TOPIC)));
+        Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
     }
 
     protected byte[][] unwrap(Collection<ByteArrayWrapper> holders) {
