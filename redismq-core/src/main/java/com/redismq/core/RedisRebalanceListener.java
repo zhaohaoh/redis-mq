@@ -24,18 +24,12 @@ public class RedisRebalanceListener implements MessageListener {
     @Override
     public void onMessage(Message message, byte[] pattern) {
         log.info("RedisRebalanceListener clientId:{}", redisMqClient.getClientId());
-        byte[] body = message.getBody();
-        String clientId = RedisMQObjectMapper.toBean(body, String.class);
-        // 发起服务不执行
-        redisMqClient.registerClient();
-        //为了等待所有任务完成的临时解决方案
-        try {
-            Thread.sleep(5000L);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            redisMqClient.rebalance();
+        String msg = message.toString();
+        String clientId = RedisMQObjectMapper.toBean(msg, String.class);
+        if (!clientId.equals(redisMqClient.getClientId())) {
+            redisMqClient.doRebalance();
         }
     }
+ 
 
 }

@@ -16,12 +16,16 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class RedisMqClient {
+    private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
+    private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final RedisListenerContainerManager redisListenerContainerManager;
-    private static final String CLIENT_KEY = "REDIS_MQ_CLIENT";
+    private static final String CLIENT_KEY = "REDISMQ_CLIENT";
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
@@ -43,28 +47,47 @@ public class RedisMqClient {
 
 
     public void registerClient() {
+        log.debug("registerClient :{}", clientId);
         //注册客户端
-        redisTemplate.opsForSet().add(CLIENT_KEY, clientId);
+        redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
     }
 
     public Set<String> allClient() {
-        // 所有客户端
-        return redisTemplate.opsForSet().members(CLIENT_KEY).stream().map(Object::toString).collect(Collectors.toSet());
+        // 60秒以内的客户端
+        long min = System.currentTimeMillis() - 60000L;
+        return redisTemplate.opsForZSet().rangeByScore(CLIENT_KEY, min, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
+    }
+
+    public Long removeExpireClients() {
+        // 60秒以外的客户端
+        long max = System.currentTimeMillis() - 60000L;
+        return redisTemplate.opsForZSet().removeRangeByScore(CLIENT_KEY, 0, max);
+    }
+
+    public Long removeAllClient() {
+        return redisTemplate.opsForZSet().removeRangeByScore(CLIENT_KEY, 0, Double.MAX_VALUE);
     }
 
     public void destory() {
-        redisTemplate.opsForSet().remove(CLIENT_KEY, clientId);
+        redisTemplate.opsForZSet().remove(CLIENT_KEY, clientId);
         log.info("redismq client remove");
-        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
         //停止任务
         redisListenerContainerManager.stopAll();
     }
 
     public void start() {
-        rebalance();
+        // 清理所有客户端
+        removeAllClient();
+        // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况
+        registerClient();
+        // 订阅平衡消息
         rebalanceSubscribe();
-        redisTemplate.delete(CLIENT_KEY);
-        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
+        doRebalance();
+        // 重平衡
+        publishRebalance();
+        // 自动注册和自动重平衡
+        startRegisterClientTask();
+        startRebalanceTask();
         if (QueueManager.hasSubscribe()) {
             //订阅push消息
             subscribe();
@@ -77,7 +100,20 @@ public class RedisMqClient {
     }
 
     public void rebalance() {
+        Long count = removeExpireClients();
+        if (count != null && count > 0) {
+            log.info("doRebalance removeExpireClients count=:{}", count);
+            publishRebalance();
+            doRebalance();
+        }
+    }
+
+    public void doRebalance() {
         rebalance.rebalance(allClient(), clientId);
+    }
+
+    private void publishRebalance() {
+        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
     }
 
     //启动时对任务重新进行拉取
@@ -127,4 +163,13 @@ public class RedisMqClient {
         }
         return unwrapped;
     }
+
+    public void startRegisterClientTask() {
+        registerThread.scheduleAtFixedRate(this::registerClient, 0, 50, TimeUnit.SECONDS);
+    }
+
+    public void startRebalanceTask() {
+        registerThread.scheduleAtFixedRate(this::rebalance, 0, 20, TimeUnit.SECONDS);
+    }
+
 }

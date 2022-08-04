@@ -43,16 +43,14 @@ public class RebalanceImpl {
 
     public static void main(String[] args) {
         List<String> virtualQueues = new ArrayList<>();
-        virtualQueues.add("aa");
-        virtualQueues.add("bb");
-        virtualQueues.add("cc");
+        virtualQueues.add("172.31.23.79");
+
 
         List<String> virtualQueues1 = new ArrayList<>();
-        virtualQueues1.add("1123");
-        virtualQueues1.add("123");
-        virtualQueues1.add("444");
+        virtualQueues1.add("172.31.23.79");
+        virtualQueues1.add("10.10.0.22");
         AllocateMessageQueueAveragely allocateMessageQueueAveragely = new AllocateMessageQueueAveragely();
-        List<String> vQueues = allocateMessageQueueAveragely.allocate("1123", virtualQueues, new ArrayList<>(virtualQueues1));
+        List<String> vQueues = allocateMessageQueueAveragely.allocate("10.10.0.22", virtualQueues, new ArrayList<>(virtualQueues1));
         System.out.println(vQueues);
     }
 
