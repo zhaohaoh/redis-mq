@@ -17,6 +17,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -54,13 +55,13 @@ public class RedisMqClient {
 
     public Set<String> allClient() {
         // 60秒以内的客户端
-        long min = System.currentTimeMillis() - 60000L;
+        long min = System.currentTimeMillis() - 40000L;
         return redisTemplate.opsForZSet().rangeByScore(CLIENT_KEY, min, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
     }
 
     public Long removeExpireClients() {
         // 60秒以外的客户端
-        long max = System.currentTimeMillis() - 60000L;
+        long max = System.currentTimeMillis() - 40000L;
         return redisTemplate.opsForZSet().removeRangeByScore(CLIENT_KEY, 0, max);
     }
 
@@ -99,6 +100,7 @@ public class RedisMqClient {
         }
     }
 
+    // 多个服务应该只有一个执行重平衡
     public void rebalance() {
         Long count = removeExpireClients();
         if (count != null && count > 0) {
@@ -165,11 +167,16 @@ public class RedisMqClient {
     }
 
     public void startRegisterClientTask() {
-        registerThread.scheduleAtFixedRate(this::registerClient, 0, 50, TimeUnit.SECONDS);
+        registerThread.scheduleAtFixedRate(this::registerClient, 0, 30, TimeUnit.SECONDS);
     }
 
     public void startRebalanceTask() {
-        registerThread.scheduleAtFixedRate(this::rebalance, 0, 20, TimeUnit.SECONDS);
+        String lockKey = "RedisMQRebalanceLock";
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        String uuid = new UUID(random.nextLong(), random.nextLong()).toString().replace("-", "");
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, uuid, 20, TimeUnit.SECONDS);
+        if (success != null && success) {
+            registerThread.scheduleAtFixedRate(this::rebalance, 0, 20, TimeUnit.SECONDS);
+        }
     }
-
 }
