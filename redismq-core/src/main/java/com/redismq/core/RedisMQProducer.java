@@ -125,14 +125,16 @@ public class RedisMQProducer {
                     } catch (InterruptedException ignored) {
                     }
                     count++;
+                    log.warn("RedisMQ sendMessage retry");
                 } else {
+                    log.info("RedisMQ sendMessage success");
                     return true;
                 }
             }
-            log.error("Redismq Producer Queue Full");
+            log.error("RedisMQ Producer Queue Full");
             return false;
         } catch (Exception e) {
-            log.error("Redismq Send Message Fail", e);
+            log.error("RedisMQ Send Message Fail", e);
             return false;
         }
     }
