@@ -72,6 +72,7 @@ public abstract class AbstractMessageListenerContainer {
     private static final int RUNNING = 1;
     private static final int STOP = 1 << 1;
     private static final int BUSY = 1 << 2;
+    private static final int PAUSE = 1 << 3;
 
     public void setRedisListenerEndpointMap(Map<String, RedisListenerEndpoint> redisListenerEndpointMap) {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
@@ -88,6 +89,11 @@ public abstract class AbstractMessageListenerContainer {
         this.retryInterval = redisListenerContainerFactory.getRetryInterval();
         this.semaphore = new Semaphore(queue.getMaxConcurrency());
     }
+
+    public int pause() {
+        return state = PAUSE;
+    }
+
 
     public abstract void repush();
 
@@ -167,7 +173,7 @@ public abstract class AbstractMessageListenerContainer {
         state = BUSY;
     }
 
-    public void setRunning() {
+    public void running() {
         state = RUNNING;
     }
 

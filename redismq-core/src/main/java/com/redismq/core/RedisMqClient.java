@@ -83,21 +83,20 @@ public class RedisMqClient {
         registerClient();
         // 订阅平衡消息
         rebalanceSubscribe();
-        doRebalance();
-        // 重平衡
+        // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
-        // 自动注册和自动重平衡
+        // 在执行重平衡.当前服务暂停重新分配拉取消息
+        doRebalance();
+        // 30秒自动注册
         startRegisterClientTask();
+        // 20秒自动重平衡
         startRebalanceTask();
-        if (QueueManager.hasSubscribe()) {
-            //订阅push消息
-            subscribe();
-            //启动队列监控
-            redisListenerContainerManager.startRedisListener();
-            //启动延时队列监控
-            redisListenerContainerManager.startDelayRedisListener();
-            repush();
-        }
+        //订阅push消息
+        subscribe();
+        //启动队列监控
+        redisListenerContainerManager.startRedisListener();
+        //启动延时队列监控
+        redisListenerContainerManager.startDelayRedisListener();
     }
 
     // 多个服务应该只有一个执行重平衡
@@ -110,8 +109,11 @@ public class RedisMqClient {
         }
     }
 
+    // 暂停消息分配.重新负载均衡后.重新拉取消息
     public void doRebalance() {
+        redisListenerContainerManager.pauseAll();
         rebalance.rebalance(allClient(), clientId);
+        repush();
     }
 
     private void publishRebalance() {
@@ -119,8 +121,11 @@ public class RedisMqClient {
     }
 
     //启动时对任务重新进行拉取
-    private void repush() {
+    public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
+        if (CollectionUtils.isEmpty(queues)) {
+            return;
+        }
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
@@ -167,16 +172,14 @@ public class RedisMqClient {
     }
 
     public void startRegisterClientTask() {
-        registerThread.scheduleAtFixedRate(this::registerClient, 0, 30, TimeUnit.SECONDS);
+        registerThread.scheduleAtFixedRate(this::registerClient, 30, 30, TimeUnit.SECONDS);
     }
 
     public void startRebalanceTask() {
         String lockKey = "RedisMQRebalanceLock";
-        ThreadLocalRandom random = ThreadLocalRandom.current();
-        String uuid = new UUID(random.nextLong(), random.nextLong()).toString().replace("-", "");
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, uuid, 20, TimeUnit.SECONDS);
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
         if (success != null && success) {
-            registerThread.scheduleAtFixedRate(this::rebalance, 0, 20, TimeUnit.SECONDS);
+            registerThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
         }
     }
 }

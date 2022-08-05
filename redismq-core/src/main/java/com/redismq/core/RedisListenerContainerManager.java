@@ -140,4 +140,9 @@ public class RedisListenerContainerManager {
         boss.shutdownNow();
         log.info("Shutdown  redismq All ThreadPollExecutor");
     }
+
+    public void pauseAll() {
+        redisDelayListenerContainerMap.values().forEach(AbstractMessageListenerContainer::pause);
+        log.info("Shutdown  redismq All ThreadPollExecutor");
+    }
 }

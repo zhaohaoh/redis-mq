@@ -30,6 +30,6 @@ public class RedisRebalanceListener implements MessageListener {
             redisMqClient.doRebalance();
         }
     }
- 
+
 
 }

@@ -2,6 +2,7 @@ package com.redismq.container;
 
 
 import com.redismq.Message;
+import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
@@ -18,6 +19,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -51,6 +53,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return t;
         }
     });
+
 
     private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
             60L, TimeUnit.SECONDS,
@@ -109,7 +112,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 if (CollectionUtils.isEmpty(tuples)) {
                     //本地消息没有消费完就先不取延时任务的.
                     if (localMessages.size() > 0) {
-                        break;
+                        Thread.sleep(200L);
+                        continue;
                     }
                     //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
                     Set<ZSetOperations.TypedTuple<Object>> headDatas = redisTemplate.opsForZSet().rangeWithScores(queueName, 0, 100);
@@ -182,6 +186,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
 
     public void start(Long startTime) {
+        running();
         //为空说明当前能获取到数据
         DelayTimeoutTask task1 = delayTimeoutTaskManager.computeIfAbsent(queueName, task -> new DelayTimeoutTask() {
             @Override
@@ -191,20 +196,19 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     return null;
                 }
                 Set<Long> nextTimeSet = new HashSet<>();
-                while (true) {
+                while (isRunning()) {
                     int i = 0;
                     for (String virtualQueue : virtualQueues) {
                         Set<Long> pop = pop(virtualQueue);
-                        nextTimeSet.addAll(pop);
                         //为空说明当前能获取到数据
-                        if (CollectionUtils.isEmpty(pop)) {
-                            i++;
-                        }
+                        nextTimeSet.addAll(pop);
+                        i++;
                     }
                     if (i >= virtualQueues.size()) {
                         return nextTimeSet;
                     }
                 }
+                return nextTimeSet;
             }
         });
         delayTimeoutTaskManager.schedule(task1, startTime);
