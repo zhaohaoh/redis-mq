@@ -103,7 +103,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         Set<Long> startTimeSet = new HashSet<>();
         while (isRunning()) {
             try {
-                //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量
+                //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
                 long pullTime = System.currentTimeMillis();
                 Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, localMessages.size(), super.maxConcurrency);
                 if (CollectionUtils.isEmpty(tuples)) {
