@@ -143,6 +143,5 @@ public class RedisListenerContainerManager {
 
     public void pauseAll() {
         redisDelayListenerContainerMap.values().forEach(AbstractMessageListenerContainer::pause);
-        log.info("Shutdown  redismq All ThreadPollExecutor");
     }
 }
