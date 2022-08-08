@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.Message;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -33,6 +34,7 @@ public class RedisPushListener extends AbstractRedisPushListener {
             semaphore.acquire();
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQObjectMapper.toBean(body, PushMessage.class);
+            log.debug("RedisPushListener onMessage:{}", pushMessage);
             String queueName = pushMessage.getQueue();
             String realNameQueue = StringUtils.substringBefore(queueName, SPLITE);
             //当前服务订阅的队列列表
