@@ -106,10 +106,10 @@ public class RedisMqClient {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
-                // 发布重平衡 会让其他服务暂停拉取消息
-                publishRebalance();
                 // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
                 doRebalance();
+                // 发布重平衡 会让其他服务暂停拉取消息
+                publishRebalance();
             }
         }
     }
