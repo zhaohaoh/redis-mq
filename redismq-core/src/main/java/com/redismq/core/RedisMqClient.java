@@ -202,6 +202,6 @@ public class RedisMqClient {
     }
 
     public void startRebalanceTask() {
-        registerThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
     }
 }
