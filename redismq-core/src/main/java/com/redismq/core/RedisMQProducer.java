@@ -1,7 +1,7 @@
 package com.redismq.core;
 
 import com.redismq.Message;
-import com.redismq.constant.PublishContant;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
 import com.redismq.exception.RedisMqException;
 import com.redismq.queue.Queue;
@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.RedisMQConstant.REDIS_MQ_SEND_MSG_INCREMENT;
 
 /**
  * @Author: hzh
@@ -25,7 +26,6 @@ import static com.redismq.constant.QueueConstant.SPLITE;
 public class RedisMQProducer {
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
     private final RedisTemplate<String, Object> redisTemplate;
-    private final AtomicInteger i = new AtomicInteger(0);
     private Integer retryCount = 3;
     private Integer retrySleep = 200;
 
@@ -88,31 +88,27 @@ public class RedisMQProducer {
 
     private boolean sendMessage(Queue queue, Message message, Long executorTime) {
         try {
-            int i = this.i.updateAndGet(x -> {
-                if (x >= Integer.MAX_VALUE) {
-                    return 0;
-                } else {
-                    return x + 1;
-                }
-            });
+            Long increment = redisTemplate.opsForValue().increment(REDIS_MQ_SEND_MSG_INCREMENT);
+            increment = increment == null ? 0 : increment;
+            //此处bug 多机无法保证顺序
             if (executorTime == null) {
-                executorTime = (long) i;
+                executorTime = increment;
             }
-            int num = i % QueueManager.VIRTUAL_QUEUES_NUM;
+            long num = increment % QueueManager.VIRTUAL_QUEUES_NUM;
             PushMessage pushMessage = new PushMessage();
             pushMessage.setTimestamp(executorTime);
             pushMessage.setQueue(queue.getQueueName() + SPLITE + num);
-            String s = "local size = redis.call('zcard', KEYS[1]);\n" +
+            String lua = "local size = redis.call('zcard', KEYS[1]);\n" +
                     "if size and tonumber(size) >=" + queue.getQueueMaxSize() + " then  \n" +
                     "return -1;\n" +
                     "end\n" +
                     "redis.call('zadd', KEYS[1], ARGV[3], ARGV[2]);\n" +
                     "redis.call('publish', KEYS[2], ARGV[1]);\n" +
                     "return size";
-            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(s, Long.class);
+            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
             List<String> list = new ArrayList<>();
             list.add(queue.getQueueName() + SPLITE + num);
-            list.add(PublishContant.TOPIC);
+            list.add(RedisMQConstant.TOPIC);
             message.setQueueName(queue.getQueueName() + SPLITE + num);
             Long size = -1L;
             int count = 0;

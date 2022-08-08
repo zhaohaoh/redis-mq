@@ -1,7 +1,7 @@
 package com.redismq.core;
 
 
-import com.redismq.constant.PublishContant;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
@@ -17,7 +17,6 @@ import org.springframework.util.CollectionUtils;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -117,7 +116,7 @@ public class RedisMqClient {
     }
 
     private void publishRebalance() {
-        redisTemplate.convertAndSend(PublishContant.REBALANCE_TOPIC, clientId);
+        redisTemplate.convertAndSend(RedisMQConstant.REBALANCE_TOPIC, clientId);
     }
 
     //启动时对任务重新进行拉取
@@ -147,13 +146,13 @@ public class RedisMqClient {
 
     public void subscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.TOPIC)));
+        ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
     }
 
     public void rebalanceSubscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(PublishContant.REBALANCE_TOPIC)));
+        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.REBALANCE_TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
     }
 
