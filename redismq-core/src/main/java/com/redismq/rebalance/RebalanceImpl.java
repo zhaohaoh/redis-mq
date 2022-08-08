@@ -38,6 +38,7 @@ public class RebalanceImpl {
             List<String> virtualQueues = QueueManager.getVirtualQueues(queue);
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, new ArrayList<>(clientIds));
             QueueManager.CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
+            log.info("RebalanceImpl rebalance vQueues:{}", vQueues);
         }
     }
 
