@@ -72,6 +72,7 @@ public class RedisMqClient {
     public void destory() {
         redisTemplate.opsForZSet().remove(CLIENT_KEY, clientId);
         unSubscribe();
+        subscription.close();
         publishRebalance();
         log.info("redismq client remove");
         //停止任务
