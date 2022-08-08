@@ -5,10 +5,10 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>1.1.11</version>
+        <version>1.1.12</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-    <version>1.1.11</version>
+    <version>1.1.12</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-spring-boot-autoconfigure</artifactId>
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-core</artifactId>
-            <version>1.1.11</version>
+            <version>1.1.12</version>
         </dependency>
     </dependencies>
 </project>
