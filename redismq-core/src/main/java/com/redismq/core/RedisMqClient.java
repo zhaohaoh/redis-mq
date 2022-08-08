@@ -9,6 +9,8 @@ import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.RebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.Subscription;
 import org.springframework.data.redis.connection.util.ByteArrayWrapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -29,6 +31,7 @@ public class RedisMqClient {
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
+    private Subscription subscription;
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
@@ -68,6 +71,8 @@ public class RedisMqClient {
 
     public void destory() {
         redisTemplate.opsForZSet().remove(CLIENT_KEY, clientId);
+        unSubscribe();
+        publishRebalance();
         log.info("redismq client remove");
         //停止任务
         redisListenerContainerManager.stopAll();
@@ -76,20 +81,16 @@ public class RedisMqClient {
     public void start() {
         // 清理所有客户端
         removeAllClient();
+        // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况 doReblance已经注册
+//        registerClient();
+        // 重平衡
+        rebalance();
         // 订阅平衡消息
         rebalanceSubscribe();
-        // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况
-        registerClient();
-        // 发布重平衡 会让其他服务暂停拉取消息
-        publishRebalance();
-        // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
-        doRebalance();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
         startRebalanceTask();
-        //订阅push消息
-        subscribe();
         //启动队列监控
         redisListenerContainerManager.startRedisListener();
         //启动延时队列监控
@@ -104,7 +105,9 @@ public class RedisMqClient {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
+                // 发布重平衡 会让其他服务暂停拉取消息
                 publishRebalance();
+                // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
                 doRebalance();
             }
         }
@@ -126,8 +129,11 @@ public class RedisMqClient {
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
         if (CollectionUtils.isEmpty(queues)) {
+            unSubscribe();
             return;
         }
+        //订阅push消息
+        subscribe();
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
@@ -147,16 +153,33 @@ public class RedisMqClient {
         });
     }
 
-    public void subscribe() {
+    //订阅
+    public synchronized void subscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
         ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.TOPIC)));
-        Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
+        if (subscription == null) {
+            RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+            connection.subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
+            subscription = connection.getSubscription();
+        } else {
+            subscription.subscribe(unwrap(Collections.singletonList(holder)));
+        }
+    }
+
+    //取消订阅
+    public void unSubscribe() {
+        if (subscription != null) {
+            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.TOPIC)));
+            subscription.unsubscribe(unwrap(Collections.singletonList(holder)));
+        }
     }
 
     public void rebalanceSubscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
         ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.REBALANCE_TOPIC)));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
+        redisTemplate.getConnectionFactory().getConnection();
     }
 
     protected byte[][] unwrap(Collection<ByteArrayWrapper> holders) {
