@@ -48,13 +48,8 @@ public class RedisMqClient {
 
     public void registerClient() {
         log.debug("registerClient :{}", clientId);
-        Boolean success = redisTemplate.opsForZSet().addIfAbsent(CLIENT_KEY, clientId, System.currentTimeMillis());
-        if (success == null || !success) {
-            //注册客户端
-            redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
-        } else {
-            doRebalance();
-        }
+        //注册客户端
+        redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
     }
 
     public Set<String> allClient() {
@@ -88,7 +83,7 @@ public class RedisMqClient {
         // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
         // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
-//        doRebalance();
+        doRebalance();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
@@ -103,16 +98,21 @@ public class RedisMqClient {
 
     // 多个服务应该只有一个执行重平衡
     public void rebalance() {
-        Long count = removeExpireClients();
-        if (count != null && count > 0) {
-            log.info("doRebalance removeExpireClients count=:{}", count);
-            publishRebalance();
-            doRebalance();
+        String lockKey = "RedisMQRebalanceLock";
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
+        if (success != null && success) {
+            Long count = removeExpireClients();
+            if (count != null && count > 0) {
+                log.info("doRebalance removeExpireClients count=:{}", count);
+                publishRebalance();
+                doRebalance();
+            }
         }
     }
 
     // 暂停消息分配.重新负载均衡后.重新拉取消息
     public void doRebalance() {
+        registerClient();
         redisListenerContainerManager.pauseAll();
         rebalance.rebalance(allClient(), clientId);
         repush();
@@ -178,10 +178,6 @@ public class RedisMqClient {
     }
 
     public void startRebalanceTask() {
-        String lockKey = "RedisMQRebalanceLock";
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
-        if (success != null && success) {
-            registerThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
-        }
+        registerThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
     }
 }
