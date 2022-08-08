@@ -90,7 +90,7 @@ public class RedisMQProducer {
         try {
             Long increment = redisTemplate.opsForValue().increment(REDIS_MQ_SEND_MSG_INCREMENT);
             increment = increment == null ? 0 : increment;
-            //此处bug 多机无法保证顺序
+
             if (executorTime == null) {
                 executorTime = increment;
             }
