@@ -87,7 +87,7 @@ public class RedisMqClient {
         registerClient();
         // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
-        // 在执行重平衡.当前服务暂停重新分配拉取消息
+        // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
 //        doRebalance();
         // 30秒自动注册
         startRegisterClientTask();
