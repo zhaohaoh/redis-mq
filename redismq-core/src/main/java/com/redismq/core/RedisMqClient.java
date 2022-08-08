@@ -48,14 +48,17 @@ public class RedisMqClient {
 
     public void registerClient() {
         log.debug("registerClient :{}", clientId);
-        //注册客户端
-        redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
+        Boolean success = redisTemplate.opsForZSet().addIfAbsent(CLIENT_KEY, clientId, System.currentTimeMillis());
+        if (success == null || !success) {
+            //注册客户端
+            redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
+        } else {
+            doRebalance();
+        }
     }
 
     public Set<String> allClient() {
-        // 60秒以内的客户端
-        long min = System.currentTimeMillis() - 40000L;
-        return redisTemplate.opsForZSet().rangeByScore(CLIENT_KEY, min, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
+        return redisTemplate.opsForZSet().rangeByScore(CLIENT_KEY, 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
     }
 
     public Long removeExpireClients() {
@@ -78,14 +81,14 @@ public class RedisMqClient {
     public void start() {
         // 清理所有客户端
         removeAllClient();
-        // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况
-        registerClient();
         // 订阅平衡消息
         rebalanceSubscribe();
+        // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况
+        registerClient();
         // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
         // 在执行重平衡.当前服务暂停重新分配拉取消息
-        doRebalance();
+//        doRebalance();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
