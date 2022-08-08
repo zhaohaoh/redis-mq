@@ -34,11 +34,12 @@ public class RedisPushListener extends AbstractRedisPushListener {
             semaphore.acquire();
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQObjectMapper.toBean(body, PushMessage.class);
-            log.debug("RedisPushListener onMessage:{}", pushMessage);
+
             String queueName = pushMessage.getQueue();
             String realNameQueue = StringUtils.substringBefore(queueName, SPLITE);
             //当前服务订阅的队列列表
             List<String> list = QueueManager.CURRENT_VIRTUAL_QUEUES.get(realNameQueue);
+            log.info("RedisPushListener onMessage:{} Queue:{} currentVirtualQueues:{}", pushMessage, realNameQueue, list);
             if (list == null || !list.contains(queueName)) {
                 return;
             }
