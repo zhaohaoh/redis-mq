@@ -4,12 +4,15 @@ import com.redismq.Message;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
 import com.redismq.exception.RedisMqException;
+import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,8 @@ public class RedisMQProducer {
     private final RedisTemplate<String, Object> redisTemplate;
     private Integer retryCount = 3;
     private Integer retrySleep = 200;
+    private List<ProducerInterceptor> producerInterceptors;
+    private String queueSuffix;
 
     public RedisMQProducer(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -41,6 +46,26 @@ public class RedisMQProducer {
         this.retrySleep = retrySleep;
     }
 
+    public void setProducerInterceptors(List<ProducerInterceptor> producerInterceptors) {
+        this.producerInterceptors = producerInterceptors;
+    }
+
+    public Integer getRetryCount() {
+        return retryCount;
+    }
+
+    public Integer getRetrySleep() {
+        return retrySleep;
+    }
+
+    public List<ProducerInterceptor> getProducerInterceptors() {
+        return producerInterceptors;
+    }
+
+
+    public void setQueueSuffix(String queueSuffix) {
+        this.queueSuffix = queueSuffix;
+    }
 
     /**
      * 队列消息
@@ -112,6 +137,7 @@ public class RedisMQProducer {
             message.setQueueName(queue.getQueueName() + SPLITE + num);
             Long size = -1L;
             int count = 0;
+            beforeSend(message);
             // 发送的重试 如果redis中数量超过1万也会重试.
             while (size == null || count < retryCount) {
                 size = redisTemplate.execute(redisScript, list, pushMessage, message, executorTime);
@@ -124,17 +150,43 @@ public class RedisMQProducer {
                     log.warn("RedisMQ sendMessage retry");
                 } else {
                     log.info("RedisMQ sendMessage success");
+                    afterSend(message);
                     return true;
                 }
             }
             log.error("RedisMQ Producer Queue Full");
+            onFail(message, null);
             return false;
         } catch (Exception e) {
             log.error("RedisMQ Send Message Fail", e);
+            onFail(message, e);
             return false;
         }
     }
 
+    private void afterSend(Message message) {
+        if (!CollectionUtils.isEmpty(producerInterceptors)) {
+            for (ProducerInterceptor interceptor : producerInterceptors) {
+                interceptor.afterSend(message);
+            }
+        }
+    }
+
+    private void onFail(Message message, Exception e) {
+        if (!CollectionUtils.isEmpty(producerInterceptors)) {
+            for (ProducerInterceptor interceptor : producerInterceptors) {
+                interceptor.onFail(message, e);
+            }
+        }
+    }
+
+    private void beforeSend(Message message) {
+        if (!CollectionUtils.isEmpty(producerInterceptors)) {
+            for (ProducerInterceptor interceptor : producerInterceptors) {
+                interceptor.beforeSend(message);
+            }
+        }
+    }
 
     /*
      * redis的发布订阅  直接传递实际数据即可
@@ -145,6 +197,7 @@ public class RedisMQProducer {
 
 
     private Queue hasQueue(String name) {
+        name = name + queueSuffix;
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
@@ -156,12 +209,13 @@ public class RedisMQProducer {
     }
 
     private Queue hasDelayQueue(String name) {
+        name = name + queueSuffix;
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
         }
         if (!queue.getDelayState()) {
-            throw new RedisMqException("Redismq Queue type mismatch");
+            throw new RedisMqException("Redismq DelayQueue type mismatch");
         }
         return queue;
     }

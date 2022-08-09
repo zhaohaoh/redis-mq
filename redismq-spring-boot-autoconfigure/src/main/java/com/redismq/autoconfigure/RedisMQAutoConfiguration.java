@@ -1,25 +1,27 @@
 package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.redismq.constant.PushMessage;
+import com.redismq.core.RedisListenerConfigurationRegister;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
+import com.redismq.interceptor.ConsumeInterceptor;
+import com.redismq.interceptor.ProducerInterceptor;
+import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.AllocateMessageQueueAveragely;
 import com.redismq.rebalance.RebalanceImpl;
 import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQTemplate;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
-import org.springframework.boot.configurationprocessor.json.JSONObject;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,25 +31,27 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import static com.redismq.constant.QueueConstant.SPLITE;
 
 /**
  * @author hzh
  */
+@Import(RedisListenerConfigurationRegister.class)
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
-@ComponentScan("com.redismq")
 @Configuration
-@EnableConfigurationProperties({RedisMqProperties.class, RedisProperties.class})
-@EnableRedisMq
-public class RedisMqAutoConfiguration {
+@EnableConfigurationProperties({RedisMQProperties.class, RedisProperties.class})
+public class RedisMQAutoConfiguration implements InitializingBean {
     @Autowired
-    private RedisMqProperties redisMqProperties;
+    private RedisMQProperties redisMqProperties;
     @Autowired
     private RedisProperties redisProperties;
-    @Resource(name = "redisMqRedisTemplate")
+    @Resource(name = "redisMQRedisTemplate")
     private RedisTemplate<String, Object> redisTemplate;
+    @Autowired(required = false)
+    private List<ProducerInterceptor> producerInterceptors;
+    @Autowired(required = false)
+    private List<ConsumeInterceptor> consumeInterceptors;
 
     @Bean
     public DefaultRedisListenerContainerFactory redisListenerContainerFactory() {
@@ -59,7 +63,14 @@ public class RedisMqAutoConfiguration {
         redisListenerContainerFactory.setRetryInterval(redisMqProperties.getRetryInterval());
         redisListenerContainerFactory.setRedisTemplate(redisTemplate);
         redisListenerContainerFactory.setTimeout(redisProperties.getTimeout());
+        redisListenerContainerFactory.setConsumeInterceptors(consumeInterceptors);
         return redisListenerContainerFactory;
+    }
+
+    @Bean
+    public RedisMQTemplate redisMQTemplate() {
+        RedisMQTemplate redisMQTemplate = new RedisMQTemplate(redisMQProducer());
+        return redisMQTemplate;
     }
 
     @Bean
@@ -67,6 +78,8 @@ public class RedisMqAutoConfiguration {
         RedisMQProducer redisMQProducer = new RedisMQProducer(redisTemplate);
         redisMQProducer.setRetryCount(redisMqProperties.getProducerRetryMax());
         redisMQProducer.setRetrySleep(redisMqProperties.getProducerRetryInterval());
+        redisMQProducer.setProducerInterceptors(producerInterceptors);
+        redisMQProducer.setQueueSuffix(redisMqProperties.getQueueSuffix());
         return redisMQProducer;
     }
 
@@ -113,7 +126,7 @@ public class RedisMqAutoConfiguration {
         return redisMessageListenerContainer;
     }
 
-    @Bean(name = "redisMqRedisTemplate")
+    @Bean(name = "redisMQRedisTemplate")
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         // 配置连接工厂
@@ -135,4 +148,9 @@ public class RedisMqAutoConfiguration {
     }
 
 
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
+        QueueManager.QUEUE_SUFFIX = redisMqProperties.getQueueSuffix();
+    }
 }

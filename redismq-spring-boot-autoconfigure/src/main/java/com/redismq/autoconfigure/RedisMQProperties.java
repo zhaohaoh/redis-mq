@@ -2,8 +2,8 @@ package com.redismq.autoconfigure;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(prefix = RedisMqProperties.PREFIX)
-public class RedisMqProperties {
+@ConfigurationProperties(prefix = RedisMQProperties.PREFIX)
+public class RedisMQProperties {
     public static final String PREFIX = "spring.redismq";
     /**
      * 消费者 此处得消费对应得是每个队列得消费者。假如有5个队列。就会有5个线程池。分别最小消费者是1. 会被注解redis监听替换
@@ -22,13 +22,13 @@ public class RedisMqProperties {
      */
     private int producerRetryMax = 1;
     /**
-     * 消费者重试时间
-     */
-    private int retryInterval = 1000;
-    /**
      * 发送者重试时间
      */
     private int producerRetryInterval = 200;
+    /**
+     * 消费者重试时间
+     */
+    private int retryInterval = 500;
     /**
      * ack模式
      */
@@ -37,6 +37,19 @@ public class RedisMqProperties {
      * 虚拟队列数量
      */
     private Integer virtual = 1;
+
+    /**
+     * 队列统一后缀
+     */
+    private String queueSuffix;
+
+    public String getQueueSuffix() {
+        return queueSuffix;
+    }
+
+    public void setQueueSuffix(String queueSuffix) {
+        this.queueSuffix = queueSuffix;
+    }
 
     public Integer getVirtual() {
         return virtual;
@@ -61,6 +74,7 @@ public class RedisMqProperties {
     public void setAckMode(String ackMode) {
         this.ackMode = ackMode;
     }
+
     public int getConcurrency() {
         return concurrency;
     }

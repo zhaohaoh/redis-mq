@@ -9,6 +9,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Import(RedisListenerConfigurationRegister.class)
-public @interface EnableRedisMq  {
+@Import(RedisMQAutoConfiguration.class)
+public @interface EnableRedisMQ {
 }

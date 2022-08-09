@@ -3,16 +3,20 @@ package com.redismq.core;
 import com.redismq.Message;
 import com.redismq.constant.AckMode;
 import com.redismq.exception.RedisMqException;
+import com.redismq.interceptor.ConsumeInterceptor;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * @Author: hzh
  * @Date: 2022/5/19 11:28
@@ -34,6 +38,15 @@ public class RedisListenerRunnable implements Runnable {
     private String queueName;
     //本地消息表
     private Set<Message> localMessages;
+    private List<ConsumeInterceptor> consumeInterceptors;
+
+    public List<ConsumeInterceptor> getConsumeInterceptors() {
+        return consumeInterceptors;
+    }
+
+    public void setConsumeInterceptors(List<ConsumeInterceptor> consumeInterceptors) {
+        this.consumeInterceptors = consumeInterceptors;
+    }
 
     public void setLocalMessages(Set<Message> localMessages) {
         this.localMessages = localMessages;
@@ -64,14 +77,6 @@ public class RedisListenerRunnable implements Runnable {
 
     public void setAckMode(String ackMode) {
         this.ackMode = ackMode;
-    }
-
-    public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisTemplate<String, Object> redisTemplate) {
-        this.target = target;
-        this.method = method;
-        this.retryMax = retryMax;
-        this.semaphore = semaphore;
-        this.redisTemplate = redisTemplate;
     }
 
     public Object getArgs() {
@@ -109,6 +114,13 @@ public class RedisListenerRunnable implements Runnable {
         return this.method;
     }
 
+    public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisTemplate<String, Object> redisTemplate) {
+        this.target = target;
+        this.method = method;
+        this.retryMax = retryMax;
+        this.semaphore = semaphore;
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     public void run() {
@@ -142,7 +154,9 @@ public class RedisListenerRunnable implements Runnable {
             state.running();
             ReflectionUtils.makeAccessible(this.method);
             Message message = (Message) args;
+            // 拷贝对象.原对象不会发生改变.否则对象改变了无法删除redis中的数据
             Message clone = message.deepClone();
+            beforeConsume(clone);
             //参数是Message或者是实体类都可以
             if (paramType.equals(clone.getClass())) {
                 this.method.invoke(this.target, clone);
@@ -151,6 +165,7 @@ public class RedisListenerRunnable implements Runnable {
             }
             state.finsh();
             log.debug("redismq消息消费成功 tag:{}", message.getTag());
+            afterConsume(clone);
         } catch (Exception e) {
             log.error("redismq 执行失败", e);
             if (AckMode.MAUAL.equals(ackMode) && i > retryMax) {
@@ -165,6 +180,31 @@ public class RedisListenerRunnable implements Runnable {
                     log.error("redismq 执行失败睡眠重试InterruptedException", interruptedException);
                     Thread.currentThread().interrupt();
                 }
+            }
+            onFail((Message) args, e);
+        }
+    }
+
+    private void onFail(Message args, Exception e) {
+        if (!CollectionUtils.isEmpty(consumeInterceptors)) {
+            for (ConsumeInterceptor consumeInterceptor : consumeInterceptors) {
+                consumeInterceptor.onFail(args, e);
+            }
+        }
+    }
+
+    private void beforeConsume(Message args) {
+        if (!CollectionUtils.isEmpty(consumeInterceptors)) {
+            for (ConsumeInterceptor consumeInterceptor : consumeInterceptors) {
+                consumeInterceptor.beforeConsume(args);
+            }
+        }
+    }
+
+    private void afterConsume(Message args) {
+        if (!CollectionUtils.isEmpty(consumeInterceptors)) {
+            for (ConsumeInterceptor consumeInterceptor : consumeInterceptors) {
+                consumeInterceptor.afterConsume(args);
             }
         }
     }

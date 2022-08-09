@@ -7,9 +7,11 @@ import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.QueueConstant;
 import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
+import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
@@ -66,6 +68,10 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected Semaphore semaphore;
     /**
+     * 消费拦截器
+     */
+    protected List<ConsumeInterceptor> consumeInterceptorList;
+    /**
      * 状态描述
      */
     protected volatile Integer state = RUNNING;
@@ -73,6 +79,10 @@ public abstract class AbstractMessageListenerContainer {
     private static final int STOP = 1 << 1;
     private static final int BUSY = 1 << 2;
     private static final int PAUSE = 1 << 3;
+
+    public void setConsumeInterceptorList(List<ConsumeInterceptor> consumeInterceptorList) {
+        this.consumeInterceptorList = consumeInterceptorList;
+    }
 
     public void setRedisListenerEndpointMap(Map<String, RedisListenerEndpoint> redisListenerEndpointMap) {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
@@ -194,6 +204,7 @@ public abstract class AbstractMessageListenerContainer {
         runnable.setRetryInterval(this.getRetryInterval());
         runnable.setQueueName(queueName);
         runnable.setLocalMessages(localMessages);
+        runnable.setConsumeInterceptors(consumeInterceptorList);
         return runnable;
     }
 

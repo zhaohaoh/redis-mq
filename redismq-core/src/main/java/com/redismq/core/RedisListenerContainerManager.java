@@ -4,6 +4,7 @@ import com.redismq.constant.PushMessage;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.exception.RedisMqException;
+import com.redismq.interceptor.ConsumeInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ public class RedisListenerContainerManager {
     // 队列的容器
     private final Map<String, AbstractMessageListenerContainer> redisDelayListenerContainerMap = new ConcurrentHashMap<>();
     private volatile StateEnum state = StateEnum.CREATED;
+
 
     public LinkedBlockingQueue<String> getLinkedBlockingQueue() {
         return linkedBlockingQueue;

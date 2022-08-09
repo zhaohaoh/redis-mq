@@ -3,10 +3,12 @@ package com.redismq.factory;
 
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
+import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import org.springframework.data.redis.core.RedisTemplate;
 
 import java.time.Duration;
+import java.util.List;
 
 public class DefaultRedisListenerContainerFactory
         implements RedisListenerContainerFactory {
@@ -22,6 +24,18 @@ public class DefaultRedisListenerContainerFactory
     //重试次数
     private int retryInterval;
     private Duration timeout;
+    /**
+     * 消费拦截器
+     */
+    private List<ConsumeInterceptor> consumeInterceptors;
+
+    public List<ConsumeInterceptor> getConsumeInterceptors() {
+        return consumeInterceptors;
+    }
+
+    public void setConsumeInterceptors(List<ConsumeInterceptor> consumeInterceptors) {
+        this.consumeInterceptors = consumeInterceptors;
+    }
 
     public Duration getTimeout() {
         return timeout;
@@ -85,6 +99,7 @@ public class DefaultRedisListenerContainerFactory
     public AbstractMessageListenerContainer createListenerContainer(Queue queue) {
         AbstractMessageListenerContainer instance;
         instance = new RedisMQListenerContainer(this, queue);
+        instance.setConsumeInterceptorList(consumeInterceptors);
         return instance;
     }
 }
