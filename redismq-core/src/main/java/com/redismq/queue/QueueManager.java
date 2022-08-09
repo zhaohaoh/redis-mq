@@ -1,8 +1,7 @@
 package com.redismq.queue;
 
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import com.redismq.constant.RedisMQConstant;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,10 +20,9 @@ public class QueueManager {
     public static final Map<String, List<String>> CURRENT_VIRTUAL_QUEUES = new ConcurrentHashMap<>();
 
     public static int VIRTUAL_QUEUES_NUM;
-    public static String QUEUE_SUFFIX;
 
     public static Queue registerQueue(Queue queue) {
-        queue.setQueueName(queue.getQueueName() + QUEUE_SUFFIX);
+        queue.setQueueName(RedisMQConstant.getQueueName(queue.getQueueName()));
         String queueName = queue.getQueueName();
         Queue returnQueue = QUEUES.computeIfAbsent(queueName, q -> queue);
         returnQueue.setVirtual(QueueManager.VIRTUAL_QUEUES_NUM);

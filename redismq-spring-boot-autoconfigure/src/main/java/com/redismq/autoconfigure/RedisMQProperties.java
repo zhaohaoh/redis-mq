@@ -39,16 +39,16 @@ public class RedisMQProperties {
     private Integer virtual = 1;
 
     /**
-     * 队列统一后缀
+     * 环境隔离统一后缀
      */
-    private String queueSuffix;
+    private String cluster;
 
-    public String getQueueSuffix() {
-        return queueSuffix;
+    public String getCluster() {
+        return cluster;
     }
 
-    public void setQueueSuffix(String queueSuffix) {
-        this.queueSuffix = queueSuffix;
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
     }
 
     public Integer getVirtual() {

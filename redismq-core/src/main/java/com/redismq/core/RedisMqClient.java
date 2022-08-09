@@ -22,16 +22,19 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.RedisMQConstant.*;
+
 public class RedisMqClient {
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final RedisListenerContainerManager redisListenerContainerManager;
-    private static final String CLIENT_KEY = "REDISMQ_CLIENT";
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
     private Subscription subscription;
+
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
@@ -52,25 +55,25 @@ public class RedisMqClient {
     public void registerClient() {
         log.debug("registerClient :{}", clientId);
         //注册客户端
-        redisTemplate.opsForZSet().add(CLIENT_KEY, clientId, System.currentTimeMillis());
+        redisTemplate.opsForZSet().add(getClientKey(), clientId, System.currentTimeMillis());
     }
 
     public Set<String> allClient() {
-        return redisTemplate.opsForZSet().rangeByScore(CLIENT_KEY, 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
+        return redisTemplate.opsForZSet().rangeByScore(getClientKey(), 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
     }
 
     public Long removeExpireClients() {
         // 60秒以外的客户端
         long max = System.currentTimeMillis() - 40000L;
-        return redisTemplate.opsForZSet().removeRangeByScore(CLIENT_KEY, 0, max);
+        return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, max);
     }
 
     public Long removeAllClient() {
-        return redisTemplate.opsForZSet().removeRangeByScore(CLIENT_KEY, 0, Double.MAX_VALUE);
+        return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, Double.MAX_VALUE);
     }
 
     public void destory() {
-        redisTemplate.opsForZSet().remove(CLIENT_KEY, clientId);
+        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         unSubscribe();
         closeSubscribe();
         publishRebalance();
@@ -106,7 +109,7 @@ public class RedisMqClient {
 
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
-        String lockKey = "RedisMQRebalanceLock";
+        String lockKey = getRebalanceLock();
         Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
@@ -133,7 +136,7 @@ public class RedisMqClient {
     }
 
     private void publishRebalance() {
-        redisTemplate.convertAndSend(RedisMQConstant.REBALANCE_TOPIC, clientId);
+        redisTemplate.convertAndSend(getRebalanceTopic(), clientId);
     }
 
     //启动时对任务重新进行拉取
@@ -167,7 +170,7 @@ public class RedisMqClient {
     //订阅
     public synchronized void subscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.TOPIC)));
+        ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
         if (subscription == null) {
             RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
             connection.subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
@@ -181,14 +184,14 @@ public class RedisMqClient {
     public void unSubscribe() {
         if (subscription != null) {
             RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.TOPIC)));
+            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
             subscription.unsubscribe(unwrap(Collections.singletonList(holder)));
         }
     }
 
     public void rebalanceSubscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.REBALANCE_TOPIC)));
+        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(getRebalanceTopic())));
         Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
         redisTemplate.getConnectionFactory().getConnection();
     }

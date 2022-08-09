@@ -9,17 +9,14 @@ import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.redismq.constant.QueueConstant.SPLITE;
-import static com.redismq.constant.RedisMQConstant.REDIS_MQ_SEND_MSG_INCREMENT;
 
 /**
  * @Author: hzh
@@ -32,7 +29,6 @@ public class RedisMQProducer {
     private Integer retryCount = 3;
     private Integer retrySleep = 200;
     private List<ProducerInterceptor> producerInterceptors;
-    private String queueSuffix;
 
     public RedisMQProducer(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -62,10 +58,6 @@ public class RedisMQProducer {
         return producerInterceptors;
     }
 
-
-    public void setQueueSuffix(String queueSuffix) {
-        this.queueSuffix = queueSuffix;
-    }
 
     /**
      * 队列消息
@@ -113,7 +105,7 @@ public class RedisMQProducer {
 
     private boolean sendMessage(Queue queue, Message message, Long executorTime) {
         try {
-            Long increment = redisTemplate.opsForValue().increment(REDIS_MQ_SEND_MSG_INCREMENT);
+            Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
             increment = increment == null ? 0 : increment;
 
             if (executorTime == null) {
@@ -133,7 +125,7 @@ public class RedisMQProducer {
             DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
             List<String> list = new ArrayList<>();
             list.add(queue.getQueueName() + SPLITE + num);
-            list.add(RedisMQConstant.TOPIC);
+            list.add(RedisMQConstant.getTopic());
             message.setQueueName(queue.getQueueName() + SPLITE + num);
             Long size = -1L;
             int count = 0;
@@ -167,7 +159,7 @@ public class RedisMQProducer {
     private void afterSend(Message message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             for (ProducerInterceptor interceptor : producerInterceptors) {
-                 interceptor.afterSend(message);
+                interceptor.afterSend(message);
             }
         }
     }
@@ -198,7 +190,7 @@ public class RedisMQProducer {
 
 
     private Queue hasQueue(String name) {
-        name = name + queueSuffix;
+        name = RedisMQConstant.getQueueName(name);
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
@@ -210,7 +202,7 @@ public class RedisMQProducer {
     }
 
     private Queue hasDelayQueue(String name) {
-        name = name + queueSuffix;
+        name = RedisMQConstant.getQueueName(name);
         Queue queue = QueueManager.getQueue(name);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");

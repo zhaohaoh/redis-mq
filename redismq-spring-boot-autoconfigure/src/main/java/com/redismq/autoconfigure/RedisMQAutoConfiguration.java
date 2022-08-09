@@ -1,6 +1,7 @@
 package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerConfigurationRegister;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
@@ -79,13 +80,13 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisMQProducer.setRetryCount(redisMqProperties.getProducerRetryMax());
         redisMQProducer.setRetrySleep(redisMqProperties.getProducerRetryInterval());
         redisMQProducer.setProducerInterceptors(producerInterceptors);
-        redisMQProducer.setQueueSuffix(redisMqProperties.getQueueSuffix());
         return redisMQProducer;
     }
 
     @Bean
     public RedisMqClient redisMqClient() {
-        return new RedisMqClient(redisTemplate, redisListenerContainerManager(), rebalance());
+        RedisMqClient redisMqClient = new RedisMqClient(redisTemplate, redisListenerContainerManager(), rebalance());
+        return redisMqClient;
     }
 
     @Bean
@@ -151,6 +152,5 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
-        QueueManager.QUEUE_SUFFIX = redisMqProperties.getQueueSuffix();
     }
 }
