@@ -105,19 +105,23 @@ public class RedisMqClient {
     }
 
     // 多个服务应该只有一个执行重平衡
-    public void rebalance() {
+    public void rebalanceTask() {
         String lockKey = "RedisMQRebalanceLock";
         Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
-                // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
-                doRebalance();
-                // 发布重平衡 会让其他服务暂停拉取消息
-                publishRebalance();
+                rebalance();
             }
         }
+    }
+
+    private void rebalance() {
+        // 发布重平衡 会让其他服务暂停拉取消息
+        publishRebalance();
+        // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
+        doRebalance();
     }
 
     // 暂停消息分配.重新负载均衡后.重新拉取消息
@@ -208,6 +212,6 @@ public class RedisMqClient {
     }
 
     public void startRebalanceTask() {
-        rebalanceThread.scheduleAtFixedRate(this::rebalance, 10, 20, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 20, TimeUnit.SECONDS);
     }
 }

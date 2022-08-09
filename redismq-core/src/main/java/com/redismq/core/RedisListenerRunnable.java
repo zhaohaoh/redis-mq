@@ -156,7 +156,7 @@ public class RedisListenerRunnable implements Runnable {
             Message message = (Message) args;
             // 拷贝对象.原对象不会发生改变.否则对象改变了无法删除redis中的数据
             Message clone = message.deepClone();
-            beforeConsume(clone);
+            clone = beforeConsume(clone);
             //参数是Message或者是实体类都可以
             if (paramType.equals(clone.getClass())) {
                 this.method.invoke(this.target, clone);
@@ -193,12 +193,13 @@ public class RedisListenerRunnable implements Runnable {
         }
     }
 
-    private void beforeConsume(Message args) {
+    private Message beforeConsume(Message args) {
         if (!CollectionUtils.isEmpty(consumeInterceptors)) {
             for (ConsumeInterceptor consumeInterceptor : consumeInterceptors) {
-                consumeInterceptor.beforeConsume(args);
+                args = consumeInterceptor.beforeConsume(args);
             }
         }
+        return args;
     }
 
     private void afterConsume(Message args) {

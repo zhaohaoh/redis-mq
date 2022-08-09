@@ -167,7 +167,7 @@ public class RedisMQProducer {
     private void afterSend(Message message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             for (ProducerInterceptor interceptor : producerInterceptors) {
-                interceptor.afterSend(message);
+                 interceptor.afterSend(message);
             }
         }
     }
@@ -180,12 +180,13 @@ public class RedisMQProducer {
         }
     }
 
-    private void beforeSend(Message message) {
+    private Message beforeSend(Message message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             for (ProducerInterceptor interceptor : producerInterceptors) {
-                interceptor.beforeSend(message);
+                message = interceptor.beforeSend(message);
             }
         }
+        return message;
     }
 
     /*

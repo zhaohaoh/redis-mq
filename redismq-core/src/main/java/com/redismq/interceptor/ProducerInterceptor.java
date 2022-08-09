@@ -10,7 +10,7 @@ public interface ProducerInterceptor {
     // 发送前回调
     Message beforeSend(Message message);
     // 发送后回调
-    Message afterSend(Message message);
+    void afterSend(Message message);
     // 失败回调
     void onFail(Message message,Exception e);
 }
