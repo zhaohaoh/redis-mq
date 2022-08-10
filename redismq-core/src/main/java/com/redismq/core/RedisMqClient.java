@@ -21,6 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
@@ -165,17 +166,24 @@ public class RedisMqClient {
 
     //订阅
     public synchronized void subscribe() {
-        RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
-        if (subscription == null) {
-            RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
-            connection.subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
-            subscription = connection.getSubscription();
-        } else {
-            if (!subscription.isAlive()) {
-                subscription.subscribe(unwrap(Collections.singletonList(holder)));
+        RedisMqClient redisMqClient = this;
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+                ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
+                if (subscription == null) {
+                    RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+                    connection.subscribe(new RedisPushListener(redisMqClient), unwrap(Collections.singletonList(holder)));
+                    subscription = connection.getSubscription();
+                } else {
+                    if (!subscription.isAlive()) {
+                        subscription.subscribe(unwrap(Collections.singletonList(holder)));
+                    }
+                }
             }
-        }
+        });
+        thread.start();
     }
 
     //取消订阅
@@ -188,11 +196,18 @@ public class RedisMqClient {
 //        }
 //    }
 
-    public void rebalanceSubscribe() {
-        RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-        ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(getRebalanceTopic())));
-        Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(this), unwrap(Collections.singletonList(byteArrayWrapper)));
-        redisTemplate.getConnectionFactory().getConnection();
+    public synchronized void rebalanceSubscribe() {
+        RedisMqClient redisMqClient = this;
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+                ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(getRebalanceTopic())));
+                Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(redisMqClient), unwrap(Collections.singletonList(byteArrayWrapper)));
+                redisTemplate.getConnectionFactory().getConnection();
+            }
+        });
+        thread.start();
     }
 
     protected byte[][] unwrap(Collection<ByteArrayWrapper> holders) {
