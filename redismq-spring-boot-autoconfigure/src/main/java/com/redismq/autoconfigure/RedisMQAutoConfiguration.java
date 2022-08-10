@@ -152,5 +152,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
+        RedisMQConstant.CLUSTER = redisMqProperties.getCluster();
     }
 }
