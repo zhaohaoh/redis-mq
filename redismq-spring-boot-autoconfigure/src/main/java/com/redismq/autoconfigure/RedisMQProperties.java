@@ -41,7 +41,7 @@ public class RedisMQProperties {
     /**
      * 环境隔离统一后缀
      */
-    private String cluster;
+    private String cluster = "";
 
     public String getCluster() {
         return cluster;
