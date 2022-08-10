@@ -17,6 +17,7 @@ import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -38,7 +39,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * @author hzh
  */
-@Import(RedisListenerConfigurationRegister.class)
 @AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
 @Configuration
 @EnableConfigurationProperties({RedisMQProperties.class, RedisProperties.class})

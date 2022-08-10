@@ -1,6 +1,7 @@
 package com.redismq;
 
 
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
