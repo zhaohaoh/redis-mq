@@ -107,7 +107,9 @@ public class RedisMQProducer {
         try {
             Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
             increment = increment == null ? 0 : increment;
-
+            if (increment >= Long.MAX_VALUE) {
+                redisTemplate.opsForValue().set(RedisMQConstant.getSendIncrement(), 0L);
+            }
             if (executorTime == null) {
                 executorTime = increment;
             }
