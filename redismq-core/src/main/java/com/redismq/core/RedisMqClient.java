@@ -21,8 +21,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static com.redismq.constant.QueueConstant.SPLITE;
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
@@ -73,9 +71,8 @@ public class RedisMqClient {
     }
 
     public void destory() {
-        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
-        unSubscribe();
         closeSubscribe();
+        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         publishRebalance();
         log.info("redismq client remove");
         //停止任务
@@ -95,6 +92,8 @@ public class RedisMqClient {
 //        registerClient();
         // 重平衡
         rebalance();
+        //订阅push消息
+        subscribe();
         // 订阅平衡消息
         rebalanceSubscribe();
         // 30秒自动注册
@@ -110,7 +109,7 @@ public class RedisMqClient {
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 20, TimeUnit.SECONDS);
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 30, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
@@ -143,11 +142,8 @@ public class RedisMqClient {
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
         if (CollectionUtils.isEmpty(queues)) {
-            unSubscribe();
             return;
         }
-        //订阅push消息
-        subscribe();
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
@@ -176,18 +172,21 @@ public class RedisMqClient {
             connection.subscribe(new RedisPushListener(this), unwrap(Collections.singletonList(holder)));
             subscription = connection.getSubscription();
         } else {
-            subscription.subscribe(unwrap(Collections.singletonList(holder)));
+            if (!subscription.isAlive()) {
+                subscription.subscribe(unwrap(Collections.singletonList(holder)));
+            }
         }
     }
 
     //取消订阅
-    public void unSubscribe() {
-        if (subscription != null) {
-            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
-            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
-            subscription.unsubscribe(unwrap(Collections.singletonList(holder)));
-        }
-    }
+//    public void unSubscribe() {
+//        if (subscription != null) {
+//            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+//            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
+//            subscription.unsubscribe(unwrap(Collections.singletonList(holder)));
+//
+//        }
+//    }
 
     public void rebalanceSubscribe() {
         RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
@@ -215,6 +214,6 @@ public class RedisMqClient {
     }
 
     public void startRebalanceTask() {
-        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 20, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 30, TimeUnit.SECONDS);
     }
 }

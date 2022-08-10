@@ -36,7 +36,7 @@ public class RedisPushListener extends AbstractRedisPushListener {
             PushMessage pushMessage = RedisMQObjectMapper.toBean(body, PushMessage.class);
 
             String queueName = pushMessage.getQueue();
-            String realNameQueue = StringUtils.substringBefore(queueName, SPLITE);
+            String realNameQueue = StringUtils.substringBeforeLast(queueName, SPLITE);
             //当前服务订阅的队列列表
             List<String> list = QueueManager.CURRENT_VIRTUAL_QUEUES.get(realNameQueue);
             log.info("RedisPushListener onMessage:{} Queue:{} currentVirtualQueues:{}", pushMessage, realNameQueue, list);
