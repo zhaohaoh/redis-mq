@@ -145,10 +145,12 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
     @Override
     public void start() {
-        isRunning = true;
         this.registryBeanQueue();
-        this.createContainer();
-        redisMqClient.start();
+        if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
+            isRunning = true;
+            this.createContainer();
+            redisMqClient.start();
+        }
     }
 
     private void createContainer() {
@@ -183,7 +185,6 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     public void stop(Runnable callback) {
         stop();
         callback.run();
-        isRunning = false;
     }
 
     @Override
@@ -198,8 +199,10 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
     @Override
     public void stop() {
-        redisMqClient.destory();
-        isRunning = false;
+        if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
+            redisMqClient.destory();
+            isRunning = false;
+        }
     }
 
     @Override
