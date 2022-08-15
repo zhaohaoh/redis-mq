@@ -41,14 +41,14 @@ public class RedisMQProperties {
     /**
      * 环境隔离统一后缀
      */
-    private String cluster = "";
+    private String group = "";
 
-    public String getCluster() {
-        return cluster;
+    public String getGroup() {
+        return group;
     }
 
-    public void setCluster(String cluster) {
-        this.cluster = cluster;
+    public void setGroup(String group) {
+        this.group = group;
     }
 
     public Integer getVirtual() {

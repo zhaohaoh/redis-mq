@@ -68,6 +68,7 @@ public class RedisMqClient {
     }
 
     public Long removeAllClient() {
+        log.info("redismq removeAllClient");
         return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, Double.MAX_VALUE);
     }
 
