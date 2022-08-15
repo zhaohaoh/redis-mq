@@ -240,7 +240,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     }
 
     private void handlerPubSub(RedisListener redisListener, Method method, Object bean) {
-        RedisMessageListenerContainer container = applicationContext.getBean(RedisMessageListenerContainer.class);
+        RedisMessageListenerContainer container = applicationContext.getBean("redisMQMessageListenerContainer", RedisMessageListenerContainer.class);
         MessageListenerAdapter listener = new MessageListenerAdapter(bean, method.getName());
         //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
         Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);

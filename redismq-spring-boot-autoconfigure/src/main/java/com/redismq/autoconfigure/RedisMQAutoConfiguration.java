@@ -82,9 +82,9 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     }
 
     @Bean
-    public RedisMqClient redisMqClient(RedisConnectionFactory redisConnectionFactory) {
+    public RedisMqClient redisMqClient() {
         RedisMqClient redisMqClient = new RedisMqClient(redisTemplate, redisListenerContainerManager(), rebalance());
-        redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer(redisConnectionFactory));
+        redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer());
         return redisMqClient;
     }
 
@@ -100,7 +100,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     }
 
     @Bean("redismqInnerRedisMessageListenerContainer")
-    public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
+    public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer() {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(Objects.requireNonNull(redisTemplate.getConnectionFactory()));
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -122,16 +122,15 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     }
 
     //    //spring的redis发布订阅模式
-    @Bean("redisMessageListenerContainer")
-    @ConditionalOnMissingBean(value = RedisMessageListenerContainer.class)
-    public RedisMessageListenerContainer container(RedisConnectionFactory redisConnectionFactory) {
+    @Bean("redisMQMessageListenerContainer")
+    public RedisMessageListenerContainer redisMQMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
         redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 设置核心线程数
-        executor.setCorePoolSize(5);
+        executor.setCorePoolSize(2);
         // 设置最大线程数
-        executor.setMaxPoolSize(5);
+        executor.setMaxPoolSize(4);
         // 设置队列容量
         executor.setQueueCapacity(10000);
         // 设置线程活跃时间（秒）

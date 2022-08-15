@@ -9,23 +9,16 @@ import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.RebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.connection.Subscription;
-import org.springframework.data.redis.connection.util.ByteArrayWrapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.serializer.RedisSerializer;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
@@ -36,9 +29,8 @@ public class RedisMqClient {
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
-//    private Subscription subscription;
     private RedisMessageListenerContainer redisMessageListenerContainer;
-    private volatile boolean isSub;
+    private boolean isSub;
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
@@ -86,19 +78,12 @@ public class RedisMqClient {
     }
 
     public void destory() {
-//        closeSubscribe();
         redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         publishRebalance();
         log.info("redismq client remove");
         //停止任务
         redisListenerContainerManager.stopAll();
     }
-
-//    private void closeSubscribe() {
-//        if (subscription != null) {
-//            subscription.close();
-//        }
-//    }
 
     public void start() {
         // 清理所有客户端
@@ -203,20 +188,6 @@ public class RedisMqClient {
     public void rebalanceSubscribe() {
         RedisMqClient redisMqClient = this;
         redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient), new ChannelTopic(RedisMQConstant.getRebalanceTopic()));
-    }
-
-    protected byte[][] unwrap(Collection<ByteArrayWrapper> holders) {
-        if (CollectionUtils.isEmpty(holders)) {
-            return new byte[0][];
-        }
-
-        byte[][] unwrapped = new byte[holders.size()][];
-
-        int index = 0;
-        for (ByteArrayWrapper arrayHolder : holders) {
-            unwrapped[index++] = arrayHolder.getArray();
-        }
-        return unwrapped;
     }
 
     public void startRegisterClientTask() {

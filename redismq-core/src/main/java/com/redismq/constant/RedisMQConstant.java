@@ -40,4 +40,5 @@ public class RedisMQConstant {
     public static String getSendIncrement() {
         return PREFIX + CLUSTER + SPLITE + REDIS_MQ_SEND_MSG_INCREMENT;
     }
+
 }
