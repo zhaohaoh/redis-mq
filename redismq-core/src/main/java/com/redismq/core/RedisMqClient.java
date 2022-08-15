@@ -9,9 +9,11 @@ import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.RebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.Subscription;
+import org.springframework.data.redis.connection.util.ByteArrayWrapper;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -19,6 +21,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
@@ -29,22 +32,14 @@ public class RedisMqClient {
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
     private final RebalanceImpl rebalance;
-    private RedisMessageListenerContainer redisMessageListenerContainer;
-    private boolean isSub;
+    private Subscription subscription;
+
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
         this.clientId = ClientConfig.getLocalAddress();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
-    }
-
-    public RedisMessageListenerContainer getRedisMessageListenerContainer() {
-        return redisMessageListenerContainer;
-    }
-
-    public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
-        this.redisMessageListenerContainer = redisMessageListenerContainer;
     }
 
     public String getClientId() {
@@ -78,6 +73,7 @@ public class RedisMqClient {
     }
 
     public void destory() {
+        closeSubscribe();
         redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         publishRebalance();
         log.info("redismq client remove");
@@ -85,17 +81,23 @@ public class RedisMqClient {
         redisListenerContainerManager.stopAll();
     }
 
+    private void closeSubscribe() {
+        if (subscription != null) {
+            subscription.close();
+        }
+    }
+
     public void start() {
         // 清理所有客户端
         removeAllClient();
         // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况 doReblance已经注册
 //        registerClient();
+        // 订阅平衡消息 必须优先订阅.防止其他服务要重平衡的消息丢失
+        rebalanceSubscribe();
         // 重平衡
         rebalance();
         //订阅push消息
-//        subscribe();
-        // 订阅平衡消息
-        rebalanceSubscribe();
+        subscribe();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
@@ -105,7 +107,6 @@ public class RedisMqClient {
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
     }
-
 
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
@@ -142,12 +143,9 @@ public class RedisMqClient {
     //启动时对任务重新进行拉取
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
-        boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
-        if (isEmpty) {
-            unSubscribe();
+        if (CollectionUtils.isEmpty(queues)) {
             return;
         }
-        subscribe();
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
@@ -169,25 +167,62 @@ public class RedisMqClient {
 
     //订阅
     public synchronized void subscribe() {
-        if (!isSub) {
-            RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.addMessageListener(new RedisPushListener(redisMqClient), new ChannelTopic(RedisMQConstant.getTopic()));
-            isSub = true;
-        }
+        RedisMqClient redisMqClient = this;
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+                ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
+                if (subscription == null) {
+                    RedisConnection connection = Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection();
+                    connection.subscribe(new RedisPushListener(redisMqClient), unwrap(Collections.singletonList(holder)));
+                    subscription = connection.getSubscription();
+                } else {
+                    if (!subscription.isAlive()) {
+                        subscription.subscribe(unwrap(Collections.singletonList(holder)));
+                    }
+                }
+            }
+        });
+        thread.start();
     }
 
     //取消订阅
-    public synchronized void unSubscribe() {
-        if (isSub) {
-            RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.removeMessageListener(new RedisPushListener(redisMqClient), new ChannelTopic(RedisMQConstant.getTopic()));
-            isSub = false;
-        }
+//    public void unSubscribe() {
+//        if (subscription != null) {
+//            RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+//            ByteArrayWrapper holder = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(RedisMQConstant.getTopic())));
+//            subscription.unsubscribe(unwrap(Collections.singletonList(holder)));
+//
+//        }
+//    }
+
+    public synchronized void rebalanceSubscribe() {
+        RedisMqClient redisMqClient = this;
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                RedisSerializer<String> stringSerializer = redisTemplate.getStringSerializer();
+                ByteArrayWrapper byteArrayWrapper = new ByteArrayWrapper(Objects.requireNonNull(stringSerializer.serialize(getRebalanceTopic())));
+                Objects.requireNonNull(redisTemplate.getConnectionFactory()).getConnection().subscribe(new RedisRebalanceListener(redisMqClient), unwrap(Collections.singletonList(byteArrayWrapper)));
+                redisTemplate.getConnectionFactory().getConnection();
+            }
+        });
+        thread.start();
     }
 
-    public void rebalanceSubscribe() {
-        RedisMqClient redisMqClient = this;
-        redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient), new ChannelTopic(RedisMQConstant.getRebalanceTopic()));
+    protected byte[][] unwrap(Collection<ByteArrayWrapper> holders) {
+        if (CollectionUtils.isEmpty(holders)) {
+            return new byte[0][];
+        }
+
+        byte[][] unwrapped = new byte[holders.size()][];
+
+        int index = 0;
+        for (ByteArrayWrapper arrayHolder : holders) {
+            unwrapped[index++] = arrayHolder.getArray();
+        }
+        return unwrapped;
     }
 
     public void startRegisterClientTask() {
