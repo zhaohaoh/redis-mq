@@ -19,6 +19,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
@@ -90,12 +91,12 @@ public class RedisMqClient {
         removeAllClient();
         // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况 doReblance已经注册
 //        registerClient();
+        // 先订阅平衡消息,以免平衡的消息没有收到
+        rebalanceSubscribe();
         // 重平衡
         rebalance();
         //订阅push消息
 //        subscribe();
-        // 订阅平衡消息
-        rebalanceSubscribe();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
@@ -120,7 +121,7 @@ public class RedisMqClient {
         }
     }
 
-    private void rebalance() {
+    public void rebalance() {
         // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
         // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中

@@ -145,7 +145,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             continue;
                         }
                     } else {
-                        redisTemplate.opsForZSet().remove(queueName, value);
+                        Long remove = redisTemplate.opsForZSet().remove(queueName, value);
+                        if (remove == null || remove <= 0) {
+                            continue;
+                        }
                     }
                     try {
                         String id = super.getRunableKey(value.getTag());
