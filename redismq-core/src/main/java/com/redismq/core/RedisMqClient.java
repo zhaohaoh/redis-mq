@@ -92,12 +92,12 @@ public class RedisMqClient {
         removeAllClient();
         // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况 doReblance已经注册
 //        registerClient();
+        // 订阅平衡消息
+        rebalanceSubscribe();
         // 重平衡
         rebalance();
         //订阅push消息
         subscribe();
-        // 订阅平衡消息
-        rebalanceSubscribe();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
