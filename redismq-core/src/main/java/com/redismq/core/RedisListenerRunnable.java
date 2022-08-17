@@ -4,6 +4,7 @@ import com.redismq.Message;
 import com.redismq.constant.AckMode;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
+import com.redismq.queue.QueueManager;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,7 +134,8 @@ public class RedisListenerRunnable implements Runnable {
             Message message = (Message) args;
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
-                Long count = redisTemplate.opsForZSet().remove(message.getQueueName(), args);
+                String queueName = QueueManager.getQueueNameByVirtual(message.getVirtualQueueName());
+                Long count = redisTemplate.opsForZSet().remove(queueName, args);
                 localMessages.remove(message);
             }
         } finally {
@@ -160,8 +162,8 @@ public class RedisListenerRunnable implements Runnable {
             //参数是Message或者是实体类都可以
             if (paramType.equals(clone.getClass())) {
                 this.method.invoke(this.target, clone);
-            } else if (paramType.equals(clone.getContent().getClass())) {
-                this.method.invoke(this.target, clone.getContent());
+            } else if (paramType.equals(clone.getBody().getClass())) {
+                this.method.invoke(this.target, clone.getBody());
             }
             state.finsh();
             log.debug("redismq消息消费成功 tag:{}", message.getTag());

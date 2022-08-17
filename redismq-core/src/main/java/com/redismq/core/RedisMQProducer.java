@@ -3,6 +3,7 @@ package com.redismq.core;
 import com.redismq.Message;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
+import com.redismq.exception.QueueFullException;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.Queue;
@@ -62,20 +63,22 @@ public class RedisMQProducer {
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queueName) {
-        Queue queue = hasQueue(queueName);
+    public boolean sendMessage(Object obj, String topic) {
+        Queue queue = hasQueue(topic);
         Message message = new Message();
-        message.setContent(obj);
+        message.setTopic(topic);
+        message.setBody(obj);
         return sendMessage(queue, message, null);
     }
 
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queueName, String tag) {
-        Queue queue = hasQueue(queueName);
+    public boolean sendMessage(Object obj, String topic, String tag) {
+        Queue queue = hasQueue(topic);
         Message message = new Message();
-        message.setContent(obj);
+        message.setTopic(topic);
+        message.setBody(obj);
         message.setTag(tag);
         return sendMessage(queue, message, null);
     }
@@ -83,10 +86,11 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String queueName, String tag, Integer delayTime) {
-        Queue queue = hasDelayQueue(queueName);
+    public boolean sendDelayMessage(Object obj, String topic, String tag, Integer delayTime) {
+        Queue queue = hasDelayQueue(topic);
         Message message = new Message();
-        message.setContent(obj);
+        message.setTopic(topic);
+        message.setBody(obj);
         message.setTag(tag);
         long executorTime = System.currentTimeMillis() + (delayTime * 1000);
         return RedisMQProducer.this.sendMessage(queue, message, executorTime);
@@ -95,10 +99,11 @@ public class RedisMQProducer {
     /**
      * 发送定时消息
      */
-    public boolean sendTimingMessage(Object obj, String queueName, String tag, Long executorTime) {
-        Queue queue = hasDelayQueue(queueName);
+    public boolean sendTimingMessage(Object obj, String topic, String tag, Long executorTime) {
+        Queue queue = hasDelayQueue(topic);
         Message message = new Message();
-        message.setContent(obj);
+        message.setTopic(topic);
+        message.setBody(obj);
         message.setTag(tag);
         return RedisMQProducer.this.sendMessage(queue, message, executorTime);
     }
@@ -128,8 +133,8 @@ public class RedisMQProducer {
             List<String> list = new ArrayList<>();
             list.add(queue.getQueueName() + SPLITE + num);
             list.add(RedisMQConstant.getTopic());
-            message.setQueueName(queue.getQueueName() + SPLITE + num);
-            Long size = -1L;
+            message.setVirtualQueueName(queue.getQueueName() + SPLITE + num);
+            Long size = -2L;
             int count = 0;
             beforeSend(message);
             // 发送的重试 如果redis中数量超过1万也会重试.
@@ -148,8 +153,12 @@ public class RedisMQProducer {
                     return true;
                 }
             }
-            log.error("RedisMQ Producer Queue Full");
-            onFail(message, null);
+            if (size == -1L) {
+                log.error("RedisMQ Producer Queue Full");
+                onFail(message, new QueueFullException("RedisMQ Producer Queue Full"));
+            } else {
+                onFail(message, null);
+            }
             return false;
         } catch (Exception e) {
             log.error("RedisMQ Send Message Fail", e);
@@ -191,9 +200,9 @@ public class RedisMQProducer {
     }
 
 
-    private Queue hasQueue(String name) {
-        name = RedisMQConstant.getQueueName(name);
-        Queue queue = QueueManager.getQueue(name);
+    private Queue hasQueue(String topic) {
+        String queueName = RedisMQConstant.getQueueNameByTopic(topic);
+        Queue queue = QueueManager.getQueue(queueName);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
         }
@@ -203,9 +212,9 @@ public class RedisMQProducer {
         return queue;
     }
 
-    private Queue hasDelayQueue(String name) {
-        name = RedisMQConstant.getQueueName(name);
-        Queue queue = QueueManager.getQueue(name);
+    private Queue hasDelayQueue(String topic) {
+        String queueName = RedisMQConstant.getQueueNameByTopic(topic);
+        Queue queue = QueueManager.getQueue(queueName);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
         }

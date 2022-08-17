@@ -2,6 +2,7 @@ package com.redismq.queue;
 
 
 import com.redismq.constant.RedisMQConstant;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +23,7 @@ public class QueueManager {
     public static int VIRTUAL_QUEUES_NUM;
 
     public static Queue registerQueue(Queue queue) {
-        queue.setQueueName(RedisMQConstant.getQueueName(queue.getQueueName()));
+        queue.setQueueName(RedisMQConstant.getQueueNameByTopic(queue.getQueueName()));
         String queueName = queue.getQueueName();
         Queue returnQueue = QUEUES.computeIfAbsent(queueName, q -> queue);
         returnQueue.setVirtual(QueueManager.VIRTUAL_QUEUES_NUM);
@@ -53,5 +54,8 @@ public class QueueManager {
 
     public static Queue getQueue(String name) {
         return QUEUES.get(name) != null ? QUEUES.get(name) : null;
+    }
+    public static String getQueueNameByVirtual(String virtual) {
+       return StringUtils.substringBeforeLast(virtual, SPLITE);
     }
 }

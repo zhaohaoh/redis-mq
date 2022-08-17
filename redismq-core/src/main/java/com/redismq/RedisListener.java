@@ -6,8 +6,8 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface RedisListener {
-    //队列名
-    String queue() default "";
+    // topic
+    String topic() default "";
 
     //重试次数 默认配置文件上是0
     int retryMax() default -1;
@@ -28,7 +28,7 @@ public @interface RedisListener {
     String tag() default "";
 
     //名称完全对应的topic  发布订阅使用
-    String topic() default "";
+    String channelTopic() default "";
 
     // 虚拟队列数量 默认-1
     int virtual() default -1;

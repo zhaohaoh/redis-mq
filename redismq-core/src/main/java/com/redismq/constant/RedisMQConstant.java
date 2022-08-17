@@ -17,8 +17,8 @@ public class RedisMQConstant {
 
     public static final String REDISMQ_REBALANCE_LOCK = "REBALANCE_LOCK";
 
-    public static String getQueueName(String queueName) {
-        return PREFIX + CLUSTER + SPLITE + queueName;
+    public static String getQueueNameByTopic(String topic) {
+        return PREFIX + CLUSTER + SPLITE + topic;
     }
 
     public static String getTopic() {

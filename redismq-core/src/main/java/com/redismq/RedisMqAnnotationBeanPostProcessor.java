@@ -1,7 +1,6 @@
 package com.redismq;
 
 
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
@@ -73,7 +72,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             } else {
                 //校验重复队列名的注解
                 Collection<RedisListener> values = annotatedMethods.values();
-                Map<String, List<RedisListener>> listMap = values.stream().collect(Collectors.groupingBy(RedisListener::queue));
+                Map<String, List<RedisListener>> listMap = values.stream().collect(Collectors.groupingBy(RedisListener::topic));
                 listMap.forEach((k, v) -> {
                     if (StringUtils.isBlank(k)) {
                         throw new RedisMqException("redismq queue name not null");
@@ -99,12 +98,13 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     //处理RedisListener注解
     private void process(RedisListener redisListener, Method method, Object bean) {
         //添加订阅监听类  为了快速使用spring封装好的监听容器.  发布订阅的实现
-        if (StringUtils.isNotBlank(redisListener.topic())) {
+        if (StringUtils.isNotBlank(redisListener.channelTopic())) {
             handlerPubSub(redisListener, method, bean);
             return;
         }
         Queue queue = new Queue();
-        queue.setQueueName(redisListener.queue());
+        // 注册时会加入组名
+        queue.setQueueName(redisListener.topic());
         //注解中有配置以注解的配置优先
         if (redisListener.concurrency() > 0) {
             queue.setConcurrency(redisListener.concurrency());
@@ -248,6 +248,6 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         listener.setSerializer(jacksonSeial);
         listener.afterPropertiesSet();
         //名称完全对应的topic
-        container.addMessageListener(listener, new ChannelTopic(redisListener.topic()));
+        container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));
     }
 }

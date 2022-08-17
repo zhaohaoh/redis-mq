@@ -1,10 +1,16 @@
 package com.redismq;
 
+import com.redismq.core.RedisListenerRunnable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.util.Objects;
 import java.util.UUID;
 
 public class Message implements Serializable {
+    protected final Logger log = LoggerFactory.getLogger(Message.class);
+    private static final long serialVersionUID = 1L;
     public Message deepClone() {
         Message outer = null;
         try { // 将该对象序列化成流,因为写在流里的是对象的一个拷贝，而原对象仍然存在于JVM里面。所以利用这个特性可以实现对象的深拷贝
@@ -16,28 +22,27 @@ public class Message implements Serializable {
             ObjectInputStream ois = new ObjectInputStream(bais);
             outer = (Message) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            e.printStackTrace();
+            log.error("Message deepClone IOException|ClassNotFoundException", e);
         }
         return outer;
     }
 
-    private static final long serialVersionUID = 1L;
+    private Object body;
 
-    private Object content;
     private String id = UUID.randomUUID().toString().replace("-", "");
-    private Long tenantId;
-    private Boolean restartState = false;
+
+    private String topic;
     //默认根据字符串匹配
     private String tag = "";
 
-    private String queueName;
+    private String virtualQueueName;
 
-    public String getQueueName() {
-        return queueName;
+    public String getVirtualQueueName() {
+        return virtualQueueName;
     }
 
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
+    public void setVirtualQueueName(String virtualQueueName) {
+        this.virtualQueueName = virtualQueueName;
     }
 
     public String getTag() {
@@ -48,21 +53,6 @@ public class Message implements Serializable {
         this.tag = tag;
     }
 
-    public Long getTenantId() {
-        return tenantId;
-    }
-
-    public void setTenantId(Long tenantId) {
-        this.tenantId = tenantId;
-    }
-
-    public Boolean getRestartState() {
-        return restartState;
-    }
-
-    public void setRestartState(Boolean restartState) {
-        this.restartState = restartState;
-    }
 
     public String getId() {
         return id;
@@ -72,12 +62,20 @@ public class Message implements Serializable {
         this.id = id;
     }
 
-    public Object getContent() {
-        return content;
+    public Object getBody() {
+        return body;
     }
 
-    public void setContent(Object content) {
-        this.content = content;
+    public void setBody(Object body) {
+        this.body = body;
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
     }
 
     @Override
@@ -85,11 +83,11 @@ public class Message implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Message message = (Message) o;
-        return Objects.equals(content, message.content) && Objects.equals(id, message.id) && Objects.equals(tenantId, message.tenantId) && Objects.equals(restartState, message.restartState) && Objects.equals(tag, message.tag) && Objects.equals(queueName, message.queueName);
+        return Objects.equals(log, message.log) && Objects.equals(body, message.body) && Objects.equals(id, message.id) && Objects.equals(tag, message.tag) && Objects.equals(virtualQueueName, message.virtualQueueName) && Objects.equals(topic, message.topic);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(content, id, tenantId, restartState, tag, queueName);
+        return Objects.hash(log, body, id, tag, virtualQueueName, topic);
     }
 }
