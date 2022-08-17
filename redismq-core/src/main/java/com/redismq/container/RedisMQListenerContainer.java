@@ -175,6 +175,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 //                    log.error("redismq [ERROR] ClassCastException",e);
 //                    stop();
 //                }
+                try {
+                    Thread.sleep(5000L);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
                 semaphore.release();
             }
         }

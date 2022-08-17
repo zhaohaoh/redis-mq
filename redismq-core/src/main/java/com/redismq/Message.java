@@ -9,8 +9,8 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class Message implements Serializable {
-    protected final Logger log = LoggerFactory.getLogger(Message.class);
     private static final long serialVersionUID = 1L;
+
     public Message deepClone() {
         Message outer = null;
         try { // 将该对象序列化成流,因为写在流里的是对象的一个拷贝，而原对象仍然存在于JVM里面。所以利用这个特性可以实现对象的深拷贝
@@ -22,7 +22,7 @@ public class Message implements Serializable {
             ObjectInputStream ois = new ObjectInputStream(bais);
             outer = (Message) ois.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            log.error("Message deepClone IOException|ClassNotFoundException", e);
+            e.printStackTrace();
         }
         return outer;
     }
@@ -83,11 +83,11 @@ public class Message implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Message message = (Message) o;
-        return Objects.equals(log, message.log) && Objects.equals(body, message.body) && Objects.equals(id, message.id) && Objects.equals(tag, message.tag) && Objects.equals(virtualQueueName, message.virtualQueueName) && Objects.equals(topic, message.topic);
+        return Objects.equals(body, message.body) && Objects.equals(id, message.id) && Objects.equals(topic, message.topic) && Objects.equals(tag, message.tag) && Objects.equals(virtualQueueName, message.virtualQueueName);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(log, body, id, tag, virtualQueueName, topic);
+        return Objects.hash(body, id, topic, tag, virtualQueueName);
     }
 }
