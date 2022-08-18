@@ -5,6 +5,7 @@ import static com.redismq.constant.QueueConstant.SPLITE;
 
 public class RedisMQConstant {
     public static String CLUSTER;
+    public static final String DEAD_NAME = "DEAD";
     public static final String PREFIX = "REDISMQ_";
     // 内部发布订阅消息的topic
     public static final String TOPIC = "PUSH_TOPIC";
@@ -19,6 +20,10 @@ public class RedisMQConstant {
 
     public static String getQueueNameByTopic(String topic) {
         return PREFIX + CLUSTER + SPLITE + topic;
+    }
+
+    public static String getDeadQueueNameByTopic(String topic) {
+        return PREFIX + CLUSTER + DEAD_NAME + SPLITE + topic;
     }
 
     public static String getTopic() {

@@ -2,6 +2,7 @@ package com.redismq.core;
 
 import com.redismq.Message;
 import com.redismq.constant.AckMode;
+import com.redismq.LocalMessageManager;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
@@ -14,7 +15,6 @@ import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,8 +37,7 @@ public class RedisListenerRunnable implements Runnable {
     private Integer retryInterval;
     //真实队列名
     private String queueName;
-    //本地消息表
-    private Set<Message> localMessages;
+
     private List<ConsumeInterceptor> consumeInterceptors;
 
     public List<ConsumeInterceptor> getConsumeInterceptors() {
@@ -49,9 +48,6 @@ public class RedisListenerRunnable implements Runnable {
         this.consumeInterceptors = consumeInterceptors;
     }
 
-    public void setLocalMessages(Set<Message> localMessages) {
-        this.localMessages = localMessages;
-    }
 
     public String getQueueName() {
         return queueName;
@@ -131,14 +127,17 @@ public class RedisListenerRunnable implements Runnable {
             do {
                 run0(atomicInteger);
             } while (state.isActive());
+        } catch (Exception e) {
+            onFail((Message) args, e);
+        } finally {
             Message message = (Message) args;
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
                 String queueName = QueueManager.getQueueNameByVirtual(message.getVirtualQueueName());
                 Long count = redisTemplate.opsForZSet().remove(queueName, args);
-                localMessages.remove(message);
+                redisTemplate.delete(message.getId());
+                LocalMessageManager.LOCAL_MESSAGES.remove(message.getId());
             }
-        } finally {
             if (semaphore != null) {
                 semaphore.release();
             }
@@ -166,24 +165,22 @@ public class RedisListenerRunnable implements Runnable {
                 this.method.invoke(this.target, clone.getBody());
             }
             state.finsh();
-            log.debug("redismq消息消费成功 tag:{}", message.getTag());
+            log.debug("redismq consumeMessage success topic:{} tag:{}", message.getTopic(), message.getTag());
             afterConsume(clone);
         } catch (Exception e) {
-            log.error("redismq 执行失败", e);
-            if (AckMode.MAUAL.equals(ackMode) && i > retryMax) {
+            log.error("RedisListenerRunnable consumeMessage run ERROR:", e);
+            if (i > retryMax) {
                 state.cancel();
-                log.error("redismq 手动ack执行失败超过指定次数:{} 任务取消", retryMax);
-            } else if (AckMode.AUTO.equals(ackMode)) {
-                state.cancel();
+                log.error("redismq run0 retryMax:{} Cancel", retryMax);
+                throw new RedisMqException("RedisListenerRunnable retryMax run0:", e);
             } else {
                 try {
                     Thread.sleep(retryInterval);
                 } catch (InterruptedException interruptedException) {
-                    log.error("redismq 执行失败睡眠重试InterruptedException", interruptedException);
+                    log.error("redismq consumeMessage InterruptedException", interruptedException);
                     Thread.currentThread().interrupt();
                 }
             }
-            onFail((Message) args, e);
         }
     }
 
@@ -198,7 +195,7 @@ public class RedisListenerRunnable implements Runnable {
     private Message beforeConsume(Message args) {
         if (!CollectionUtils.isEmpty(consumeInterceptors)) {
             for (ConsumeInterceptor consumeInterceptor : consumeInterceptors) {
-                args = consumeInterceptor.beforeConsume(args);
+                consumeInterceptor.beforeConsume(args);
             }
         }
         return args;

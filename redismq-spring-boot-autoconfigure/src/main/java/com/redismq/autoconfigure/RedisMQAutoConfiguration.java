@@ -16,7 +16,7 @@ import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -167,6 +167,11 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         return template;
     }
 
+    @Bean
+    @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable",havingValue = "true")
+    public RedisDeadQueueHandleInterceptor redisDeadQueueHandleInterceptor() {
+        return new RedisDeadQueueHandleInterceptor(redisTemplate);
+    }
 
     @Override
     public void afterPropertiesSet() throws Exception {

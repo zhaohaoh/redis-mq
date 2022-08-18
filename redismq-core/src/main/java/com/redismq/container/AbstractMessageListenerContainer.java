@@ -14,6 +14,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
 import static com.redismq.constant.QueueConstant.SPLITE;
@@ -22,10 +23,7 @@ import static com.redismq.constant.QueueConstant.SPLITE;
  * 容器抽象类
  */
 public abstract class AbstractMessageListenerContainer {
-    /**
-     * 本地消息表
-     */
-    protected final Set<Message> localMessages = Sets.newConcurrentHashSet();
+
     /**
      * 队列名
      */
@@ -203,7 +201,6 @@ public abstract class AbstractMessageListenerContainer {
         runnable.setAckMode(this.getAckMode());
         runnable.setRetryInterval(this.getRetryInterval());
         runnable.setQueueName(queueName);
-        runnable.setLocalMessages(localMessages);
         runnable.setConsumeInterceptors(consumeInterceptorList);
         return runnable;
     }

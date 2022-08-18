@@ -186,7 +186,7 @@ public class RedisMQProducer {
     private Message beforeSend(Message message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             for (ProducerInterceptor interceptor : producerInterceptors) {
-                message = interceptor.beforeSend(message);
+                 interceptor.beforeSend(message);
             }
         }
         return message;

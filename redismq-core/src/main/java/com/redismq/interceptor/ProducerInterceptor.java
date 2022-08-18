@@ -8,9 +8,15 @@ import com.redismq.Message;
  */
 public interface ProducerInterceptor {
     // 发送前回调
-    Message beforeSend(Message message);
-    // 发送后回调
-    void afterSend(Message message);
+    default void beforeSend(Message message) {
+    }
+
+    // 发送后
+    default void afterSend(Message message) {
+
+    }
     // 失败回调
-    void onFail(Message message,Exception e);
+    default void onFail(Message message, Exception e) {
+
+    }
 }

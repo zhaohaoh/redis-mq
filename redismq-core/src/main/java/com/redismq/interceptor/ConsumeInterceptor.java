@@ -8,11 +8,16 @@ import com.redismq.Message;
  */
 public interface ConsumeInterceptor {
     // 消费前回调
-    Message beforeConsume(Message message);
+    default void beforeConsume(Message message) {
+    }
 
     // 消费后
-    void afterConsume(Message message);
+    default void afterConsume(Message message) {
+
+    }
 
     // 失败回调
-    void onFail(Message message, Exception e);
+    default void onFail(Message message, Exception e) {
+
+    }
 }

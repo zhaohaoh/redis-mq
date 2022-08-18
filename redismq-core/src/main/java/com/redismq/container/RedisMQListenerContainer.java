@@ -1,8 +1,8 @@
 package com.redismq.container;
 
 
+import com.redismq.LocalMessageManager;
 import com.redismq.Message;
-import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
@@ -14,12 +14,11 @@ import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.util.CollectionUtils;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -30,7 +29,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     protected static final Logger log = LoggerFactory.getLogger(RedisMQListenerContainer.class);
+    private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
     private final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
+    private volatile ScheduledFuture<?> scheduledFuture;
     private final ThreadPoolExecutor boss = new ThreadPoolExecutor(1, 1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
@@ -100,6 +101,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
     public RedisMQListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue registerQueue) {
         super(redisListenerContainerFactory, registerQueue);
+        lifeExtension();
     }
 
     public Set<Long> pop(String queueName) {
@@ -108,10 +110,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             try {
                 //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
                 long pullTime = System.currentTimeMillis();
-                Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, localMessages.size(), super.maxConcurrency);
+                Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, LocalMessageManager.LOCAL_MESSAGES.size(), super.maxConcurrency);
                 if (CollectionUtils.isEmpty(tuples)) {
                     //本地消息没有消费完就先不取延时任务的.
-                    if (localMessages.size() > 0) {
+                    if (LocalMessageManager.LOCAL_MESSAGES.size() > 0) {
                         Thread.sleep(200L);
                         continue;
                     }
@@ -128,7 +130,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     break;
                 }
                 for (ZSetOperations.TypedTuple<Object> tuple : tuples) {
-                    Message value = (Message) tuple.getValue();
+                    Message message = (Message) tuple.getValue();
                     try {
                         semaphore.acquire();
                     } catch (InterruptedException e) {
@@ -139,28 +141,36 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         Thread.currentThread().interrupt();
                     }
                     //手动ack
-                    if (AckMode.MAUAL.equals(ackMode)) {
-                        boolean success = localMessages.add(value);
-                        if (!success) {
-                            continue;
-                        }
-                    } else {
-                        Long remove = redisTemplate.opsForZSet().remove(queueName, value);
-                        if (remove == null || remove <= 0) {
-                            continue;
-                        }
-                    }
+                    Boolean success = null;
                     try {
-                        String id = super.getRunableKey(value.getTag());
-                        RedisListenerRunnable runnable = super.createRedisListenerRunnable(id, value);
+                        if (AckMode.MAUAL.equals(ackMode)) {
+                            success = redisTemplate.opsForValue().setIfAbsent(message.getId(), "", Duration.ofSeconds(60));
+                            if (success == null || !success) {
+                                continue;
+                            }
+                            Message msg = LocalMessageManager.LOCAL_MESSAGES.putIfAbsent(message.getId(), message);
+                            if (msg != null) {
+                                continue;
+                            }
+                        } else {
+                            Long remove = redisTemplate.opsForZSet().remove(queueName, message);
+                            if (remove == null || remove <= 0) {
+                                continue;
+                            }
+                        }
+                        String id = super.getRunableKey(message.getTag());
+                        RedisListenerRunnable runnable = super.createRedisListenerRunnable(id, message);
                         if (runnable == null) {
                             throw new RedisMqException("redismq not found tag runnable");
                         }
                         // 多线程执行完毕后semaphore.release();
                         work.execute(runnable);
                     } catch (Exception e) {
-                        //如果跑错直接释放资源，否则线程执行完毕才释放
                         log.error("redismq listener container error  semaphore:{}", semaphore.toString(), e);
+                        //如果异常直接释放资源，否则线程执行完毕才释放
+                        if (success != null && success) {
+                            redisTemplate.delete(message.getId());
+                        }
                         semaphore.release();
                     }
                 }
@@ -216,12 +226,54 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         return nextTimeSet;
                     }
                 }
+//                lifeExtensionCancel();
                 return nextTimeSet;
             }
         });
         delayTimeoutTaskManager.schedule(task1, startTime);
     }
 
+    private void lifeExtension() {
+        if (AckMode.MAUAL.equals(ackMode)) {
+            if (scheduledFuture == null || scheduledFuture.isCancelled()) {
+                scheduledFuture = lifeExtensionThread.scheduleAtFixedRate(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!CollectionUtils.isEmpty(LocalMessageManager.LOCAL_MESSAGES)) {
+                            for (Message message : LocalMessageManager.LOCAL_MESSAGES.values()) {
+                                String messageId = message.getId();
+                                String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
+                                        "redis.call('expire', KEYS[1], 60); " +
+                                        "return 1; " +
+                                        "end; " +
+                                        "return 0;";
+                                try {
+                                    DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
+                                    List<String> list = new ArrayList<>();
+                                    list.add(messageId);
+                                    redisTemplate.execute(redisScript, list);
+//                                redisTemplate.expire(messageId, Duration.ofSeconds(60));
+                                } catch (Exception e) {
+                                    log.error("lifeExtension  redisTemplate.expire Exception", e);
+                                }
+                            }
+                        }
+                    }
+                }, 60, 30, TimeUnit.SECONDS);
+            }
+        }
+    }
+    // 不做取消的逻辑.在并发量大的时候频繁取消反而消耗性能.
+//    private void lifeExtensionCancel() {
+//        try {
+//            if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+//                boolean cancel = scheduledFuture.cancel(false);
+//                scheduledFuture = null;
+//            }
+//        } catch (Exception e) {
+//            log.error("lifeExtensionCancel Exception:", e);
+//        }
+//    }
 
 //原来在pop()方法下面
 //                String script = "local expiredValues = redis.call('zrangebyscore', KEYS[2], 0, ARGV[1], 'limit', 0, ARGV[2]);\n" +
