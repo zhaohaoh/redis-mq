@@ -58,7 +58,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
     private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
             60L, TimeUnit.SECONDS,
-            new LinkedBlockingDeque<>(getConcurrency()), new ThreadFactory() {
+            new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
         private static final String NAME_PREFIX = "redis-mq-delay-work-";
