@@ -37,7 +37,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "redis-mq-delay-boss-";
+        private static final String NAME_PREFIX = "REDIS-MQ-BOSS-";
 
         {
             SecurityManager s = System.getSecurityManager();
@@ -61,7 +61,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "redis-mq-delay-work-";
+        private static final String NAME_PREFIX = "REDIS-MQ-WORK-";
 
         {
             SecurityManager s = System.getSecurityManager();
