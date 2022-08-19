@@ -5,6 +5,7 @@ import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
+import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.interceptor.ProducerInterceptor;
@@ -168,7 +169,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     }
 
     @Bean
-    @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable",havingValue = "true")
+    @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable", havingValue = "true")
     public RedisDeadQueueHandleInterceptor redisDeadQueueHandleInterceptor() {
         return new RedisDeadQueueHandleInterceptor(redisTemplate);
     }

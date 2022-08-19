@@ -174,6 +174,12 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             if (queue.getRetryMax() == null) {
                 queue.setRetryMax(containerFactory.getRetryMax());
             }
+            if (queue.getConcurrency() > queue.getMaxConcurrency()) {
+                throw new RedisMqException("MaxConcurrency cannot be less than Concurrency");
+            }
+            if (queue.getRetryMax() > 10) {
+                throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
+            }
             AbstractMessageListenerContainer listenerContainer = containerFactory.createListenerContainer(queue);
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);

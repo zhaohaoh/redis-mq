@@ -58,7 +58,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
     private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
             60L, TimeUnit.SECONDS,
-            new LinkedBlockingDeque<>(100), new ThreadFactory() {
+            new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
         private static final String NAME_PREFIX = "redis-mq-delay-work-";
@@ -134,9 +134,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     try {
                         semaphore.acquire();
                     } catch (InterruptedException e) {
-                        log.info("redismq acquire semaphore InterruptedException", e);
                         if (isRunning()) {
-                            log.error("redismq acquire semaphore error", e);
+                            log.info("redismq acquire semaphore InterruptedException", e);
                         }
                         Thread.currentThread().interrupt();
                     }
@@ -166,29 +165,33 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         // 多线程执行完毕后semaphore.release();
                         work.execute(runnable);
                     } catch (Exception e) {
-                        log.error("redismq listener container error  semaphore:{}", semaphore.toString(), e);
-                        //如果异常直接释放资源，否则线程执行完毕才释放
-                        if (success != null && success) {
-                            redisTemplate.delete(message.getId());
+                        if (isRunning()) {
+                            log.error("redismq listener container error ", e);
+                            //如果异常直接释放资源，否则线程执行完毕才释放
+                            if (success != null && success) {
+                                redisTemplate.delete(message.getId());
+                            }
                         }
                         semaphore.release();
                     }
                 }
             } catch (Exception e) {
-                //报错需要  semaphore.release();
-                log.error("redismq pop error", e);
-                if (e.getMessage().contains("WRONGTYPE Operation against a key holding the wrong kind of value")) {
-                    log.error("redismq [ERROR] queue not is zset type。 cancel pop");
-                    stop();
-                }
+                if (isRunning()) {
+                    //报错需要  semaphore.release();
+                    log.error("redismq pop error", e);
+                    if (e.getMessage().contains("WRONGTYPE Operation against a key holding the wrong kind of value")) {
+                        log.error("redismq [ERROR] queue not is zset type。 cancel pop");
+                        stop();
+                    }
 //                if (e instanceof ClassCastException){
 //                    log.error("redismq [ERROR] ClassCastException",e);
 //                    stop();
 //                }
-                try {
-                    Thread.sleep(5000L);
-                } catch (InterruptedException ex) {
-                    Thread.currentThread().interrupt();
+                    try {
+                        Thread.sleep(5000L);
+                    } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
                 semaphore.release();
             }
@@ -254,7 +257,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                                     redisTemplate.execute(redisScript, list);
 //                                redisTemplate.expire(messageId, Duration.ofSeconds(60));
                                 } catch (Exception e) {
-                                    log.error("lifeExtension  redisTemplate.expire Exception", e);
+                                    if (isRunning()) {
+                                        log.error("lifeExtension  redisTemplate.expire Exception", e);
+                                    }
                                 }
                             }
                         }

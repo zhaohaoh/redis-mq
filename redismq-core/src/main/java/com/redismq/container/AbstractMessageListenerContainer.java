@@ -169,16 +169,11 @@ public abstract class AbstractMessageListenerContainer {
         return retryInterval;
     }
 
-    public boolean isBusy() {
-        return state == BUSY;
+    public boolean isStop() {
+        return state == STOP;
     }
-
     public boolean isRunning() {
         return state == RUNNING;
-    }
-
-    public void busy() {
-        state = BUSY;
     }
 
     public void running() {
