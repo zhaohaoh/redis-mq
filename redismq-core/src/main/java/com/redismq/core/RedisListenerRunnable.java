@@ -133,8 +133,7 @@ public class RedisListenerRunnable implements Runnable {
             Message message = (Message) args;
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
-                String queueName = QueueManager.getQueueNameByVirtual(message.getVirtualQueueName());
-                Long count = redisTemplate.opsForZSet().remove(queueName, args);
+                Long count = redisTemplate.opsForZSet().remove(message.getVirtualQueueName(), args);
                 redisTemplate.delete(message.getId());
                 LocalMessageManager.LOCAL_MESSAGES.remove(message.getId());
             }
