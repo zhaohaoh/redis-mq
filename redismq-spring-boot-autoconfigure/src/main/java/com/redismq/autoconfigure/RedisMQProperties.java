@@ -12,7 +12,7 @@ public class RedisMQProperties {
     /**
      * 最大消费者
      */
-    private int maxConcurrency = 1;
+    private int maxConcurrency = 32;
     /**
      * 消费者重试次数
      */
