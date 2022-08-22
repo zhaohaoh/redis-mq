@@ -1,5 +1,6 @@
 package com.redismq;
 
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.redismq.core.RedisListenerRunnable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ public class Message implements Serializable {
 
     private Object body;
 
-    private String id = UUID.randomUUID().toString().replace("-", "");
+    private String id = NanoIdUtils.randomNanoId();
 
     private String topic;
     //默认根据字符串匹配

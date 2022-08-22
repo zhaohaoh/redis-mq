@@ -3,6 +3,7 @@ package com.redismq.core;
 import com.redismq.Message;
 import com.redismq.constant.AckMode;
 import com.redismq.LocalMessageManager;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
@@ -134,7 +135,7 @@ public class RedisListenerRunnable implements Runnable {
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
                 Long count = redisTemplate.opsForZSet().remove(message.getVirtualQueueName(), args);
-                redisTemplate.delete(message.getId());
+                redisTemplate.delete(RedisMQConstant.getMaualLock(message.getId()));
                 LocalMessageManager.LOCAL_MESSAGES.remove(message.getId());
             }
             if (semaphore != null) {

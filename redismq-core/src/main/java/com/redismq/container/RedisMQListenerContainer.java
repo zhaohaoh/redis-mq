@@ -22,6 +22,8 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.redismq.constant.RedisMQConstant.getMaualLock;
+
 /**
  * @author hzh
  * @date 2021/8/10
@@ -143,7 +145,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     Boolean success = null;
                     try {
                         if (AckMode.MAUAL.equals(ackMode)) {
-                            success = redisTemplate.opsForValue().setIfAbsent(message.getId(), "", Duration.ofSeconds(60));
+                            success = redisTemplate.opsForValue().setIfAbsent(getMaualLock(message.getId()), "", Duration.ofSeconds(60));
                             if (success == null || !success) {
                                 continue;
                             }
@@ -158,7 +160,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             }
                         }
                         String id = super.getRunableKey(message.getTag());
-                        RedisListenerRunnable runnable = super.createRedisListenerRunnable(id, message);
+                        RedisListenerRunnable runnable = super.getRedisListenerRunnable(id, message);
                         if (runnable == null) {
                             throw new RedisMqException("redismq not found tag runnable");
                         }
@@ -253,7 +255,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                                 try {
                                     DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
                                     List<String> list = new ArrayList<>();
-                                    list.add(messageId);
+                                    list.add(getMaualLock(messageId));
                                     redisTemplate.execute(redisScript, list);
 //                                redisTemplate.expire(messageId, Duration.ofSeconds(60));
                                 } catch (Exception e) {

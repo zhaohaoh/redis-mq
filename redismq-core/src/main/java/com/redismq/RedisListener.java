@@ -25,7 +25,7 @@ public @interface RedisListener {
     boolean delay() default false;
 
     //路由的key 默认default。如果有一个队列不填写tag那么他默认是default存入map中并且取。实现了默认不配置队列也有routingKey
-    String tag() default "";
+    String[] tag() default "";
 
     //名称完全对应的topic  发布订阅使用
     String channelTopic() default "";

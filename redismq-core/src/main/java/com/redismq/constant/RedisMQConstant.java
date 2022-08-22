@@ -46,4 +46,7 @@ public class RedisMQConstant {
         return PREFIX + CLUSTER + SPLITE + REDIS_MQ_SEND_MSG_INCREMENT;
     }
 
+    public static String getMaualLock(String messageId) {
+        return PREFIX + CLUSTER + "_MAUAL_LOCK" + SPLITE + messageId;
+    }
 }

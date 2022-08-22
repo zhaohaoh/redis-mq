@@ -131,7 +131,7 @@ public class RedisListenerContainerManager {
     public void registerContainer(AbstractMessageListenerContainer listenerContainer, List<RedisListenerEndpoint> redisListenerEndpoints) {
         //id是队列的名称
         AbstractMessageListenerContainer container = redisDelayListenerContainerMap.computeIfAbsent(listenerContainer.getQueueName(), c -> listenerContainer);
-        // 端点的容器
+        // 端点的容器 id是queue:tag
         Map<String, RedisListenerEndpoint> redisListenerEndpointMap = redisListenerEndpoints.stream().collect(
                 Collectors.toMap(RedisListenerEndpoint::getId, r -> r));
         container.setRedisListenerEndpointMap(redisListenerEndpointMap);

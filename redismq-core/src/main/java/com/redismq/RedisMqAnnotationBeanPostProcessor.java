@@ -77,7 +77,11 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                     if (StringUtils.isBlank(k)) {
                         throw new RedisMqException("redismq queue name not null");
                     }
-                    List<String> nameList = v.stream().map(RedisListener::tag).collect(Collectors.toList());
+                    List<String[]> list = v.stream().map(RedisListener::tag).collect(Collectors.toList());
+                    List<String> nameList = new ArrayList<>();
+                    for (String[] tags : list) {
+                        nameList.addAll(Arrays.stream(tags).collect(Collectors.toList()));
+                    }
                     if (nameList.stream().distinct().count() != nameList.size()) {
                         throw new RedisMqException("redismq  duplicate routingkey");
                     }
@@ -128,13 +132,16 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         //反射获取方法
         Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
         //监听端点 封装方法名 bean名字 和routingKey一对一。一个队列可能有多个
-        RedisListenerEndpoint redisListenerEndpoint = new RedisListenerEndpoint();
-        redisListenerEndpoint.setTag(redisListener.tag());
-        redisListenerEndpoint.setBean(bean);
-        redisListenerEndpoint.setMethod(invocableMethod);
-        redisListenerEndpoint.setId(registerQueue.getQueueName() + SPLITE + redisListener.tag());
+
         List<RedisListenerEndpoint> redisListenerEndpoints = redisListenerEndpointMap.computeIfAbsent(queue.getQueueName(), q -> new ArrayList<>());
-        redisListenerEndpoints.add(redisListenerEndpoint);
+        for (String tag : redisListener.tag()) {
+            RedisListenerEndpoint redisListenerEndpoint = new RedisListenerEndpoint();
+            redisListenerEndpoint.setTag(tag);
+            redisListenerEndpoint.setBean(bean);
+            redisListenerEndpoint.setMethod(invocableMethod);
+            redisListenerEndpoint.setId(registerQueue.getQueueName() + SPLITE + tag);
+            redisListenerEndpoints.add(redisListenerEndpoint);
+        }
     }
 
     @Override
@@ -160,8 +167,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         RedisTemplate<String, Object> redisTemplate = applicationContext.getBean("redisMQRedisTemplate", RedisTemplate.class);
         containerFactory.setRedisTemplate(redisTemplate);
         //没有配置取全局配置
-        queues.forEach((k, queue) -> {
-            List<RedisListenerEndpoint> listenerEndpoints = redisListenerEndpointMap.get(k);
+        queues.forEach((name, queue) -> {
+            List<RedisListenerEndpoint> listenerEndpoints = redisListenerEndpointMap.get(name);
             if (queue.getConcurrency() == null) {
                 queue.setConcurrency(containerFactory.getConcurrency());
             }

@@ -184,7 +184,7 @@ public abstract class AbstractMessageListenerContainer {
         return ackMode;
     }
 
-    protected RedisListenerRunnable createRedisListenerRunnable(String id, Object message) {
+    protected RedisListenerRunnable getRedisListenerRunnable(String id, Object message) {
         RedisListenerEndpoint redisListenerEndpoint = redisListenerEndpointMap.get(id);
         if (redisListenerEndpoint == null) {
             throw new RedisMqException("not found RedisListenerEndpoint check your queue or tag");
