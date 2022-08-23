@@ -154,16 +154,19 @@ public class RedisMqClient {
             if (queue == null) {
                 return;
             }
-            PushMessage pushMessage = new PushMessage();
-            pushMessage.setQueue(k);
-            pushMessage.setTimestamp(System.currentTimeMillis());
-            LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
-            LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
-            boolean delayState = queue.getDelayState();
-            if (delayState) {
-                delayBlockingQueue.add(pushMessage);
-            } else {
-                linkedBlockingQueue.add(k);
+            List<String> virtualQueues = QueueManager.getVirtualQueues(k);
+            for (String virtualQueue : virtualQueues) {
+                PushMessage pushMessage = new PushMessage();
+                pushMessage.setQueue(virtualQueue);
+                pushMessage.setTimestamp(System.currentTimeMillis());
+                LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
+                LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
+                boolean delayState = queue.getDelayState();
+                if (delayState) {
+                    delayBlockingQueue.add(pushMessage);
+                } else {
+                    linkedBlockingQueue.add(virtualQueue);
+                }
             }
         });
     }

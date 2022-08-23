@@ -47,7 +47,6 @@ public class RedisPushListener extends AbstractRedisPushListener {
             if (queue == null) {
                 return;
             }
-            pushMessage.setQueue(realNameQueue);
             boolean delayState = queue.getDelayState();
 
             //延时队列和普通队列分开处理
@@ -63,8 +62,8 @@ public class RedisPushListener extends AbstractRedisPushListener {
                 }
             } else {
                 LinkedBlockingQueue<String> linkedBlockingQueue = redisMqClient.getRedisListenerContainerManager().getLinkedBlockingQueue();
-                if (!linkedBlockingQueue.contains(realNameQueue)) {
-                    linkedBlockingQueue.add(realNameQueue);
+                if (!linkedBlockingQueue.contains(queueName)) {
+                    linkedBlockingQueue.add(queueName);
                 }
             }
         } catch (InterruptedException e) {

@@ -2,11 +2,9 @@ package com.redismq.core;
 
 import com.redismq.Message;
 import com.redismq.constant.AckMode;
-import com.redismq.LocalMessageManager;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
-import com.redismq.queue.QueueManager;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,8 +14,8 @@ import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Author: hzh
@@ -33,11 +31,20 @@ public class RedisListenerRunnable implements Runnable {
     private final Method method;
     private final PollState state = new PollState();
     private final RedisTemplate<String, Object> redisTemplate;
-    private Semaphore semaphore;
+    private volatile Semaphore semaphore;
     private String ackMode;
     private Integer retryInterval;
     //真实队列名
     private String queueName;
+    private Map<String, Message> localMessages;
+
+    public Map<String, Message> getLocalMessages() {
+        return localMessages;
+    }
+
+    public void setLocalMessages(Map<String, Message> localMessages) {
+        this.localMessages = localMessages;
+    }
 
     private List<ConsumeInterceptor> consumeInterceptors;
 
@@ -124,28 +131,26 @@ public class RedisListenerRunnable implements Runnable {
     public void run() {
         state.starting();
         try {
-            AtomicInteger atomicInteger = new AtomicInteger(0);
             do {
-                run0(atomicInteger);
+                run0();
             } while (state.isActive());
         } catch (Exception e) {
             onFail((Message) args, e);
         } finally {
             Message message = (Message) args;
+            semaphore.release();
+            log.info("线程={}执行完毕 semaphore释放:{}", Thread.currentThread().getName(), semaphore.toString());
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
                 Long count = redisTemplate.opsForZSet().remove(message.getVirtualQueueName(), args);
-                redisTemplate.delete(RedisMQConstant.getMaualLock(message.getId()));
-                LocalMessageManager.LOCAL_MESSAGES.remove(message.getId());
             }
-            if (semaphore != null) {
-                semaphore.release();
-            }
+            localMessages.remove(message.getId());
         }
     }
 
-    private void run0(AtomicInteger atomicInteger) {
-        int i = atomicInteger.incrementAndGet();
+    private void run0() {
+        int i = 0;
+        i++;
         try {
             Class<?>[] parameterTypes = method.getParameterTypes();
             if (ArrayUtils.isEmpty(parameterTypes)) {

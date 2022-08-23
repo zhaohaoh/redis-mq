@@ -48,7 +48,7 @@ public abstract class AbstractMessageListenerContainer {
     /**
      * 死信队列
      */
-    protected String deadQueue;
+    protected Boolean delay;
     /**
      * ack模式
      */
@@ -65,6 +65,8 @@ public abstract class AbstractMessageListenerContainer {
      * 信号量
      */
     protected Semaphore semaphore;
+
+    protected final Map<String, Message> localMessages = new ConcurrentHashMap<>();
     /**
      * 消费拦截器
      */
@@ -91,8 +93,8 @@ public abstract class AbstractMessageListenerContainer {
         this.redisTemplate = redisListenerContainerFactory.getRedisTemplate();
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
+        this.delay = queue.getDelayState();
         this.retryMax = queue.getRetryMax();
-        this.deadQueue = QueueConstant.DEFAULT_DEAD_QUEUE_PREFIX + queueName;
         this.ackMode = queue.getAckMode();
         this.retryInterval = redisListenerContainerFactory.getRetryInterval();
         this.semaphore = new Semaphore(queue.getMaxConcurrency());
@@ -102,6 +104,9 @@ public abstract class AbstractMessageListenerContainer {
         return state = PAUSE;
     }
 
+    public boolean isPause() {
+        return state == PAUSE;
+    }
 
     public abstract void repush();
 
@@ -116,13 +121,6 @@ public abstract class AbstractMessageListenerContainer {
         return queueName;
     }
 
-    public String getDeadQueue() {
-        return deadQueue;
-    }
-
-    public void setDeadQueue(String deadQueue) {
-        this.deadQueue = deadQueue;
-    }
 
     public void setQueueName(String queueName) {
         this.queueName = queueName;
@@ -169,15 +167,14 @@ public abstract class AbstractMessageListenerContainer {
         return retryInterval;
     }
 
-    public boolean isStop() {
-        return state == STOP;
-    }
     public boolean isRunning() {
         return state == RUNNING;
     }
 
     public void running() {
-        state = RUNNING;
+        if (state != RUNNING) {
+            state = RUNNING;
+        }
     }
 
     public String getAckMode() {
@@ -197,6 +194,7 @@ public abstract class AbstractMessageListenerContainer {
         runnable.setRetryInterval(this.getRetryInterval());
         runnable.setQueueName(queueName);
         runnable.setConsumeInterceptors(consumeInterceptorList);
+        runnable.setLocalMessages(localMessages);
         return runnable;
     }
 

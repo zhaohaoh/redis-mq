@@ -1,8 +1,8 @@
 package com.redismq.container;
 
 
-import com.redismq.LocalMessageManager;
 import com.redismq.Message;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
@@ -11,6 +11,7 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
+import lombok.Synchronized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -21,8 +22,9 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
-import static com.redismq.constant.RedisMQConstant.getMaualLock;
+import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 
 /**
  * @author hzh
@@ -34,6 +36,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
     private final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
     private volatile ScheduledFuture<?> scheduledFuture;
+    private int count = 0;
     private final ThreadPoolExecutor boss = new ThreadPoolExecutor(1, 1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
@@ -56,9 +59,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return t;
         }
     });
-
-
-    private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
+    private final  CopyOnWriteArraySet<String> copyOnWriteArraySet=new CopyOnWriteArraySet<>();
+    private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency()+1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
@@ -112,44 +114,45 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             try {
                 //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
                 long pullTime = System.currentTimeMillis();
-                Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, LocalMessageManager.LOCAL_MESSAGES.size(), super.maxConcurrency);
+                int size = localMessages.size();
+                // 此处会有部分本地消息正好被消费完,那么本地偏移量会前移几十个.那么会拉取到正在消费的消息
+                // 解决思路1 记录偏移量的count 一直累加.直到取不到消息的时候偏移量归零重新取数据.
+                //解决思路2 本地消息必须全部提交,也就是全部被删除后,才能消费下一组消息.
+                Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
+                String name = Thread.currentThread().getName();
+                log.info("线程名:{}", name);
                 if (CollectionUtils.isEmpty(tuples)) {
                     //本地消息没有消费完就先不取延时任务的.
-                    if (LocalMessageManager.LOCAL_MESSAGES.size() > 0) {
+                    if (size > 0) {
                         Thread.sleep(200L);
                         continue;
                     }
-                    //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
-                    Set<ZSetOperations.TypedTuple<Object>> headDatas = redisTemplate.opsForZSet().rangeWithScores(queueName, 0, 100);
-                    if (headDatas != null) {
-                        for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
-                            Double score = headData.getScore();
-                            if (score != null) {
-                                startTimeSet.add(score.longValue());
+                    //从头的偏移量开始消费
+                    if (count > 0) {
+                        count = 0;
+                        continue;
+                    }
+                    if (delay) {
+                        //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
+                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisTemplate.opsForZSet().rangeWithScores(queueName, 0, 100);
+                        if (headDatas != null) {
+                            for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
+                                Double score = headData.getScore();
+                                if (score != null) {
+                                    startTimeSet.add(score.longValue());
+                                }
                             }
                         }
                     }
                     break;
                 }
+                count += tuples.size();
                 for (ZSetOperations.TypedTuple<Object> tuple : tuples) {
                     Message message = (Message) tuple.getValue();
-                    try {
-                        semaphore.acquire();
-                    } catch (InterruptedException e) {
-                        if (isRunning()) {
-                            log.info("redismq acquire semaphore InterruptedException", e);
-                        }
-                        Thread.currentThread().interrupt();
-                    }
                     //手动ack
-                    Boolean success = null;
                     try {
                         if (AckMode.MAUAL.equals(ackMode)) {
-                            success = redisTemplate.opsForValue().setIfAbsent(getMaualLock(message.getId()), "", Duration.ofSeconds(60));
-                            if (success == null || !success) {
-                                continue;
-                            }
-                            Message msg = LocalMessageManager.LOCAL_MESSAGES.putIfAbsent(message.getId(), message);
+                            Message msg = localMessages.putIfAbsent(message.getId(), message);
                             if (msg != null) {
                                 continue;
                             }
@@ -158,6 +161,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             if (remove == null || remove <= 0) {
                                 continue;
                             }
+                        }
+                        try {
+                            semaphore.acquire();
+                            log.info("semaphore获取:{}", semaphore.toString());
+                        } catch (InterruptedException e) {
+                            if (isRunning()) {
+                                log.info("redismq acquire semaphore InterruptedException", e);
+                            }
+                            Thread.currentThread().interrupt();
                         }
                         String id = super.getRunableKey(message.getTag());
                         RedisListenerRunnable runnable = super.getRedisListenerRunnable(id, message);
@@ -170,9 +182,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (isRunning()) {
                             log.error("redismq listener container error ", e);
                             //如果异常直接释放资源，否则线程执行完毕才释放
-                            if (success != null && success) {
-                                redisTemplate.delete(message.getId());
-                            }
+                            localMessages.remove(message.getId());
                         }
                         semaphore.release();
                     }
@@ -195,9 +205,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         Thread.currentThread().interrupt();
                     }
                 }
-                semaphore.release();
             }
         }
+        log.info("当前线程释放执行完毕:{}", Thread.currentThread().getName());
         return startTimeSet;
     }
 
@@ -208,31 +218,40 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     }
 
 
-    public void start(Long startTime) {
+    public void start(String virtualQueue, Long startTime) {
         running();
         //为空说明当前能获取到数据
-        DelayTimeoutTask task1 = delayTimeoutTaskManager.computeIfAbsent(queueName, task -> new DelayTimeoutTask() {
+        DelayTimeoutTask task1 = delayTimeoutTaskManager.computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
             @Override
             protected Set<Long> pullTask() {
-                List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
-                if (CollectionUtils.isEmpty(virtualQueues)) {
-                    return null;
-                }
-                Set<Long> nextTimeSet = new HashSet<>();
-                while (isRunning()) {
-                    int i = 0;
-                    for (String virtualQueue : virtualQueues) {
+                // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
+                // 而新的消息通知因为加锁获取不到的问题
+                // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
+                String virtualQueueLock = getVirtualQueueLock(virtualQueue);
+                Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(60));
+                try {
+                    if (success != null && success && isRunning()) {
+                        boolean add = copyOnWriteArraySet.add(virtualQueue);
+                        List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
+                        if (CollectionUtils.isEmpty(virtualQueues)) {
+                            return null;
+                        }
+                        if (!virtualQueues.contains(virtualQueue)) {
+                            return null;
+                        }
+                        log.info("DelayTimeoutTask:{}", Thread.currentThread().getName());
                         Set<Long> pop = pop(virtualQueue);
                         //为空说明当前能获取到数据
-                        nextTimeSet.addAll(pop);
-                        i++;
+                        return new HashSet<>(pop);
                     }
-                    if (i >= virtualQueues.size()) {
-                        return nextTimeSet;
+                } finally {
+                    if (success != null && success) {
+                        copyOnWriteArraySet.remove(virtualQueue);
+                        redisTemplate.delete(virtualQueueLock);
                     }
                 }
+                return null;
 //                lifeExtensionCancel();
-                return nextTimeSet;
             }
         });
         delayTimeoutTaskManager.schedule(task1, startTime);
@@ -244,29 +263,30 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 scheduledFuture = lifeExtensionThread.scheduleAtFixedRate(new Runnable() {
                     @Override
                     public void run() {
-                        if (!CollectionUtils.isEmpty(LocalMessageManager.LOCAL_MESSAGES)) {
-                            for (Message message : LocalMessageManager.LOCAL_MESSAGES.values()) {
-                                String messageId = message.getId();
-                                String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
-                                        "redis.call('expire', KEYS[1], 60); " +
-                                        "return 1; " +
-                                        "end; " +
-                                        "return 0;";
-                                try {
-                                    DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
-                                    List<String> list = new ArrayList<>();
-                                    list.add(getMaualLock(messageId));
-                                    redisTemplate.execute(redisScript, list);
+                        List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
+                        if (CollectionUtils.isEmpty(virtualQueues)) {
+                            return;
+                        }
+                        for (String virtualQueue : copyOnWriteArraySet) {
+                            String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
+                                    "redis.call('expire', KEYS[1], 60); " +
+                                    "return 1; " +
+                                    "end; " +
+                                    "return 0;";
+                            try {
+                                DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
+                                List<String> list = new ArrayList<>();
+                                list.add(getVirtualQueueLock(virtualQueue));
+                                Long execute = redisTemplate.execute(redisScript, list);
 //                                redisTemplate.expire(messageId, Duration.ofSeconds(60));
-                                } catch (Exception e) {
-                                    if (isRunning()) {
-                                        log.error("lifeExtension  redisTemplate.expire Exception", e);
-                                    }
+                            } catch (Exception e) {
+                                if (isRunning()) {
+                                    log.error("lifeExtension  redisTemplate.expire Exception", e);
                                 }
                             }
                         }
                     }
-                }, 60, 30, TimeUnit.SECONDS);
+                }, 60, 20, TimeUnit.SECONDS);
             }
         }
     }

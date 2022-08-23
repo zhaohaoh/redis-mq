@@ -17,6 +17,7 @@ public class RedisMQConstant {
     public static final String REDIS_MQ_SEND_MSG_INCREMENT = "INCRMENT";
 
     public static final String REDISMQ_REBALANCE_LOCK = "REBALANCE_LOCK";
+    public static final String VIRTUAL_LOCK = "VIRTUAL_LOCK";
 
     public static String getQueueNameByTopic(String topic) {
         return PREFIX + CLUSTER + SPLITE + topic;
@@ -46,7 +47,7 @@ public class RedisMQConstant {
         return PREFIX + CLUSTER + SPLITE + REDIS_MQ_SEND_MSG_INCREMENT;
     }
 
-    public static String getMaualLock(String messageId) {
-        return PREFIX + CLUSTER + SPLITE + "MAUAL_LOCK" + SPLITE + messageId;
+    public static String getVirtualQueueLock(String virtualQueueName) {
+        return PREFIX + CLUSTER + SPLITE + VIRTUAL_LOCK + SPLITE + virtualQueueName;
     }
 }
