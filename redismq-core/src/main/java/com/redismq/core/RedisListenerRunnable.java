@@ -139,7 +139,6 @@ public class RedisListenerRunnable implements Runnable {
         } finally {
             Message message = (Message) args;
             semaphore.release();
-            log.info("线程={}执行完毕 semaphore释放:{}", Thread.currentThread().getName(), semaphore.toString());
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
                 Long count = redisTemplate.opsForZSet().remove(message.getVirtualQueueName(), args);

@@ -42,7 +42,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "REDIS-MQ-BOSS-";
+        private static final String NAME_PREFIX = "REDISMQ-BOSS-";
 
         {
             SecurityManager s = System.getSecurityManager();
@@ -59,13 +59,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return t;
         }
     });
-    private final  CopyOnWriteArraySet<String> copyOnWriteArraySet=new CopyOnWriteArraySet<>();
-    private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency()+1,
+    private final CopyOnWriteArraySet<String> copyOnWriteArraySet = new CopyOnWriteArraySet<>();
+    private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
         private final ThreadGroup group;
         private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "REDIS-MQ-WORK-";
+        private static final String NAME_PREFIX = "REDISMQ-WORK-";
 
         {
             SecurityManager s = System.getSecurityManager();
@@ -83,7 +83,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
             return t;
         }
-    });
+    }, new ThreadPoolExecutor.CallerRunsPolicy());
 
 
     @Override
@@ -119,12 +119,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 // 解决思路1 记录偏移量的count 一直累加.直到取不到消息的时候偏移量归零重新取数据.
                 //解决思路2 本地消息必须全部提交,也就是全部被删除后,才能消费下一组消息.
                 Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
-                String name = Thread.currentThread().getName();
-                log.info("线程名:{}", name);
                 if (CollectionUtils.isEmpty(tuples)) {
                     //本地消息没有消费完就先不取延时任务的.
                     if (size > 0) {
-                        Thread.sleep(200L);
+                        Thread.sleep(500L);
                         continue;
                     }
                     //从头的偏移量开始消费
@@ -164,7 +162,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         }
                         try {
                             semaphore.acquire();
-                            log.info("semaphore获取:{}", semaphore.toString());
                         } catch (InterruptedException e) {
                             if (isRunning()) {
                                 log.info("redismq acquire semaphore InterruptedException", e);
@@ -239,7 +236,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (!virtualQueues.contains(virtualQueue)) {
                             return null;
                         }
-                        log.info("DelayTimeoutTask:{}", Thread.currentThread().getName());
                         Set<Long> pop = pop(virtualQueue);
                         //为空说明当前能获取到数据
                         return new HashSet<>(pop);

@@ -13,6 +13,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.redismq.delay.DelayTimeoutTaskManager.EXECUTOR;
+
 /**
  * @Author: hzh
  * @Date: 2022/4/25 12:05
@@ -23,28 +25,6 @@ public abstract class DelayTimeoutTask {
     //时间轮
     private final HashedWheelTimer timer = new HashedWheelTimer(new DefaultThreadFactory("REDISMQ-HashedWheelTimer-WORKER"), 100, TimeUnit.MILLISECONDS, 1024, false);
     private final Map<Long, TimeoutTask> timeoutTaskMap = new ConcurrentHashMap<>();
-    private final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(2, 2,
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(10000), new ThreadFactory() {
-        private final ThreadGroup group;
-        private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "REDISMQ-TIMER-EXECUTOR-";
-
-        {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r, NAME_PREFIX + threadNumber.getAndIncrement());
-            t.setDaemon(true);
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-                t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
-        }
-    });
 
     public static class TimeoutTask {
         private final long startTime;
