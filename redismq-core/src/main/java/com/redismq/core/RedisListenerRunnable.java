@@ -31,61 +31,36 @@ public class RedisListenerRunnable implements Runnable {
     private final Method method;
     private final PollState state = new PollState();
     private final RedisTemplate<String, Object> redisTemplate;
-    private volatile Semaphore semaphore;
+    private final Semaphore semaphore;
     private String ackMode;
     private Integer retryInterval;
     //真实队列名
     private String queueName;
     private Map<String, Message> localMessages;
 
-    public Map<String, Message> getLocalMessages() {
-        return localMessages;
-    }
-
     public void setLocalMessages(Map<String, Message> localMessages) {
         this.localMessages = localMessages;
     }
-
-    private List<ConsumeInterceptor> consumeInterceptors;
-
-    public List<ConsumeInterceptor> getConsumeInterceptors() {
-        return consumeInterceptors;
-    }
-
-    public void setConsumeInterceptors(List<ConsumeInterceptor> consumeInterceptors) {
-        this.consumeInterceptors = consumeInterceptors;
-    }
-
 
     public String getQueueName() {
         return queueName;
     }
 
+    private List<ConsumeInterceptor> consumeInterceptors;
+
+    public void setConsumeInterceptors(List<ConsumeInterceptor> consumeInterceptors) {
+        this.consumeInterceptors = consumeInterceptors;
+    }
     public void setQueueName(String queueName) {
         this.queueName = queueName;
-    }
-
-    public void setDelayState(boolean delayState) {
-    }
-
-    public Integer getRetryInterval() {
-        return retryInterval;
     }
 
     public void setRetryInterval(Integer retryInterval) {
         this.retryInterval = retryInterval;
     }
 
-    public String getAckMode() {
-        return ackMode;
-    }
-
     public void setAckMode(String ackMode) {
         this.ackMode = ackMode;
-    }
-
-    public Object getArgs() {
-        return args;
     }
 
     public void setArgs(Object args) {
@@ -93,31 +68,6 @@ public class RedisListenerRunnable implements Runnable {
     }
 
 
-    public Semaphore getSemaphore() {
-        return semaphore;
-    }
-
-    public void setSemaphore(Semaphore semaphore) {
-        this.semaphore = semaphore;
-    }
-
-    public RedisTemplate<String, Object> getRedisTemplate() {
-        return redisTemplate;
-    }
-
-    /**
-     * Return the target instance to call the method on.
-     */
-    public Object getTarget() {
-        return this.target;
-    }
-
-    /**
-     * Return the target method to call.
-     */
-    public Method getMethod() {
-        return this.method;
-    }
 
     public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisTemplate<String, Object> redisTemplate) {
         this.target = target;

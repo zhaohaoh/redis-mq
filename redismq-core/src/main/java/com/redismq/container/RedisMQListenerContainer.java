@@ -2,7 +2,6 @@ package com.redismq.container;
 
 
 import com.redismq.Message;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
@@ -11,19 +10,15 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
-import lombok.Synchronized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.util.CollectionUtils;
-
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
-
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 
 /**
@@ -59,7 +54,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return t;
         }
     });
-    private final CopyOnWriteArraySet<String> copyOnWriteArraySet = new CopyOnWriteArraySet<>();
+    private final Set<String> hashSet = new HashSet<>();
     private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
@@ -192,10 +187,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         log.error("redismq [ERROR] queue not is zset type。 cancel pop");
                         stop();
                     }
-//                if (e instanceof ClassCastException){
-//                    log.error("redismq [ERROR] ClassCastException",e);
-//                    stop();
-//                }
                     try {
                         Thread.sleep(5000L);
                     } catch (InterruptedException ex) {
@@ -204,7 +195,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
             }
         }
-        log.info("当前线程释放执行完毕:{}", Thread.currentThread().getName());
         return startTimeSet;
     }
 
@@ -228,7 +218,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(60));
                 try {
                     if (success != null && success && isRunning()) {
-                        boolean add = copyOnWriteArraySet.add(virtualQueue);
+                        boolean add = hashSet.add(virtualQueue);
                         List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
                         if (CollectionUtils.isEmpty(virtualQueues)) {
                             return null;
@@ -242,7 +232,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                 } finally {
                     if (success != null && success) {
-                        copyOnWriteArraySet.remove(virtualQueue);
+                        hashSet.remove(virtualQueue);
                         redisTemplate.delete(virtualQueueLock);
                     }
                 }
@@ -263,7 +253,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (CollectionUtils.isEmpty(virtualQueues)) {
                             return;
                         }
-                        for (String virtualQueue : copyOnWriteArraySet) {
+                        for (String virtualQueue : hashSet) {
                             String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
                                     "redis.call('expire', KEYS[1], 60); " +
                                     "return 1; " +
