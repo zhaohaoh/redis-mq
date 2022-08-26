@@ -2,10 +2,7 @@ package com.redismq.autoconfigure;
 
 import com.redismq.Message;
 import com.redismq.constant.RedisMQConstant;
-import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.interceptor.ConsumeInterceptor;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;

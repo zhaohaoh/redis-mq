@@ -2,7 +2,6 @@ package com.redismq.core;
 
 import com.redismq.Message;
 import com.redismq.constant.AckMode;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import org.apache.commons.lang3.ArrayUtils;

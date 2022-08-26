@@ -14,6 +14,8 @@ import static com.redismq.constant.QueueConstant.SPLITE;
  * @Date: 2021/11/25 16:03
  */
 public class QueueManager {
+    public static final Set<String> INVOKE_VIRTUAL_QUEUES =  Collections.newSetFromMap(new ConcurrentHashMap<>());
+
     public static final Map<String, Queue> QUEUES = new LinkedHashMap<>();
     //虚拟队列
     public static final Map<String, List<String>> VIRTUAL_QUEUES = new HashMap<>();
@@ -23,6 +25,7 @@ public class QueueManager {
     public static int VIRTUAL_QUEUES_NUM;
 
     public static Queue registerQueue(Queue queue) {
+
         queue.setQueueName(RedisMQConstant.getQueueNameByTopic(queue.getQueueName()));
         String queueName = queue.getQueueName();
         Queue returnQueue = QUEUES.computeIfAbsent(queueName, q -> queue);
@@ -55,7 +58,12 @@ public class QueueManager {
     public static Queue getQueue(String name) {
         return QUEUES.get(name) != null ? QUEUES.get(name) : null;
     }
+
     public static String getQueueNameByVirtual(String virtual) {
-       return StringUtils.substringBeforeLast(virtual, SPLITE);
+        return StringUtils.substringBeforeLast(virtual, SPLITE);
+    }
+
+    public static Queue getQueueByVirtual(String virtual) {
+        return getQueue(StringUtils.substringBeforeLast(virtual, SPLITE));
     }
 }

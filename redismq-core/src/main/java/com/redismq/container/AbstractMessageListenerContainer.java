@@ -1,10 +1,8 @@
 package com.redismq.container;
 
-import com.google.common.collect.Sets;
 import com.redismq.Message;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisListenerRunnable;
-import com.redismq.constant.QueueConstant;
 import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.interceptor.ConsumeInterceptor;
@@ -13,7 +11,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 

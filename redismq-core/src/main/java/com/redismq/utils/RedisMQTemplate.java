@@ -2,6 +2,8 @@ package com.redismq.utils;
 
 import com.redismq.core.RedisMQProducer;
 
+import java.util.List;
+
 public class RedisMQTemplate {
     private final RedisMQProducer redisMQProducer;
 
@@ -27,6 +29,21 @@ public class RedisMQTemplate {
     public boolean sendMessage(Object obj, String topic, String tag) {
         return redisMQProducer.sendMessage(obj, topic, tag);
     }
+
+    /**
+     * 批量一次性打包发送队列消息  消费仍然是一对一消费
+     */
+    public boolean sendBatchMessage(List<?> messages, String topic) {
+        return redisMQProducer.sendBatchMessage(messages, topic, "tag");
+    }
+
+    /**
+     * 批量一次性打包发送队列消息  消费仍然是一对一消费
+     */
+    public boolean sendBatchMessage(List<?> messages, String topic, String tag) {
+        return redisMQProducer.sendBatchMessage(messages, topic, tag);
+    }
+
 
     /**
      * 带tag的队列延迟消息

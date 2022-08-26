@@ -35,7 +35,7 @@ public class RedisMqClient {
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
-        this.clientId = ClientConfig.getLocalAddress();
+        this.clientId = UUID.randomUUID().toString();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
     }

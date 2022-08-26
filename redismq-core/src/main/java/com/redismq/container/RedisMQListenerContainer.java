@@ -15,11 +15,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.util.CollectionUtils;
+
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
+import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
 
 /**
  * @author hzh
@@ -31,7 +34,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
     private final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
     private volatile ScheduledFuture<?> scheduledFuture;
-    private int count = 0;
     private final ThreadPoolExecutor boss = new ThreadPoolExecutor(1, 1,
             60L, TimeUnit.SECONDS,
             new SynchronousQueue<>(), new ThreadFactory() {
@@ -54,32 +56,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return t;
         }
     });
-    private final Set<String> hashSet = new HashSet<>();
-    private final ThreadPoolExecutor work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<>(), new ThreadFactory() {
-        private final ThreadGroup group;
-        private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "REDISMQ-WORK-";
-
-        {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r, NAME_PREFIX + threadNumber.getAndIncrement());
-            if (t.isDaemon()) {
-                t.setDaemon(false);
-            }
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-                t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
-        }
-    }, new ThreadPoolExecutor.CallerRunsPolicy());
-
+    // 非核心线程的高并发驻留时间加长为10分钟
+    private final ThreadPoolExecutor work;
 
     @Override
     public void doStop() {
@@ -101,10 +79,35 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public RedisMQListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue registerQueue) {
         super(redisListenerContainerFactory, registerQueue);
         lifeExtension();
+        work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
+                600L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(), new ThreadFactory() {
+            private final ThreadGroup group;
+            private final AtomicInteger threadNumber = new AtomicInteger(1);
+            private final String NAME_PREFIX = "REDISMQ-WORK-" + registerQueue.getQueueName() + "-";
+
+            {
+                SecurityManager s = System.getSecurityManager();
+                group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+            }
+
+            @Override
+            public Thread newThread(Runnable r) {
+                //除了固定的boss线程。临时新增的线程会删除了会递增，int递增有最大值。这里再9999的时候就从固定线程的数量上重新计算.防止线程名字过长
+                int current = threadNumber.getAndUpdate(operand -> operand >= 99999 ? getConcurrency() + 1 : operand + 1);
+                Thread t = new Thread(group, r, NAME_PREFIX + current);
+                t.setDaemon(false);
+                if (t.getPriority() != Thread.NORM_PRIORITY) {
+                    t.setPriority(Thread.NORM_PRIORITY);
+                }
+                return t;
+            }
+        }, new ThreadPoolExecutor.CallerRunsPolicy());
     }
 
     public Set<Long> pop(String queueName) {
         Set<Long> startTimeSet = new HashSet<>();
+        int count = 0;
         while (isRunning()) {
             try {
                 //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
@@ -125,6 +128,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         count = 0;
                         continue;
                     }
+
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
                         Set<ZSetOperations.TypedTuple<Object>> headDatas = redisTemplate.opsForZSet().rangeWithScores(queueName, 0, 100);
@@ -218,7 +222,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(60));
                 try {
                     if (success != null && success && isRunning()) {
-                        boolean add = hashSet.add(virtualQueue);
                         List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
                         if (CollectionUtils.isEmpty(virtualQueues)) {
                             return null;
@@ -232,7 +235,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                 } finally {
                     if (success != null && success) {
-                        hashSet.remove(virtualQueue);
+                        INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
                         redisTemplate.delete(virtualQueueLock);
                     }
                 }
@@ -253,7 +256,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (CollectionUtils.isEmpty(virtualQueues)) {
                             return;
                         }
-                        for (String virtualQueue : hashSet) {
+                        for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
                             String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
                                     "redis.call('expire', KEYS[1], 60); " +
                                     "return 1; " +

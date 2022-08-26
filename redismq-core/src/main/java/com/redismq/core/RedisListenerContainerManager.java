@@ -18,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
+
 /**
  * @author hzh
  * @date 2021/8/10
@@ -108,11 +110,9 @@ public class RedisListenerContainerManager {
                 try {
                     String virtualName = linkedBlockingQueue.take();
                     RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
-
                     // 假设并发情况 线程A拉取了redis中的旧消息.此时插入了新消息没有拉取.然后发布订阅.这里取获取锁.但是线程A在此时还未释放.这种情况概率较小.
-                    boolean isLock = false;
-                    Boolean hasKey = container.getRedisTemplate().hasKey(RedisMQConstant.getVirtualQueueLock(virtualName));
-                    if (Boolean.FALSE.equals(hasKey)) {
+                    boolean add = INVOKE_VIRTUAL_QUEUES.add(virtualName);
+                    if (add) {
                         container.start(virtualName, System.currentTimeMillis());
                     }
                 } catch (InterruptedException e) {
