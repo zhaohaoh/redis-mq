@@ -82,7 +82,7 @@ public class RedisMQProducer {
     }
 
     /**
-     * 批量一次性打包发送队列消息  消费仍然是一对一消费
+     * 批量一次性打包发送队列消息  消费仍然是一对一消费  一次最多发送100条.超过100条会分批次发送 lua脚本语句长度限制
      */
     public boolean sendBatchMessage(List<?> objs, String topic) {
         return sendBatchMessage(objs, topic, "");
@@ -190,6 +190,16 @@ public class RedisMQProducer {
     private boolean doSendMessage(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
         //构建redis的请求参数按顺序消息和scope对应
         List<Message> messageList = sendMessageParams.stream().map(SendMessageParam::getMessage).collect(Collectors.toList());
+        if (messageList.size() > 100) {
+            List<List<Message>> lists = splitList(messageList, 100);
+            for (List<Message> list : lists) {
+                return doSendMessage0(pushMessage, sendMessageParams, list);
+            }
+        }
+        return doSendMessage0(pushMessage, sendMessageParams, messageList);
+    }
+
+    private boolean doSendMessage0(PushMessage pushMessage, List<SendMessageParam> sendMessageParams, List<Message> messageList) {
         try {
             List<Object> params = new ArrayList<>();
             beforeSend(messageList);
@@ -206,7 +216,7 @@ public class RedisMQProducer {
             return success;
         } catch (Exception e) {
             onFail(messageList, e);
-            log.error("RedisMQProducer doSendMessage Exception:",e);
+            log.error("RedisMQProducer doSendMessage Exception:", e);
             return false;
         }
     }
@@ -219,8 +229,12 @@ public class RedisMQProducer {
                 "return -1;\n" +
                 "end\n");
         sb.append("redis.call('zadd', KEYS[1]");
-        for (int i = 0; i < params.size() >> 1; i++) {
-            sb.append(", ARGV[" + (i + 3) + "], ARGV[" + (i + 2) + "]");
+        for (int i = 0; i < params.size(); i++) {
+            if (i % 2 == 0) {
+                sb.append(", ARGV[" + (i + 3) + "]");
+            } else {
+                sb.append(" , ARGV[" + (i + 1) + "]");
+            }
         }
         sb.append(");\n");
         sb.append("redis.call('publish', KEYS[2], ARGV[1]);\n" +
@@ -375,6 +389,25 @@ public class RedisMQProducer {
             throw new RedisMqException("Redismq DelayQueue type mismatch");
         }
         return queue;
+    }
+
+    private <T> List<List<T>> splitList(List<T> list, int len) {
+        if (list == null || list.isEmpty() || len < 1) {
+            return Collections.emptyList();
+        }
+
+        List<List<T>> result = new ArrayList<>();
+
+        int size = list.size();
+        int count = (size + len - 1) / len;
+
+        for (int i = 0; i < count; i++) {
+            List<T> subList = list.subList(i * len, ((i + 1) * len > size ? size : len * (i + 1)));
+            //主要是为了解决，修改新集合会影响老集合的问题
+            List<T> newList = new ArrayList<>(subList);
+            result.add(newList);
+        }
+        return result;
     }
 
 }
