@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
 import java.util.*;
@@ -32,6 +34,11 @@ public class RedisMQProducer {
     private Integer retryCount = 3;
     private Integer retrySleep = 200;
     private List<ProducerInterceptor> producerInterceptors;
+    private boolean sendAfterCommit;
+
+    public void setSendAfterCommit(boolean sendAfterCommit) {
+        this.sendAfterCommit = sendAfterCommit;
+    }
 
     public RedisMQProducer(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -189,31 +196,46 @@ public class RedisMQProducer {
 
     private boolean doSendMessage(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
         //构建redis的请求参数按顺序消息和scope对应
-        List<Message> messageList = sendMessageParams.stream().map(SendMessageParam::getMessage).collect(Collectors.toList());
-        if (messageList.size() > 100) {
-            List<List<Message>> lists = splitList(messageList, 100);
-            for (List<Message> list : lists) {
-                return doSendMessage0(pushMessage, sendMessageParams, list);
+        if (sendMessageParams.size() > 100) {
+            List<List<SendMessageParam>> lists = splitList(sendMessageParams, 100);
+            for (List<SendMessageParam> list : lists) {
+                return doSendMessage0(pushMessage, list);
             }
         }
-        return doSendMessage0(pushMessage, sendMessageParams, messageList);
+        return doSendMessage0(pushMessage, sendMessageParams);
     }
 
-    private boolean doSendMessage0(PushMessage pushMessage, List<SendMessageParam> sendMessageParams, List<Message> messageList) {
+    private boolean doSendMessage0(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
+        List<Object> params = new ArrayList<>();
+        List<Message> messageList = sendMessageParams.stream().map(SendMessageParam::getMessage).collect(Collectors.toList());
+        //发送前操作
+        beforeSend(messageList);
         try {
-            List<Object> params = new ArrayList<>();
-            beforeSend(messageList);
             for (SendMessageParam message : sendMessageParams) {
                 params.add(message.getMessage());
                 params.add(message.getExecutorTime());
             }
-            boolean success = this.sendRedisMessage(pushMessage, params);
-            if (success) {
+            final boolean[] success = new boolean[1];
+            if (sendAfterCommit) {
+                if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            success[0] = sendRedisMessage(pushMessage, params);
+                        }
+                    });
+                } else {
+                    success[0] = this.sendRedisMessage(pushMessage, params);
+                }
+            } else {
+                success[0] = this.sendRedisMessage(pushMessage, params);
+            }
+            if (success[0]) {
                 afterSend(messageList);
             } else {
                 onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
             }
-            return success;
+            return success[0];
         } catch (Exception e) {
             onFail(messageList, e);
             log.error("RedisMQProducer doSendMessage Exception:", e);
@@ -337,24 +359,36 @@ public class RedisMQProducer {
 
     private void afterSend(List<Message> message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
-            for (ProducerInterceptor interceptor : producerInterceptors) {
-                interceptor.afterSend(message);
+            try {
+                for (ProducerInterceptor interceptor : producerInterceptors) {
+                    interceptor.afterSend(message);
+                }
+            } catch (Exception exception) {
+                log.error("RedisMQ afterSend Exception:", exception);
             }
         }
     }
 
     private void onFail(List<Message> message, Exception e) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
-            for (ProducerInterceptor interceptor : producerInterceptors) {
-                interceptor.onFail(message, e);
+            try {
+                for (ProducerInterceptor interceptor : producerInterceptors) {
+                    interceptor.onFail(message, e);
+                }
+            } catch (Exception exception) {
+                log.error("RedisMQ onFail Exception:", exception);
             }
         }
     }
 
     private void beforeSend(List<Message> message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
-            for (ProducerInterceptor interceptor : producerInterceptors) {
-                interceptor.beforeSend(message);
+            try {
+                for (ProducerInterceptor interceptor : producerInterceptors) {
+                    interceptor.beforeSend(message);
+                }
+            } catch (Exception e) {
+                log.error("RedisMQ beforeSend Exception:", e);
             }
         }
     }

@@ -43,6 +43,19 @@ public class RedisMQProperties {
      */
     private String group = "";
 
+    /**
+     * 是否全局开启事务提交后发送.会在真实的发消息前,beforeInterceptor后执行发消息逻辑.
+     */
+    private boolean sendAfterCommit = true;
+
+    public boolean isSendAfterCommit() {
+        return sendAfterCommit;
+    }
+
+    public void setSendAfterCommit(boolean sendAfterCommit) {
+        this.sendAfterCommit = sendAfterCommit;
+    }
+
     public String getGroup() {
         return group;
     }

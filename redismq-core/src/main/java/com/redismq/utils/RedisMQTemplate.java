@@ -34,7 +34,7 @@ public class RedisMQTemplate {
      * 批量一次性打包发送队列消息  消费仍然是一对一消费
      */
     public boolean sendBatchMessage(List<?> messages, String topic) {
-        return redisMQProducer.sendBatchMessage(messages, topic, "tag");
+        return redisMQProducer.sendBatchMessage(messages, topic, "");
     }
 
     /**

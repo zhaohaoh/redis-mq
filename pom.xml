@@ -23,6 +23,7 @@
         <!-- 打包跳过单元测试 -->
         <skipTests>true</skipTests>
         <commons-lang3.version>3.9</commons-lang3.version>
+        <seata.version>1.5.1</seata.version>
     </properties>
 
     <licenses>
@@ -70,6 +71,18 @@
     </distributionManagement>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.seata</groupId>
+                <artifactId>seata-all</artifactId>
+                <version>${seata.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>druid</artifactId>
+                        <groupId>com.alibaba</groupId>
+                    </exclusion>
+                </exclusions>
+                <optional>true</optional>
+            </dependency>
             <dependency>
                 <groupId>com.aventrix.jnanoid</groupId>
                 <artifactId>jnanoid</artifactId>

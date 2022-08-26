@@ -79,6 +79,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisMQProducer.setRetryCount(redisMqProperties.getProducerRetryMax());
         redisMQProducer.setRetrySleep(redisMqProperties.getProducerRetryInterval());
         redisMQProducer.setProducerInterceptors(producerInterceptors);
+        redisMQProducer.setSendAfterCommit(redisMqProperties.isSendAfterCommit());
         return redisMQProducer;
     }
 
