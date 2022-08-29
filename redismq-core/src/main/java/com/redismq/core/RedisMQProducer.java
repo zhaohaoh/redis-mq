@@ -6,9 +6,13 @@ import com.redismq.constant.PushMessage;
 import com.redismq.exception.QueueFullException;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ProducerInterceptor;
+import com.redismq.utils.RedisMQDataHelper;
 import com.redismq.pojo.SendMessageParam;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
+import io.seata.core.context.RootContext;
+import io.seata.tm.api.transaction.TransactionHookAdapter;
+import io.seata.tm.api.transaction.TransactionHookManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -215,27 +219,38 @@ public class RedisMQProducer {
                 params.add(message.getMessage());
                 params.add(message.getExecutorTime());
             }
-            final boolean[] success = new boolean[1];
-            if (sendAfterCommit) {
+            boolean success = false;
+            Boolean sendAfterCommit = RedisMQDataHelper.get();
+            if (sendAfterCommit != null ? sendAfterCommit : this.sendAfterCommit) {
                 if (TransactionSynchronizationManager.isActualTransactionActive()) {
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            success[0] = sendRedisMessage(pushMessage, params);
+                            sendRedisMessage(pushMessage, params);
+
                         }
                     });
+                } else if (RootContext.inGlobalTransaction()) {
+                    TransactionHookAdapter adapter = new TransactionHookAdapter() {
+                        @Override
+                        public void afterCommit() {
+                            sendRedisMessage(pushMessage, params);
+                        }
+                    };
+                    //seata事务提交后执行的方法
+                    TransactionHookManager.registerHook(adapter);
                 } else {
-                    success[0] = this.sendRedisMessage(pushMessage, params);
+                    success = this.sendRedisMessage(pushMessage, params);
                 }
             } else {
-                success[0] = this.sendRedisMessage(pushMessage, params);
+                success = this.sendRedisMessage(pushMessage, params);
             }
-            if (success[0]) {
+            if (success) {
                 afterSend(messageList);
             } else {
                 onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
             }
-            return success[0];
+            return success;
         } catch (Exception e) {
             onFail(messageList, e);
             log.error("RedisMQProducer doSendMessage Exception:", e);
