@@ -81,7 +81,7 @@ public class RedisMqClient {
     public void destory() {
         redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         publishRebalance();
-        log.info("redismq client remove");
+        log.info("redismq client remove currentVirtualQueues:{} ",QueueManager.CURRENT_VIRTUAL_QUEUES);
         //停止任务
         redisListenerContainerManager.stopAll();
     }
@@ -132,6 +132,12 @@ public class RedisMqClient {
     public void doRebalance() {
         registerClient();
         redisListenerContainerManager.pauseAll();
+        //临时解决重平衡问题.这里主要是因为有可能出现某些客户端还没注册进来
+        try {
+            Thread.sleep(200L);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         rebalance.rebalance(allClient(), clientId);
         repush();
     }
