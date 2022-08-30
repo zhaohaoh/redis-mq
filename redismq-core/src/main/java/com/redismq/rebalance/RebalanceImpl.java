@@ -7,10 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
+import static com.redismq.queue.QueueManager.CURRENT_VIRTUAL_QUEUES;
 
 /**
  * @Author: hzh
@@ -37,23 +36,9 @@ public class RebalanceImpl {
         for (String queue : allQueues) {
             List<String> virtualQueues = QueueManager.getVirtualQueues(queue);
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, new ArrayList<>(clientIds));
-            QueueManager.CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
-            log.info("RebalanceImpl rebalance vQueues:{} clientIds:{}", vQueues, clientIds);
+            CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
         }
+        log.info("RebalanceImpl rebalance clientId:{}  vQueues:{} clientIds:{}", clientId, CURRENT_VIRTUAL_QUEUES, clientIds);
     }
-
-    public static void main(String[] args) {
-        List<String> virtualQueues = new ArrayList<>();
-        virtualQueues.add("172.31.23.79");
-
-
-        List<String> virtualQueues1 = new ArrayList<>();
-        virtualQueues1.add("172.31.23.79");
-        virtualQueues1.add("10.10.0.22");
-        AllocateMessageQueueAveragely allocateMessageQueueAveragely = new AllocateMessageQueueAveragely();
-        List<String> vQueues = allocateMessageQueueAveragely.allocate("10.10.0.22", virtualQueues, new ArrayList<>(virtualQueues1));
-        System.out.println(vQueues);
-    }
-
 
 }

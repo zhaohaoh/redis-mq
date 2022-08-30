@@ -81,7 +81,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         lifeExtension();
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
                 600L, TimeUnit.SECONDS,
-                new SynchronousQueue<>(), new ThreadFactory() {
+                // 这个范围内的视为核心线程可以处理
+                new LinkedBlockingQueue<>(getConcurrency() << 2), new ThreadFactory() {
             private final ThreadGroup group;
             private final AtomicInteger threadNumber = new AtomicInteger(1);
             private final String NAME_PREFIX = "REDISMQ-WORK-" + registerQueue.getQueueName() + "-";
@@ -211,6 +212,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
     public void start(String virtualQueue, Long startTime) {
         running();
+        log.info("current virtualQueue:{} startTime:{}", virtualQueue, startTime);
         //为空说明当前能获取到数据
         DelayTimeoutTask task1 = delayTimeoutTaskManager.computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
             @Override
