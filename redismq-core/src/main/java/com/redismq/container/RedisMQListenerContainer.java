@@ -1,6 +1,7 @@
 package com.redismq.container;
 
 
+import com.redismq.CompositeQueue;
 import com.redismq.Message;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
@@ -79,10 +80,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public RedisMQListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue registerQueue) {
         super(redisListenerContainerFactory, registerQueue);
         lifeExtension();
-        work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency() + 1,
-                600L, TimeUnit.SECONDS,
+        work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
+                60L, TimeUnit.SECONDS,
                 // 这个范围内的视为核心线程可以处理
-                new LinkedBlockingQueue<>(getConcurrency() << 2), new ThreadFactory() {
+                new CompositeQueue<>(4), new ThreadFactory() {
             private final ThreadGroup group;
             private final AtomicInteger threadNumber = new AtomicInteger(1);
             private final String NAME_PREFIX = "REDISMQ-WORK-" + registerQueue.getQueueName() + "-";

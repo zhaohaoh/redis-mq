@@ -154,7 +154,7 @@ public class RedisMqClient {
             if (queue == null) {
                 return;
             }
-            List<String> virtualQueues = QueueManager.getVirtualQueues(k);
+            List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
             for (String virtualQueue : virtualQueues) {
                 PushMessage pushMessage = new PushMessage();
                 pushMessage.setQueue(virtualQueue);
