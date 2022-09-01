@@ -10,6 +10,7 @@ import com.redismq.rebalance.RebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
@@ -35,7 +36,7 @@ public class RedisMqClient {
 
     public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisTemplate = redisTemplate;
-        this.clientId = UUID.randomUUID().toString();
+        this.clientId = ClientConfig.getLocalAddress();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
     }
@@ -79,11 +80,11 @@ public class RedisMqClient {
     }
 
     public void destory() {
-        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
-        publishRebalance();
-        log.info("redismq client remove currentVirtualQueues:{} ",QueueManager.CURRENT_VIRTUAL_QUEUES);
         //停止任务
+        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
         redisListenerContainerManager.stopAll();
+        publishRebalance();
+        log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.CURRENT_VIRTUAL_QUEUES);
     }
 
     public void start() {
@@ -111,12 +112,15 @@ public class RedisMqClient {
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 30, TimeUnit.SECONDS);
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 36, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
                 rebalance();
+                //消费锁是30秒
+                // 当其他客户端消费消息的锁肯定释放完后再重新消费一下
+                new ScheduledThreadPoolExecutor(1).schedule(this::repush, 30, TimeUnit.SECONDS);
             }
         }
     }
@@ -161,6 +165,7 @@ public class RedisMqClient {
                 return;
             }
             List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
+            log.info("repush添加的虚拟队列:{}", virtualQueues);
             for (String virtualQueue : virtualQueues) {
                 PushMessage pushMessage = new PushMessage();
                 pushMessage.setQueue(virtualQueue);
@@ -205,6 +210,6 @@ public class RedisMqClient {
     }
 
     public void startRebalanceTask() {
-        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 30, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 36, TimeUnit.SECONDS);
     }
 }

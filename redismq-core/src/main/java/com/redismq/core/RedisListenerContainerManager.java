@@ -1,23 +1,22 @@
 package com.redismq.core;
 
 import com.redismq.constant.PushMessage;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.exception.RedisMqException;
-import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.cache.RedisCache;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
+import static com.redismq.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
 
 /**
@@ -33,7 +32,7 @@ public class RedisListenerContainerManager {
     private ThreadPoolExecutor boss;
     // 队列的容器
     private final Map<String, AbstractMessageListenerContainer> redisDelayListenerContainerMap = new ConcurrentHashMap<>();
-    private volatile StateEnum state = StateEnum.CREATED;
+    private volatile int state = 0;
 
     public LinkedBlockingQueue<String> getLinkedBlockingQueue() {
         return linkedBlockingQueue;
@@ -85,23 +84,13 @@ public class RedisListenerContainerManager {
         }, new ThreadPoolExecutor.DiscardPolicy());
     }
 
-    public enum StateEnum {
-        //状态
-        CREATED, RUNNING;
-    }
-
-    public StateEnum getState() {
-        return state;
-    }
-
     boolean isActive() {
-        return state == StateEnum.RUNNING;
+        return state == RUNNING;
     }
 
     void running() {
-        state = StateEnum.RUNNING;
+        state = RUNNING;
     }
-
 
     public void startRedisListener() {
         boss.execute(() -> {
@@ -110,9 +99,19 @@ public class RedisListenerContainerManager {
                 try {
                     String virtualName = linkedBlockingQueue.take();
                     RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
-                    // 假设并发情况 线程A拉取了redis中的旧消息.此时插入了新消息没有拉取.然后发布订阅.这里取获取锁.但是线程A在此时还未释放.这种情况概率较小.
-                    boolean add = INVOKE_VIRTUAL_QUEUES.add(virtualName);
-                    if (add) {
+                    boolean contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
+                    int count = 0;
+                    while (contains && container.isPause()) {
+                        if (count > 3) {
+                            break;
+                        }
+                        Thread.sleep(1000L);
+                        contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
+                        log.info("invoke_virtual_queues exclusive virtualName:{} count:{} retryContains:{}", virtualName, count, contains);
+                        count++;
+                    }
+                    log.info("invoke_virtual_queues virtualName:{} count:{} isPause:{}  ", virtualName, count, container.isPause());
+                    if (!contains) {
                         container.start(virtualName, System.currentTimeMillis());
                     }
                 } catch (InterruptedException e) {
@@ -147,12 +146,29 @@ public class RedisListenerContainerManager {
     }
 
     public void stopAll() {
-        redisDelayListenerContainerMap.values().forEach(AbstractMessageListenerContainer::stop);
+        redisDelayListenerContainerMap.values().forEach(r -> {
+            List<String> list = new ArrayList<>();
+            for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
+                list.add(getVirtualQueueLock(virtualQueue));
+            }
+            r.stop();
+            r.getRedisTemplate().delete(list);
+        });
         boss.shutdownNow();
         log.info("Shutdown  redismq All ThreadPollExecutor");
     }
 
     public void pauseAll() {
-        redisDelayListenerContainerMap.values().forEach(AbstractMessageListenerContainer::pause);
+        redisDelayListenerContainerMap.values().forEach(r -> {
+            List<String> list = new ArrayList<>();
+            for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
+                list.add(getVirtualQueueLock(virtualQueue));
+            }
+            //改为重试来获取消息
+//            INVOKE_VIRTUAL_QUEUES.clear();
+            r.pause();
+            log.info("暂停状态 queue:{}", r.getQueueName());
+            r.getRedisTemplate().delete(list);
+        });
     }
 }

@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
 import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.StateConstant.*;
 
 /**
  * 容器抽象类
@@ -71,11 +72,8 @@ public abstract class AbstractMessageListenerContainer {
     /**
      * 状态描述
      */
-    protected volatile Integer state = RUNNING;
-    private static final int RUNNING = 1;
-    private static final int STOP = 1 << 1;
-    private static final int BUSY = 1 << 2;
-    private static final int PAUSE = 1 << 3;
+    protected volatile int state = RUNNING;
+
 
     public void setConsumeInterceptorList(List<ConsumeInterceptor> consumeInterceptorList) {
         this.consumeInterceptorList = consumeInterceptorList;

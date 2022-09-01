@@ -13,6 +13,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.redismq.constant.StateConstant.RUNNING;
+import static com.redismq.constant.StateConstant.STOP;
 import static com.redismq.delay.DelayTimeoutTaskManager.EXECUTOR;
 
 /**
@@ -25,6 +27,7 @@ public abstract class DelayTimeoutTask {
     //时间轮
     private final HashedWheelTimer timer = new HashedWheelTimer(new DefaultThreadFactory("REDISMQ-HashedWheelTimer-WORKER"), 100, TimeUnit.MILLISECONDS, 1024, false);
     private final Map<Long, TimeoutTask> timeoutTaskMap = new ConcurrentHashMap<>();
+    private volatile int state = RUNNING;
 
     public static class TimeoutTask {
         private final long startTime;
@@ -54,10 +57,11 @@ public abstract class DelayTimeoutTask {
 
     public void stop() {
         timer.stop();
+        state = STOP;
     }
 
     private void scheduleTask(final Long startTime) {
-        if (startTime == null) {
+        if (startTime == null || !isRunning()) {
             //结束本次循环调用
             return;
         }
@@ -94,16 +98,22 @@ public abstract class DelayTimeoutTask {
         }
     }
 
+    public boolean isRunning() {
+        return state == RUNNING;
+    }
+
     protected abstract Set<Long> pullTask();
 
     private void invokeTask() {
         EXECUTOR.execute(() -> {
-            //执行真正任务
-            Set<Long> nextTimes = pullTask();
-            if (!CollectionUtils.isEmpty(nextTimes)) {
-                //重复调用
-                for (Long nextTime : nextTimes) {
-                    scheduleTask(nextTime);
+            if (isRunning()) {
+                //执行真正任务
+                Set<Long> nextTimes = pullTask();
+                if (!CollectionUtils.isEmpty(nextTimes)) {
+                    //重复调用
+                    for (Long nextTime : nextTimes) {
+                        scheduleTask(nextTime);
+                    }
                 }
             }
         });

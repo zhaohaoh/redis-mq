@@ -35,36 +35,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
     private final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
     private volatile ScheduledFuture<?> scheduledFuture;
-    private final ThreadPoolExecutor boss = new ThreadPoolExecutor(1, 1,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<>(), new ThreadFactory() {
-        private final ThreadGroup group;
-        private final AtomicInteger threadNumber = new AtomicInteger(1);
-        private static final String NAME_PREFIX = "REDISMQ-BOSS-";
-
-        {
-            SecurityManager s = System.getSecurityManager();
-            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
-        }
-
-        @Override
-        public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r, NAME_PREFIX + threadNumber.getAndIncrement());
-            t.setDaemon(true);
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-                t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
-        }
-    });
     // 非核心线程的高并发驻留时间加长为10分钟
     private final ThreadPoolExecutor work;
 
     @Override
     public void doStop() {
         work.shutdown();
+        delayTimeoutTaskManager.stop();
         try {
-            if (!work.awaitTermination(3L, TimeUnit.SECONDS)) {
+            if (!work.awaitTermination(10L, TimeUnit.SECONDS)) {
                 log.warn("redismq workThreadPool shutdown timeout");
                 work.shutdownNow();
             }
@@ -72,9 +51,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             log.error("redismq workThreadPool shutdown error", e);
             Thread.currentThread().interrupt();
         }
-        delayTimeoutTaskManager.stop();
-        //只要是线程休眠的状态就会停止
-        boss.shutdownNow();
     }
 
     public RedisMQListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue registerQueue) {
@@ -83,7 +59,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
                 60L, TimeUnit.SECONDS,
                 // 这个范围内的视为核心线程可以处理
-                new CompositeQueue<>(4), new ThreadFactory() {
+                new CompositeQueue<>(getConcurrency() << 3), new ThreadFactory() {
             private final ThreadGroup group;
             private final AtomicInteger threadNumber = new AtomicInteger(1);
             private final String NAME_PREFIX = "REDISMQ-WORK-" + registerQueue.getQueueName() + "-";
@@ -119,7 +95,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 // 解决思路1 记录偏移量的count 一直累加.直到取不到消息的时候偏移量归零重新取数据.
                 //解决思路2 本地消息必须全部提交,也就是全部被删除后,才能消费下一组消息.
                 Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
-                if (CollectionUtils.isEmpty(tuples)) {
+                if (CollectionUtils.isEmpty(tuples) && isRunning()) {
                     //本地消息没有消费完就先不取延时任务的.
                     if (size > 0) {
                         Thread.sleep(500L);
@@ -147,6 +123,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
                 count += tuples.size();
                 for (ZSetOperations.TypedTuple<Object> tuple : tuples) {
+                    if (!isRunning()) {
+                        break;
+                    }
                     Message message = (Message) tuple.getValue();
                     //手动ack
                     try {
@@ -213,18 +192,21 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
     public void start(String virtualQueue, Long startTime) {
         running();
-        log.info("current virtualQueue:{} startTime:{}", virtualQueue, startTime);
+        log.info("current virtualQueue:{} startTime:{} state:{}", virtualQueue, startTime, state);
         //为空说明当前能获取到数据
-        DelayTimeoutTask task1 = delayTimeoutTaskManager.computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
+        DelayTimeoutTask timeoutTask = delayTimeoutTaskManager.computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
             @Override
             protected Set<Long> pullTask() {
                 // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
                 // 而新的消息通知因为加锁获取不到的问题
                 // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
                 String virtualQueueLock = getVirtualQueueLock(virtualQueue);
-                Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(60));
+                Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(30));
+                log.info("current virtualQueue:{} success:{} state:{}", virtualQueue, success, state);
                 try {
                     if (success != null && success && isRunning()) {
+                        //添加到当前执行队列
+                        INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
                         List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
                         if (CollectionUtils.isEmpty(virtualQueues)) {
                             return null;
@@ -233,6 +215,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             return null;
                         }
                         Set<Long> pop = pop(virtualQueue);
+                        log.info("队列结束的 virtualQueue:{} 状态:{}", virtualQueue, state);
                         //为空说明当前能获取到数据
                         return new HashSet<>(pop);
                     }
@@ -246,7 +229,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 //                lifeExtensionCancel();
             }
         });
-        delayTimeoutTaskManager.schedule(task1, startTime);
+        delayTimeoutTaskManager.schedule(timeoutTask, startTime);
     }
 
     private void lifeExtension() {
@@ -261,7 +244,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         }
                         for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
                             String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
-                                    "redis.call('expire', KEYS[1], 60); " +
+                                    "redis.call('expire', KEYS[1], 30); " +
                                     "return 1; " +
                                     "end; " +
                                     "return 0;";
@@ -278,7 +261,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             }
                         }
                     }
-                }, 60, 20, TimeUnit.SECONDS);
+                }, 15, 15, TimeUnit.SECONDS);
             }
         }
     }
