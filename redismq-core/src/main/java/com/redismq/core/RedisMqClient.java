@@ -24,9 +24,9 @@ import java.util.stream.Collectors;
 import static com.redismq.constant.RedisMQConstant.*;
 
 public class RedisMqClient {
+    protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
-    protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final RedisListenerContainerManager redisListenerContainerManager;
     private final RedisTemplate<String, Object> redisTemplate;
     private final String clientId;
@@ -39,10 +39,6 @@ public class RedisMqClient {
         this.clientId = ClientConfig.getLocalAddress();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
-    }
-
-    public RedisMessageListenerContainer getRedisMessageListenerContainer() {
-        return redisMessageListenerContainer;
     }
 
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
@@ -112,13 +108,14 @@ public class RedisMqClient {
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
+        //要比里面这个30秒大
         Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 36, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
                 rebalance();
-                //消费锁是30秒
+                //消费锁是30秒 这个值和消费所相关联
                 // 当其他客户端消费消息的锁肯定释放完后再重新消费一下
                 new ScheduledThreadPoolExecutor(1).schedule(this::repush, 30, TimeUnit.SECONDS);
             }
