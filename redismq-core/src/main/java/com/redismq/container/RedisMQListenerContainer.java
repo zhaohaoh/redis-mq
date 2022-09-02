@@ -200,6 +200,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
                 // 而新的消息通知因为加锁获取不到的问题
                 // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
+                List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
+                if (CollectionUtils.isEmpty(virtualQueues)) {
+                    return null;
+                }
+                if (!virtualQueues.contains(virtualQueue)) {
+                    return null;
+                }
                 String virtualQueueLock = getVirtualQueueLock(virtualQueue);
                 Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(30));
                 log.info("current virtualQueue:{} success:{} state:{}", virtualQueue, success, state);
@@ -207,13 +214,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     if (success != null && success && isRunning()) {
                         //添加到当前执行队列
                         INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
-                        List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
-                        if (CollectionUtils.isEmpty(virtualQueues)) {
-                            return null;
-                        }
-                        if (!virtualQueues.contains(virtualQueue)) {
-                            return null;
-                        }
                         Set<Long> pop = pop(virtualQueue);
                         log.info("队列结束的 virtualQueue:{} 状态:{}", virtualQueue, state);
                         //为空说明当前能获取到数据
