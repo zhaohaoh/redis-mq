@@ -3,7 +3,11 @@ package com.redismq;
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils; 
 import java.io.*;
 import java.util.Objects;
-
+/**
+ * @Author: hzh
+ * @Date: 2022/9/6 10:50
+ * 消息体
+ */
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
 

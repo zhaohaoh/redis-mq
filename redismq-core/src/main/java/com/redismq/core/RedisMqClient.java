@@ -21,8 +21,13 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.*;
 
+/**
+ * @Author: hzh
+ * @Date: 2022/9/6 10:39
+ */
 public class RedisMqClient {
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
@@ -65,8 +70,8 @@ public class RedisMqClient {
     }
 
     public Long removeExpireClients() {
-        // 60秒以外的客户端
-        long max = System.currentTimeMillis() - 40000L;
+        // 过期的客户端
+        long max = System.currentTimeMillis() - CLIENT_EXPIRE *1000;
         return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, max);
     }
 
@@ -108,8 +113,7 @@ public class RedisMqClient {
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
-        //要比里面这个30秒大
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", 36, TimeUnit.SECONDS);
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
@@ -117,7 +121,7 @@ public class RedisMqClient {
                 rebalance();
                 //消费锁是30秒 这个值和消费所相关联
                 // 当其他客户端消费消息的锁肯定释放完后再重新消费一下
-                new ScheduledThreadPoolExecutor(1).schedule(this::repush, 30, TimeUnit.SECONDS);
+                new ScheduledThreadPoolExecutor(1).schedule(this::repush, VIRTUAL_LOCK_TIME, TimeUnit.SECONDS);
             }
         }
     }
@@ -162,7 +166,6 @@ public class RedisMqClient {
                 return;
             }
             List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
-            log.info("repush添加的虚拟队列:{}", virtualQueues);
             for (String virtualQueue : virtualQueues) {
                 PushMessage pushMessage = new PushMessage();
                 pushMessage.setQueue(virtualQueue);
@@ -203,10 +206,10 @@ public class RedisMqClient {
     }
 
     public void startRegisterClientTask() {
-        registerThread.scheduleAtFixedRate(this::registerClient, 30, 30, TimeUnit.SECONDS);
+        registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME, TimeUnit.SECONDS);
     }
 
     public void startRebalanceTask() {
-        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, 10, 36, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
     }
 }

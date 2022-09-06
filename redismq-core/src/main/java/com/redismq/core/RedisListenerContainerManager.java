@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
@@ -27,8 +28,8 @@ import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
 public class RedisListenerContainerManager {
     protected static final Logger log = LoggerFactory.getLogger(RedisListenerEndpoint.class);
     //延时队列每次的携带队列和时间戳.数据可能会不同.队列数量要求比较高
-    private final LinkedBlockingQueue<PushMessage> delayBlockingQueue = new LinkedBlockingQueue<>(65536);
-    private final LinkedBlockingQueue<String> linkedBlockingQueue = new LinkedBlockingQueue<>(2048);
+    private final LinkedBlockingQueue<PushMessage> delayBlockingQueue = new LinkedBlockingQueue<>(DELAY_BLOCKING_QUEUE_SIZE);
+    private final LinkedBlockingQueue<String> linkedBlockingQueue = new LinkedBlockingQueue<>(BLOCKING_QUEUE_SIZE);
     private ThreadPoolExecutor boss;
     // 队列的容器
     private final Map<String, AbstractMessageListenerContainer> redisDelayListenerContainerMap = new ConcurrentHashMap<>();
@@ -47,17 +48,17 @@ public class RedisListenerContainerManager {
     }
 
     public RedisListenerContainerManager() {
-        setBoss(2);
+        setBoss(BOSS_NUM);
     }
 
     /*
               boss线程数
            */
     public void setBoss(int bossNum) {
-        if (bossNum > 2) {
+        if (bossNum > BOSS_NUM) {
             throw new RedisMqException("boos线程初始化超过最大限制");
         }
-        boss = new ThreadPoolExecutor(bossNum, 2,
+        boss = new ThreadPoolExecutor(bossNum, BOSS_NUM,
                 10L, TimeUnit.SECONDS,
                 new SynchronousQueue<>(), new ThreadFactory() {
 
@@ -73,7 +74,7 @@ public class RedisListenerContainerManager {
             @Override
             public Thread newThread(Runnable r) {
                 //除了固定的boss线程。临时新增的线程会删除了会递增，int递增有最大值。这里再9999的时候就从固定线程的数量上重新计算
-                int current = threadNumber.getAndUpdate(operand -> operand >= 99999 ? bossNum + 1 : operand + 1);
+                int current = threadNumber.getAndUpdate(operand -> operand >= THREAD_NUM_MAX ? bossNum + 1 : operand + 1);
                 Thread t = new Thread(group, r, NAME_PREFIX + current);
                 t.setDaemon(true);
                 if (t.getPriority() != Thread.NORM_PRIORITY) {
@@ -107,10 +108,11 @@ public class RedisListenerContainerManager {
                         }
                         Thread.sleep(1000L);
                         contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
-                        log.info("invoke_virtual_queues exclusive virtualName:{} count:{} retryContains:{}", virtualName, count, contains);
+                        if (PRINT_CONSUME_LOG) {
+                            log.info("invoke_virtual_queues exclusive virtualName:{} count:{} retryContains:{}", virtualName, count, contains);
+                        }
                         count++;
                     }
-                    log.info("invoke_virtual_queues virtualName:{} count:{} isPause:{}  ", virtualName, count, container.isPause());
                     if (!contains) {
                         container.start(virtualName, System.currentTimeMillis());
                     }
@@ -120,6 +122,7 @@ public class RedisListenerContainerManager {
             }
         });
     }
+
 
     public void startDelayRedisListener() {
         boss.execute(() -> {
@@ -167,7 +170,7 @@ public class RedisListenerContainerManager {
             //改为重试来获取消息
 //            INVOKE_VIRTUAL_QUEUES.clear();
             r.pause();
-            log.info("暂停状态 queue:{}", r.getQueueName());
+            log.info("pause queue:{}", r.getQueueName());
             r.getRedisTemplate().delete(list);
         });
     }

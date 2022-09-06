@@ -44,9 +44,22 @@ public class RedisMQProperties {
     private String group = "";
 
     /**
+     * 打印核心消费日志
+     */
+    private boolean printConsumeLog = true;
+
+    /**
      * 是否全局开启事务提交后发送.会在真实的发消息前,beforeInterceptor后执行发消息逻辑.
      */
     private boolean sendAfterCommit = true;
+
+    public boolean isPrintConsumeLog() {
+        return printConsumeLog;
+    }
+
+    public void setPrintConsumeLog(boolean printConsumeLog) {
+        this.printConsumeLog = printConsumeLog;
+    }
 
     public boolean isSendAfterCommit() {
         return sendAfterCommit;

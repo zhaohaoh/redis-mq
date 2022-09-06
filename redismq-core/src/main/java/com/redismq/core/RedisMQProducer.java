@@ -25,7 +25,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 
 /**
  * @Author: hzh

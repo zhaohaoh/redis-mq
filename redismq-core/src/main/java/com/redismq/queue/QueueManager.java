@@ -7,7 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 
 /**
  * @Author: hzh

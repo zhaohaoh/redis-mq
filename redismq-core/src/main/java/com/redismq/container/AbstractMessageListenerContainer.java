@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 
-import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 import static com.redismq.constant.StateConstant.*;
 
 /**

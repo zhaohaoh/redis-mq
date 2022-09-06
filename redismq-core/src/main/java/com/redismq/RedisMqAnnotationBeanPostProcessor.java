@@ -38,7 +38,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.QueueConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 
 //Bean的后置处理器切入点
 public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean {

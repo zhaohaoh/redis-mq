@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @Author: hzh
  * @Date: 2022/8/30 14:21
- * 组合队列
+ * 组合队列-组合模式
  */
 public class CompositeQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>, java.io.Serializable {
     private final List<BlockingQueue<E>> blockingQueues = new ArrayList<>();

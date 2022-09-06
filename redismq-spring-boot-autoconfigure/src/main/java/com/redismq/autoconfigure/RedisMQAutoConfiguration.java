@@ -1,11 +1,11 @@
 package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redismq.constant.GlobalConstant;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
-import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.interceptor.ProducerInterceptor;
@@ -178,6 +178,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
-        RedisMQConstant.CLUSTER = redisMqProperties.getGroup();
+        RedisMQConstant.GROUP = redisMqProperties.getGroup();
+        GlobalConstant.PRINT_CONSUME_LOG = redisMqProperties.isPrintConsumeLog();
     }
 }
