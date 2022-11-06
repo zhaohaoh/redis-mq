@@ -108,7 +108,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                  此处会有部分本地消息正好被消费完,那么本地偏移量会前移几十个.那么会拉取到正在消费的消息
                 解决思路1 记录偏移量的count 一直累加.直到取不到消息的时候偏移量归零重新取数据.
                解决思路2 本地消息必须全部提交,也就是全部被删除后,才能消费下一组消息.
-               目前采用方案2
+               目前采用方案1
                  */
                 Set<ZSetOperations.TypedTuple<Object>> tuples = redisClient.zRangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
                 if (CollectionUtils.isEmpty(tuples)) {
