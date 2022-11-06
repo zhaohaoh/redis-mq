@@ -100,7 +100,7 @@ public class RedisListenerContainerManager {
                 try {
                     String virtualName = linkedBlockingQueue.take();
                     RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
-                    boolean contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
+                    boolean contains = isContains(virtualName);
                     int count = 0;
                     while (contains && container.isPause()) {
                         if (count > 3) {
@@ -121,6 +121,10 @@ public class RedisListenerContainerManager {
                 }
             }
         });
+    }
+
+    private boolean isContains(String virtualName) {
+        return INVOKE_VIRTUAL_QUEUES.contains(virtualName);
     }
 
 
@@ -155,7 +159,7 @@ public class RedisListenerContainerManager {
                 list.add(getVirtualQueueLock(virtualQueue));
             }
             r.stop();
-            r.getRedisTemplate().delete(list);
+            r.redisClient().delete(list);
         });
         boss.shutdownNow();
         log.info("Shutdown  redismq All ThreadPollExecutor");
@@ -163,15 +167,17 @@ public class RedisListenerContainerManager {
 
     public void pauseAll() {
         redisDelayListenerContainerMap.values().forEach(r -> {
-            List<String> list = new ArrayList<>();
-            for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
-                list.add(getVirtualQueueLock(virtualQueue));
-            }
+
+
             //改为重试来获取消息
 //            INVOKE_VIRTUAL_QUEUES.clear();
             r.pause();
             log.info("pause queue:{}", r.getQueueName());
-            r.getRedisTemplate().delete(list);
+
+            // 删除队列锁
+            List<String> list = new ArrayList<>();
+            INVOKE_VIRTUAL_QUEUES.forEach(virtualQueue -> list.add(getVirtualQueueLock(virtualQueue)));
+            r.redisClient().delete(list);
         });
     }
 }

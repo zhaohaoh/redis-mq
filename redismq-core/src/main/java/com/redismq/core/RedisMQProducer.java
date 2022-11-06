@@ -1,6 +1,7 @@
 package com.redismq.core;
 
 import com.redismq.Message;
+import com.redismq.connection.RedisClient;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
 import com.redismq.exception.QueueFullException;
@@ -13,6 +14,7 @@ import com.redismq.queue.QueueManager;
 import io.seata.core.context.RootContext;
 import io.seata.tm.api.transaction.TransactionHookAdapter;
 import io.seata.tm.api.transaction.TransactionHookManager;
+import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -32,9 +34,10 @@ import static com.redismq.constant.GlobalConstant.SPLITE;
  * @Date: 2022/5/19 15:46
  * redismq生产者
  */
+@Data
 public class RedisMQProducer {
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisClient redisClient;
     private Integer retryCount = 3;
     private Integer retrySleep = 200;
     private List<ProducerInterceptor> producerInterceptors;
@@ -44,34 +47,9 @@ public class RedisMQProducer {
         this.sendAfterCommit = sendAfterCommit;
     }
 
-    public RedisMQProducer(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public RedisMQProducer(RedisClient redisClient) {
+        this.redisClient = redisClient;
     }
-
-    public void setRetryCount(Integer retryCount) {
-        this.retryCount = retryCount;
-    }
-
-    public void setRetrySleep(Integer retrySleep) {
-        this.retrySleep = retrySleep;
-    }
-
-    public void setProducerInterceptors(List<ProducerInterceptor> producerInterceptors) {
-        this.producerInterceptors = producerInterceptors;
-    }
-
-    public Integer getRetryCount() {
-        return retryCount;
-    }
-
-    public Integer getRetrySleep() {
-        return retrySleep;
-    }
-
-    public List<ProducerInterceptor> getProducerInterceptors() {
-        return producerInterceptors;
-    }
-
 
     /**
      * 队列消息
@@ -141,13 +119,7 @@ public class RedisMQProducer {
     }
 
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
-        Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
-        increment = increment == null ? 0 : increment;
-        if (increment >= System.currentTimeMillis()) {
-            redisTemplate.opsForValue().set(RedisMQConstant.getSendIncrement(), 0L);
-            increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
-            increment = increment == null ? 0 : increment;
-        }
+        Long increment = increment();
         if (executorTime == null) {
             executorTime = increment;
         }
@@ -163,17 +135,22 @@ public class RedisMQProducer {
         return doSendMessage(pushMessage, Collections.singletonList(sendMessageParam));
     }
 
+    private Long increment() {
+        Long increment = redisClient.increment(RedisMQConstant.getSendIncrement(),1);
+        increment = increment == null ? 0 : increment;
+        if (increment >= System.currentTimeMillis()) {
+            redisClient.set(RedisMQConstant.getSendIncrement(), 0L);
+            increment = redisClient.increment(RedisMQConstant.getSendIncrement(),1);
+            increment = increment == null ? 0 : increment;
+        }
+        return increment;
+    }
+
     public boolean sendBatchMessage(Queue queue, List<Message> messages) {
         Map<PushMessage, List<SendMessageParam>> messageMap = new HashMap<>();
         for (Message message : messages) {
             //有bug要改成lua
-            Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
-            increment = increment == null ? 0 : increment;
-            if (increment >= System.currentTimeMillis()) {
-                redisTemplate.opsForValue().set(RedisMQConstant.getSendIncrement(), 0L);
-                increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
-                increment = increment == null ? 0 : increment;
-            }
+            Long increment = increment();
             Long executorTime = increment;
             long num = increment % QueueManager.VIRTUAL_QUEUES_NUM;
             PushMessage pushMessage = new PushMessage();
@@ -277,7 +254,6 @@ public class RedisMQProducer {
         sb.append("redis.call('publish', KEYS[2], ARGV[1]);\n" +
                 "return size");
         String lua = sb.toString();
-        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
         List<String> list = new ArrayList<>();
         list.add(pushMessage.getQueue());
         list.add(RedisMQConstant.getTopic());
@@ -289,7 +265,7 @@ public class RedisMQProducer {
         }
         int count = 0;
         while (size == null || count < retryCount) {
-            size = redisTemplate.execute(redisScript, list, array);
+            size = redisClient.executeLua(lua, list, array);
             if (size == null || size < 0) {
                 try {
                     Thread.sleep(retrySleep);
@@ -412,7 +388,7 @@ public class RedisMQProducer {
      * redis的发布订阅  直接传递实际数据即可
      */
     public void publish(String topic, Object obj) {
-        redisTemplate.convertAndSend(topic, obj);
+        redisClient.convertAndSend(topic, obj);
     }
 
 

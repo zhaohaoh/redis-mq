@@ -7,6 +7,16 @@
       <option name="url" value="https://repo.maven.apache.org/maven2" />
     </remote-repository>
     <remote-repository>
+      <option name="id" value="aliyunmaven" />
+      <option name="name" value="阿里云公共仓库" />
+      <option name="url" value="https://maven.aliyun.com/repository/public" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="zwkj-dev" />
+      <option name="name" value="紫蔚私有仓库" />
+      <option name="url" value="http://52.81.121.136/repository/maven-public-dev/" />
+    </remote-repository>
+    <remote-repository>
       <option name="id" value="central" />
       <option name="name" value="Central Repository" />
       <option name="url" value="http://maven.aliyun.com/nexus/content/repositories/central/" />
@@ -20,6 +30,11 @@
       <option name="id" value="jboss.community" />
       <option name="name" value="JBoss Community repository" />
       <option name="url" value="https://repository.jboss.org/nexus/content/repositories/public/" />
+    </remote-repository>
+    <remote-repository>
+      <option name="id" value="zwkj-snapshot" />
+      <option name="name" value="紫蔚私有仓库" />
+      <option name="url" value="http://52.81.121.136/repository/maven-snapshot-dev/" />
     </remote-repository>
   </component>
 </project>

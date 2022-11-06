@@ -1,6 +1,7 @@
 package com.redismq.container;
 
 import com.redismq.Message;
+import com.redismq.connection.RedisClient;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.exception.RedisMqException;
@@ -30,7 +31,7 @@ public abstract class AbstractMessageListenerContainer {
     /**
      * redis
      */
-    protected RedisTemplate<String, Object> redisTemplate;
+    protected RedisClient redisClient;
     /**
      * 最小线程数
      */
@@ -85,7 +86,7 @@ public abstract class AbstractMessageListenerContainer {
 
     public AbstractMessageListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue queue) {
         this.queueName = queue.getQueueName();
-        this.redisTemplate = redisListenerContainerFactory.getRedisTemplate();
+        this.redisClient = redisListenerContainerFactory.getRedisClient();
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
         this.delay = queue.getDelayState();
@@ -121,13 +122,12 @@ public abstract class AbstractMessageListenerContainer {
         this.queueName = queueName;
     }
 
-
-    public RedisTemplate<String, Object> getRedisTemplate() {
-        return redisTemplate;
+    public RedisClient redisClient() {
+        return redisClient;
     }
 
-    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
-        this.redisTemplate = redisTemplate;
+    public void setRedisClient(RedisClient redisClient) {
+        this.redisClient = redisClient;
     }
 
     public int getConcurrency() {
@@ -183,7 +183,7 @@ public abstract class AbstractMessageListenerContainer {
         }
         RedisListenerRunnable runnable = new RedisListenerRunnable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
                 this.getRetryMax(), this.getSemaphore(),
-                this.getRedisTemplate());
+                this.redisClient);
         runnable.setArgs(message);
         runnable.setAckMode(this.getAckMode());
         runnable.setRetryInterval(this.getRetryInterval());

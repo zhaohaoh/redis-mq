@@ -105,7 +105,7 @@ public abstract class DelayTimeoutTask {
     protected abstract Set<Long> pullTask();
 
     private void invokeTask() {
-        EXECUTOR.execute(() -> {
+        Runnable runnable = () -> {
             if (isRunning()) {
                 //执行真正任务
                 Set<Long> nextTimes = pullTask();
@@ -116,7 +116,8 @@ public abstract class DelayTimeoutTask {
                     }
                 }
             }
-        });
+        };
+        EXECUTOR.execute(runnable);
     }
 
 }

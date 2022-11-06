@@ -1,6 +1,7 @@
 package com.redismq;
 
 
+import com.redismq.connection.RedisClient;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
@@ -160,12 +161,15 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         }
     }
 
+    /**
+     * 创建容器
+     */
     private void createContainer() {
         Map<String, Queue> queues = QueueManager.getAllQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
         DefaultRedisListenerContainerFactory containerFactory = applicationContext.getBean(DefaultRedisListenerContainerFactory.class);
-        RedisTemplate<String, Object> redisTemplate = applicationContext.getBean("redisMQRedisTemplate", RedisTemplate.class);
-        containerFactory.setRedisTemplate(redisTemplate);
+        RedisClient redisClient = applicationContext.getBean("redisClient", RedisClient.class);
+        containerFactory.setRedisClient(redisClient);
         //没有配置取全局配置
         queues.forEach((name, queue) -> {
             List<RedisListenerEndpoint> listenerEndpoints = redisListenerEndpointMap.get(name);

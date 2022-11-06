@@ -13,7 +13,6 @@ import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
@@ -108,7 +107,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 // 此处会有部分本地消息正好被消费完,那么本地偏移量会前移几十个.那么会拉取到正在消费的消息
                 // 解决思路1 记录偏移量的count 一直累加.直到取不到消息的时候偏移量归零重新取数据.
                 //解决思路2 本地消息必须全部提交,也就是全部被删除后,才能消费下一组消息.
-                Set<ZSetOperations.TypedTuple<Object>> tuples = redisTemplate.opsForZSet().rangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
+                Set<ZSetOperations.TypedTuple<Object>> tuples = redisClient.zRangeByScoreWithScores(queueName, 0, pullTime, count, super.maxConcurrency);
                 if (CollectionUtils.isEmpty(tuples)) {
                     //响应中断
                     if (!isRunning()) {
@@ -127,7 +126,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
-                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisTemplate.opsForZSet().rangeWithScores(queueName, 0, DELAY_QUEUE_PULL_SIZE);
+                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, 0, DELAY_QUEUE_PULL_SIZE);
                         if (headDatas != null) {
                             for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
                                 Double score = headData.getScore();
@@ -158,7 +157,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                                 continue;
                             }
                         } else {
-                            Long remove = redisTemplate.opsForZSet().remove(queueName, message);
+                            Long remove = redisClient.zRemove(queueName, message);
                             if (remove == null || remove <= 0) {
                                 continue;
                             }
@@ -220,11 +219,27 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @param startTime    开始时间
      */
     public void start(String virtualQueue, Long startTime) {
+
         running();
+        // 虚拟队列锁定执行任务默认时长,有看门狗机制
+
+        String virtualQueueLock = getVirtualQueueLock(virtualQueue);
+
+        Boolean success = redisClient.setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(VIRTUAL_LOCK_TIME));
+        if (PRINT_CONSUME_LOG) {
+            log.info("current virtualQueue:{} lockSuccess:{} state:{}", virtualQueue, success, state);
+        }
+
+        //获取锁失败
+        if (success == null || !success) {
+            return;
+        }
+
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager.computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
             @Override
             protected Set<Long> pullTask() {
+                try {
                 // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
                 // 而新的消息通知因为加锁获取不到的问题
                 // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
@@ -235,37 +250,26 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 if (!virtualQueues.contains(virtualQueue)) {
                     return null;
                 }
-                // 虚拟队列锁定执行任务默认时长,有看门狗机制
-                String virtualQueueLock = getVirtualQueueLock(virtualQueue);
-                Boolean success = redisTemplate.opsForValue().setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(VIRTUAL_LOCK_TIME));
-                if (PRINT_CONSUME_LOG) {
-                    log.info("current virtualQueue:{} lockSuccess:{} state:{}", virtualQueue, success, state);
-                }
-                try {
-                    if (success != null && success && isRunning()) {
-                        //添加到当前执行队列
-                        INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
-                        Set<Long> pop = pop(virtualQueue);
-                        //为空说明当前能获取到数据
-                        return new HashSet<>(pop);
-                    }
+
+                    //添加到当前执行队列。看门狗用
+                    INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
+                    Set<Long> pop = pop(virtualQueue);
+                    //为空说明当前能获取到数据
+                    return new HashSet<>(pop);
                 } finally {
-                    if (success != null && success) {
-                        INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
-                        redisTemplate.delete(virtualQueueLock);
-                    }
+                    INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
+                    redisClient.delete(virtualQueueLock);
                 }
-                return null;
             }
         });
         delayTimeoutTaskManager.schedule(timeoutTask, startTime);
     }
 
     /**
-     * 消费锁续期
+     * 消费锁续期 看门狗
      */
     private void lifeExtension() {
-        if (AckMode.MAUAL.equals(ackMode)) {
+//        if (AckMode.MAUAL.equals(ackMode)) {
             if (scheduledFuture == null || scheduledFuture.isCancelled()) {
                 scheduledFuture = lifeExtensionThread.scheduleAtFixedRate(new Runnable() {
                     @Override
@@ -281,10 +285,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                                     "end; " +
                                     "return 0;";
                             try {
-                                DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
                                 List<String> list = new ArrayList<>();
                                 list.add(getVirtualQueueLock(virtualQueue));
-                                Long execute = redisTemplate.execute(redisScript, list);
+                                Long execute = redisClient.executeLua(lua, list);
                             } catch (Exception e) {
                                 if (isRunning()) {
                                     log.error("lifeExtension  redisTemplate.expire Exception", e);
@@ -294,7 +297,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                 }, VIRTUAL_LOCK_WATCH_DOG_TIME, VIRTUAL_LOCK_WATCH_DOG_TIME, TimeUnit.SECONDS);
             }
-        }
+//        }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.redismq.core;
 
 
+import com.redismq.connection.RedisClient;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
 import com.redismq.queue.Queue;
@@ -15,6 +16,7 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -23,24 +25,24 @@ import java.util.stream.Collectors;
 
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.*;
-
 /**
  * @Author: hzh
- * @Date: 2022/9/6 10:39
+ * @Date: 2022/11/4 16:44
+ * RedisMQ客户端
  */
 public class RedisMqClient {
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
     private final RedisListenerContainerManager redisListenerContainerManager;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisClient redisClient;
     private final String clientId;
     private final RebalanceImpl rebalance;
     private RedisMessageListenerContainer redisMessageListenerContainer;
     private boolean isSub;
 
-    public RedisMqClient(RedisTemplate<String, Object> redisTemplate, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
-        this.redisTemplate = redisTemplate;
+    public RedisMqClient(RedisClient redisClient, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
+        this.redisClient = redisClient;
         this.clientId = ClientConfig.getLocalAddress();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
@@ -62,27 +64,27 @@ public class RedisMqClient {
     public void registerClient() {
         log.debug("registerClient :{}", clientId);
         //注册客户端
-        redisTemplate.opsForZSet().add(getClientKey(), clientId, System.currentTimeMillis());
+        redisClient.zAdd(getClientKey(), clientId, System.currentTimeMillis());
     }
 
     public Set<String> allClient() {
-        return redisTemplate.opsForZSet().rangeByScore(getClientKey(), 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
+        return redisClient.zRangeByScore(getClientKey(), 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
     }
 
     public Long removeExpireClients() {
         // 过期的客户端
         long max = System.currentTimeMillis() - CLIENT_EXPIRE *1000;
-        return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, max);
+        return redisClient.zRemoveRangeByScore(getClientKey(), 0, max);
     }
 
     public Long removeAllClient() {
         log.info("redismq removeAllClient");
-        return redisTemplate.opsForZSet().removeRangeByScore(getClientKey(), 0, Double.MAX_VALUE);
+        return redisClient.zRemoveRangeByScore(getClientKey(), 0, Double.MAX_VALUE);
     }
 
     public void destory() {
         //停止任务
-        redisTemplate.opsForZSet().remove(getClientKey(), clientId);
+        redisClient.zRemove(getClientKey(), clientId);
         redisListenerContainerManager.stopAll();
         publishRebalance();
         log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.CURRENT_VIRTUAL_QUEUES);
@@ -113,7 +115,7 @@ public class RedisMqClient {
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
-        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey, "", CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
+        Boolean success = redisClient.setIfAbsent(lockKey, "", Duration.ofSeconds(CLIENT_RABALANCE_TIME));
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
@@ -126,6 +128,9 @@ public class RedisMqClient {
         }
     }
 
+    /**
+     * 平衡
+     */
     public void rebalance() {
         // 发布重平衡 会让其他服务暂停拉取消息
         publishRebalance();
@@ -148,7 +153,7 @@ public class RedisMqClient {
     }
 
     private void publishRebalance() {
-        redisTemplate.convertAndSend(getRebalanceTopic(), clientId);
+        redisClient.convertAndSend(getRebalanceTopic(), clientId);
     }
 
     //启动时对任务重新进行拉取
@@ -200,15 +205,24 @@ public class RedisMqClient {
         }
     }
 
+    /**
+     * 负载均衡订阅
+     */
     public void rebalanceSubscribe() {
         RedisMqClient redisMqClient = this;
         redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient), new ChannelTopic(RedisMQConstant.getRebalanceTopic()));
     }
 
+    /**
+     * 开始注册客户任务
+     */
     public void startRegisterClientTask() {
         registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME, TimeUnit.SECONDS);
     }
 
+    /**
+     * 开始负载均衡任务
+     */
     public void startRebalanceTask() {
         rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
     }

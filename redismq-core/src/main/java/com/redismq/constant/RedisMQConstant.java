@@ -1,6 +1,11 @@
 package com.redismq.constant;
 
 
+/**
+ * @Author: hzh
+ * @Date: 2022/11/4 15:19
+ * 全局常量
+ */
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
 public class RedisMQConstant {

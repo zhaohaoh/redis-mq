@@ -1,6 +1,7 @@
 package com.redismq.core;
 
 import com.redismq.Message;
+import com.redismq.connection.RedisClient;
 import com.redismq.constant.AckMode;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
@@ -29,8 +30,8 @@ public class RedisListenerRunnable implements Runnable {
     private Object args;
     private final Method method;
     private final PollState state = new PollState();
-    private final RedisTemplate<String, Object> redisTemplate;
-    private final Semaphore semaphore;
+    private final RedisClient redisClient;
+    private Semaphore semaphore;
     private String ackMode;
     private Integer retryInterval;
     //真实队列名
@@ -67,13 +68,38 @@ public class RedisListenerRunnable implements Runnable {
     }
 
 
+    public Semaphore getSemaphore() {
+        return semaphore;
+    }
 
-    public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisTemplate<String, Object> redisTemplate) {
+    public void setSemaphore(Semaphore semaphore) {
+        this.semaphore = semaphore;
+    }
+
+    public RedisClient getRedisClient() {
+        return redisClient;
+    }
+
+    /**
+     * Return the target instance to call the method on.
+     */
+    public Object getTarget() {
+        return this.target;
+    }
+
+    /**
+     * Return the target method to call.
+     */
+    public Method getMethod() {
+        return this.method;
+    }
+
+    public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisClient redisClient) {
         this.target = target;
         this.method = method;
         this.retryMax = retryMax;
         this.semaphore = semaphore;
-        this.redisTemplate = redisTemplate;
+        this.redisClient = redisClient;
     }
 
     @Override
@@ -90,7 +116,7 @@ public class RedisListenerRunnable implements Runnable {
             semaphore.release();
             //如果是手动确认的话需要手动删除
             if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
-                Long count = redisTemplate.opsForZSet().remove(message.getVirtualQueueName(), args);
+                Long count = redisClient.zRemove(message.getVirtualQueueName(), args);
             }
             localMessages.remove(message.getId());
         }

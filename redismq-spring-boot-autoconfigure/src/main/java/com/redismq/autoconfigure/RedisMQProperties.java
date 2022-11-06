@@ -1,7 +1,12 @@
 package com.redismq.autoconfigure;
 
+import com.redismq.constant.AckMode;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * @Author: hzh
+ * @Date: 2022/11/4 15:29
+ */
 @ConfigurationProperties(prefix = RedisMQProperties.PREFIX)
 public class RedisMQProperties {
     public static final String PREFIX = "spring.redismq";
@@ -22,17 +27,17 @@ public class RedisMQProperties {
      */
     private int producerRetryMax = 1;
     /**
-     * 发送者重试时间
+     * 发送者重试时间间隔
      */
     private int producerRetryInterval = 200;
     /**
-     * 消费者重试时间
+     * 消费者重试时间间隔
      */
     private int retryInterval = 500;
     /**
      * ack模式
      */
-    private String ackMode = "auto";
+    private String ackMode = AckMode.AUTO;
     /**
      * 虚拟队列数量
      */
