@@ -1,6 +1,10 @@
 package com.redismq.utils;
 
-
+/**
+ * @Author: hzh
+ * @Date: 2022/11/7 11:03
+ * 目前主要是用作mq事务后提交的功能
+ */
 public class RedisMQDataHelper {
     public static final ThreadLocal<Boolean> SEND_AFTER_COMMIT = new ThreadLocal<>();
 

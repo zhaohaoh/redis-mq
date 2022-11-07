@@ -223,7 +223,7 @@ public class RedisMqClient {
     }
 
     /**
-     * 开始注册客户任务
+     * 开始注册客户任务   心跳任务
      */
     public void startRegisterClientTask() {
         registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME, TimeUnit.SECONDS);
