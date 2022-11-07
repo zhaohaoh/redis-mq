@@ -2,7 +2,6 @@ package com.redismq.container;
 
 import com.redismq.CompositeQueue;
 import com.redismq.Message;
-import com.redismq.constant.GlobalConstant;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
