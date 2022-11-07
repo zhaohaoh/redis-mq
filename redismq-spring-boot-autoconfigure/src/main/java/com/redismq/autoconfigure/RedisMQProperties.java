@@ -1,12 +1,16 @@
 package com.redismq.autoconfigure;
 
+import com.redismq.config.GlobalConfig;
 import com.redismq.constant.AckMode;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
 /**
  * @Author: hzh
  * @Date: 2022/11/4 15:29
  */
+@Data
 @ConfigurationProperties(prefix = RedisMQProperties.PREFIX)
 public class RedisMQProperties {
     public static final String PREFIX = "spring.redismq";
@@ -48,101 +52,12 @@ public class RedisMQProperties {
      */
     private String group = "";
 
-    /**
-     * 打印核心消费日志
-     */
-    private boolean printConsumeLog = true;
 
     /**
      * 是否全局开启事务提交后发送.会在真实的发消息前,beforeInterceptor后执行发消息逻辑.
      */
     private boolean sendAfterCommit = true;
 
-    public boolean isPrintConsumeLog() {
-        return printConsumeLog;
-    }
-
-    public void setPrintConsumeLog(boolean printConsumeLog) {
-        this.printConsumeLog = printConsumeLog;
-    }
-
-    public boolean isSendAfterCommit() {
-        return sendAfterCommit;
-    }
-
-    public void setSendAfterCommit(boolean sendAfterCommit) {
-        this.sendAfterCommit = sendAfterCommit;
-    }
-
-    public String getGroup() {
-        return group;
-    }
-
-    public void setGroup(String group) {
-        this.group = group;
-    }
-
-    public Integer getVirtual() {
-        return virtual;
-    }
-
-    public void setVirtual(Integer virtual) {
-        this.virtual = virtual;
-    }
-
-    public int getRetryInterval() {
-        return retryInterval;
-    }
-
-    public void setRetryInterval(int retryInterval) {
-        this.retryInterval = retryInterval;
-    }
-
-    public String getAckMode() {
-        return ackMode;
-    }
-
-    public void setAckMode(String ackMode) {
-        this.ackMode = ackMode;
-    }
-
-    public int getConcurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
-    }
-
-    public int getMaxConcurrency() {
-        return maxConcurrency;
-    }
-
-    public void setMaxConcurrency(int maxConcurrency) {
-        this.maxConcurrency = maxConcurrency;
-    }
-
-    public int getConsumeRetryMax() {
-        return consumeRetryMax;
-    }
-
-    public void setConsumeRetryMax(int consumeRetryMax) {
-        this.consumeRetryMax = consumeRetryMax;
-    }
-
-    public int getProducerRetryMax() {
-        return producerRetryMax;
-    }
-
-    public void setProducerRetryMax(int producerRetryMax) {
-        this.producerRetryMax = producerRetryMax;
-    }
-
-    public int getProducerRetryInterval() {
-        return producerRetryInterval;
-    }
-
-    public void setProducerRetryInterval(int producerRetryInterval) {
-        this.producerRetryInterval = producerRetryInterval;
-    }
+    @NestedConfigurationProperty
+    private GlobalConfig globalConfig = new GlobalConfig();
 }

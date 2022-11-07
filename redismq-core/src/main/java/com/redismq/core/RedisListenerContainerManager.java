@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.constant.StateConstant.RUNNING;
@@ -108,7 +109,7 @@ public class RedisListenerContainerManager {
                         }
                         Thread.sleep(1000L);
                         contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
-                        if (PRINT_CONSUME_LOG) {
+                        if (GLOBAL_CONFIG.printConsumeLog) {
                             log.info("invoke_virtual_queues exclusive virtualName:{} count:{} retryContains:{}", virtualName, count, contains);
                         }
                         count++;

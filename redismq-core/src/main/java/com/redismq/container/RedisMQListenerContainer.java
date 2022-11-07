@@ -2,6 +2,7 @@ package com.redismq.container;
 
 import com.redismq.CompositeQueue;
 import com.redismq.Message;
+import com.redismq.constant.GlobalConstant;
 import com.redismq.core.RedisListenerRunnable;
 import com.redismq.constant.AckMode;
 import com.redismq.delay.DelayTimeoutTask;
@@ -20,6 +21,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
@@ -129,7 +131,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
-                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, 0, DELAY_QUEUE_PULL_SIZE);
+                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, 0, GLOBAL_CONFIG.delayQueuePullSize);
                         if (headDatas != null) {
                             for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
                                 Double score = headData.getScore();
@@ -228,8 +230,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
 
-        Boolean success = redisClient.setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(VIRTUAL_LOCK_TIME));
-        if (PRINT_CONSUME_LOG) {
+        Boolean success = redisClient.setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+        if (GLOBAL_CONFIG.printConsumeLog) {
             log.info("current virtualQueue:{} lockSuccess:{} state:{}", virtualQueue, success, state);
         }
 
@@ -243,16 +245,16 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             @Override
             protected Set<Long> pullTask() {
                 try {
-                // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
-                // 而新的消息通知因为加锁获取不到的问题
-                // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
-                List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
-                if (CollectionUtils.isEmpty(virtualQueues)) {
-                    return null;
-                }
-                if (!virtualQueues.contains(virtualQueue)) {
-                    return null;
-                }
+                    // 执行真正任务 加锁执行.超过200ms获取不到则放弃.加长这里的时长可以避免执行中的任务刚好拿完老的redis消息.而没有取到最新的消息.
+                    // 而新的消息通知因为加锁获取不到的问题
+                    // 加锁主要是为了避免多个订阅的消息同时进来要求拉取同一个队列的消息.改造为分布式锁.可以同时解决手动ack多个服务负载均衡错误的并发消费问题
+                    List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
+                    if (CollectionUtils.isEmpty(virtualQueues)) {
+                        return null;
+                    }
+                    if (!virtualQueues.contains(virtualQueue)) {
+                        return null;
+                    }
 
                     //添加到当前执行队列。看门狗用
                     INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
@@ -273,33 +275,33 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     private void lifeExtension() {
 //        if (AckMode.MAUAL.equals(ackMode)) {
-            if (scheduledFuture == null || scheduledFuture.isCancelled()) {
-                scheduledFuture = lifeExtensionThread.scheduleAtFixedRate(new Runnable() {
-                    @Override
-                    public void run() {
-                        List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
-                        if (CollectionUtils.isEmpty(virtualQueues)) {
-                            return;
-                        }
-                        for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
-                            String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
-                                    "redis.call('expire', KEYS[1]," + VIRTUAL_LOCK_TIME + "); " +
-                                    "return 1; " +
-                                    "end; " +
-                                    "return 0;";
-                            try {
-                                List<String> list = new ArrayList<>();
-                                list.add(getVirtualQueueLock(virtualQueue));
-                                Long execute = redisClient.executeLua(lua, list);
-                            } catch (Exception e) {
-                                if (isRunning()) {
-                                    log.error("lifeExtension  redisTemplate.expire Exception", e);
-                                }
+        if (scheduledFuture == null || scheduledFuture.isCancelled()) {
+            scheduledFuture = lifeExtensionThread.scheduleAtFixedRate(new Runnable() {
+                @Override
+                public void run() {
+                    List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(queueName);
+                    if (CollectionUtils.isEmpty(virtualQueues)) {
+                        return;
+                    }
+                    for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
+                        String lua = "if (redis.call('exists', KEYS[1]) == 1) then " +
+                                "redis.call('expire', KEYS[1]," + GLOBAL_CONFIG.virtualLockTime + "); " +
+                                "return 1; " +
+                                "end; " +
+                                "return 0;";
+                        try {
+                            List<String> list = new ArrayList<>();
+                            list.add(getVirtualQueueLock(virtualQueue));
+                            Long execute = redisClient.executeLua(lua, list);
+                        } catch (Exception e) {
+                            if (isRunning()) {
+                                log.error("lifeExtension  redisTemplate.expire Exception", e);
                             }
                         }
                     }
-                }, VIRTUAL_LOCK_WATCH_DOG_TIME, VIRTUAL_LOCK_WATCH_DOG_TIME, TimeUnit.SECONDS);
-            }
+                }
+            }, GLOBAL_CONFIG.virtualLockWatchDogTime, GLOBAL_CONFIG.virtualLockWatchDogTime, TimeUnit.SECONDS);
+        }
 //        }
     }
 }

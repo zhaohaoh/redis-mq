@@ -10,8 +10,6 @@ import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.RebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
@@ -23,8 +21,10 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.*;
+
 /**
  * @Author: hzh
  * @Date: 2022/11/4 16:44
@@ -73,7 +73,7 @@ public class RedisMqClient {
 
     public Long removeExpireClients() {
         // 过期的客户端
-        long max = System.currentTimeMillis() - CLIENT_EXPIRE *1000;
+        long max = System.currentTimeMillis() - CLIENT_EXPIRE * 1000;
         return redisClient.zRemoveRangeByScore(getClientKey(), 0, max);
     }
 
@@ -123,7 +123,7 @@ public class RedisMqClient {
                 rebalance();
                 //消费锁是30秒 这个值和消费所相关联
                 // 当其他客户端消费消息的锁肯定释放完后再重新消费一下
-                new ScheduledThreadPoolExecutor(1).schedule(this::repush, VIRTUAL_LOCK_TIME, TimeUnit.SECONDS);
+                new ScheduledThreadPoolExecutor(1).schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
             }
         }
     }
@@ -138,7 +138,10 @@ public class RedisMqClient {
         doRebalance();
     }
 
-    // 暂停消息分配.重新负载均衡后.重新拉取消息
+
+    /**
+     * 暂停消息分配.重新负载均衡后.重新拉取消息
+     */
     public void doRebalance() {
         registerClient();
         redisListenerContainerManager.pauseAll();
@@ -156,7 +159,10 @@ public class RedisMqClient {
         redisClient.convertAndSend(getRebalanceTopic(), clientId);
     }
 
-    //启动时对任务重新进行拉取
+
+    /**
+     * 启动时对任务重新进行拉取
+     */
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
         boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
@@ -187,7 +193,9 @@ public class RedisMqClient {
         });
     }
 
-    //订阅
+    /**
+     * 监听队列消息的订阅
+     */
     public synchronized void subscribe() {
         if (!isSub) {
             RedisMqClient redisMqClient = this;
@@ -195,8 +203,9 @@ public class RedisMqClient {
             isSub = true;
         }
     }
-
-    //取消订阅
+    /**
+     * 取消监听队列消息的订阅
+     */
     public synchronized void unSubscribe() {
         if (isSub) {
             RedisMqClient redisMqClient = this;

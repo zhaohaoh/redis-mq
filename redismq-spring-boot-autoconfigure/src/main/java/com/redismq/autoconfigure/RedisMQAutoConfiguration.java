@@ -1,6 +1,7 @@
 package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.redismq.config.GlobalConfigCache;
 import com.redismq.connection.RedisClient;
 import com.redismq.connection.RedisTemplateAdapter;
 import com.redismq.constant.GlobalConstant;
@@ -34,7 +35,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -97,10 +97,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Bean
     public RedisMQProducer redisMQProducer() {
         RedisMQProducer redisMQProducer = new RedisMQProducer(redisClient);
-        redisMQProducer.setRetryCount(redisMqProperties.getProducerRetryMax());
-        redisMQProducer.setRetrySleep(redisMqProperties.getProducerRetryInterval());
         redisMQProducer.setProducerInterceptors(producerInterceptors);
-        redisMQProducer.setSendAfterCommit(redisMqProperties.isSendAfterCommit());
         return redisMQProducer;
     }
 
@@ -243,6 +240,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     public void afterPropertiesSet() throws Exception {
         QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
         RedisMQConstant.GROUP = redisMqProperties.getGroup();
-        GlobalConstant.PRINT_CONSUME_LOG = redisMqProperties.isPrintConsumeLog();
+        GlobalConfigCache.GLOBAL_CONFIG = redisMqProperties.getGlobalConfig();
     }
 }

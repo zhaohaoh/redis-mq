@@ -8,7 +8,6 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
-import org.springframework.data.redis.core.RedisTemplate;
 
 import java.util.List;
 import java.util.Map;

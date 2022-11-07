@@ -1,5 +1,6 @@
 package com.redismq.core;
 
+import com.google.common.collect.Lists;
 import com.redismq.Message;
 import com.redismq.connection.RedisClient;
 import com.redismq.constant.RedisMQConstant;
@@ -17,8 +18,6 @@ import io.seata.tm.api.transaction.TransactionHookManager;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
@@ -27,25 +26,27 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.constant.GlobalConstant.*;
 
 /**
  * @Author: hzh
  * @Date: 2022/5/19 15:46
  * redismq生产者
  */
-@Data
 public class RedisMQProducer {
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
     private final RedisClient redisClient;
-    private Integer retryCount = 3;
-    private Integer retrySleep = 200;
     private List<ProducerInterceptor> producerInterceptors;
-    private boolean sendAfterCommit;
 
-    public void setSendAfterCommit(boolean sendAfterCommit) {
-        this.sendAfterCommit = sendAfterCommit;
+    public List<ProducerInterceptor> getProducerInterceptors() {
+        return producerInterceptors;
     }
+
+    public void setProducerInterceptors(List<ProducerInterceptor> producerInterceptors) {
+        this.producerInterceptors = producerInterceptors;
+    }
+
 
     public RedisMQProducer(RedisClient redisClient) {
         this.redisClient = redisClient;
@@ -135,16 +136,6 @@ public class RedisMQProducer {
         return doSendMessage(pushMessage, Collections.singletonList(sendMessageParam));
     }
 
-    private Long increment() {
-        Long increment = redisClient.increment(RedisMQConstant.getSendIncrement(),1);
-        increment = increment == null ? 0 : increment;
-        if (increment >= System.currentTimeMillis()) {
-            redisClient.set(RedisMQConstant.getSendIncrement(), 0L);
-            increment = redisClient.increment(RedisMQConstant.getSendIncrement(),1);
-            increment = increment == null ? 0 : increment;
-        }
-        return increment;
-    }
 
     public boolean sendBatchMessage(Queue queue, List<Message> messages) {
         Map<PushMessage, List<SendMessageParam>> messageMap = new HashMap<>();
@@ -198,7 +189,7 @@ public class RedisMQProducer {
             }
             boolean success = false;
             Boolean sendAfterCommit = RedisMQDataHelper.get();
-            if (sendAfterCommit != null ? sendAfterCommit : this.sendAfterCommit) {
+            if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
                 if (TransactionSynchronizationManager.isActualTransactionActive()) {
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                         @Override
@@ -264,11 +255,11 @@ public class RedisMQProducer {
             array[i + 1] = params.get(i);
         }
         int count = 0;
-        while (size == null || count < retryCount) {
+        while (size == null || count < GLOBAL_CONFIG.producerRetryCount) {
             size = redisClient.executeLua(lua, list, array);
             if (size == null || size < 0) {
                 try {
-                    Thread.sleep(retrySleep);
+                    Thread.sleep(GLOBAL_CONFIG.producerRetrySleep);
                 } catch (InterruptedException ignored) {
                 }
                 count++;
@@ -285,7 +276,15 @@ public class RedisMQProducer {
         return false;
     }
 
-
+    private Long increment() {
+        String lua ="local count = redis.call('incrBy',KEYS[1],1) " +
+                "if tonumber(count) >= tonumber(ARGV[1]) then " +
+                "redis.call('set',KEYS[1],0) " +
+                "count = redis.call('incrBy',KEYS[1],1)" +
+                "end " +
+                "return count;";
+        return redisClient.executeLua(lua, Lists.newArrayList(RedisMQConstant.getSendIncrement()), System.currentTimeMillis());
+    }
 //    private boolean sendMessage(Queue queue, Message message, Long executorTime) {
 //        try {
 //            Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
