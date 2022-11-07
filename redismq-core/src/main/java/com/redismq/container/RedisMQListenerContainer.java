@@ -266,7 +266,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
             }
         });
-        delayTimeoutTaskManager.schedule(timeoutTask, startTime);
+        try {
+            delayTimeoutTaskManager.schedule(timeoutTask, startTime);
+        }catch (Exception e){
+            log.error("delayTimeoutTaskManager schedule ",e);
+            redisClient.delete(virtualQueueLock);
+        }
     }
 
     /**
