@@ -118,6 +118,14 @@ public class RedisMQProducer {
         return RedisMQProducer.this.sendSingleMessage(queue, message, executorTime);
     }
 
+    /**
+     * 单信息
+     *
+     * @param queue        队列
+     * @param message      消息
+     * @param executorTime 遗嘱执行人时间
+     * @return boolean
+     */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
         Long increment = increment();
         if (executorTime == null) {
@@ -136,6 +144,13 @@ public class RedisMQProducer {
     }
 
 
+    /**
+     * 批量发送消息
+     *
+     * @param queue    队列
+     * @param messages 消息
+     * @return boolean
+     */
     public boolean sendBatchMessage(Queue queue, List<Message> messages) {
         Map<PushMessage, List<SendMessageParam>> messageMap = new HashMap<>();
         for (Message message : messages) {
@@ -165,9 +180,17 @@ public class RedisMQProducer {
         return result.get();
     }
 
+    /**
+     * 做发送消息
+     *
+     * @param pushMessage       推送消息
+     * @param sendMessageParams 发送消息参数
+     * @return boolean
+     */
     private boolean doSendMessage(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
         //构建redis的请求参数按顺序消息和scope对应
         if (sendMessageParams.size() > 100) {
+            //只所以要分离集合发送是因为lua脚本的参数长度优先
             List<List<SendMessageParam>> lists = splitList(sendMessageParams, 100);
             for (List<SendMessageParam> list : lists) {
                 return doSendMessage0(pushMessage, list);
@@ -176,6 +199,13 @@ public class RedisMQProducer {
         return doSendMessage0(pushMessage, sendMessageParams);
     }
 
+    /**
+     * 真实发送消息核心方法
+     *
+     * @param pushMessage       推送消息
+     * @param sendMessageParams 发送消息参数
+     * @return boolean
+     */
     private boolean doSendMessage0(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
         List<Object> params = new ArrayList<>();
         List<Message> messageList = sendMessageParams.stream().map(SendMessageParam::getMessage).collect(Collectors.toList());
@@ -212,6 +242,7 @@ public class RedisMQProducer {
             } else {
                 success = this.sendRedisMessage(pushMessage, params);
             }
+            //发送完成回调
             if (success) {
                 afterSend(messageList);
             } else {
@@ -284,68 +315,12 @@ public class RedisMQProducer {
                 "return count;";
         return redisClient.executeLua(lua, Lists.newArrayList(RedisMQConstant.getSendIncrement()), System.currentTimeMillis());
     }
-//    private boolean sendMessage(Queue queue, Message message, Long executorTime) {
-//        try {
-//            Long increment = redisTemplate.opsForValue().increment(RedisMQConstant.getSendIncrement());
-//            increment = increment == null ? 0 : increment;
-//            if (increment >= Long.MAX_VALUE) {
-//                redisTemplate.opsForValue().set(RedisMQConstant.getSendIncrement(), 0L);
-//            }
-//            long num = increment % QueueManager.VIRTUAL_QUEUES_NUM;
-//            PushMessage pushMessage = new PushMessage();
-//            pushMessage.setQueue(queue.getQueueName() + SPLITE + num);
-//            //普通消息不需要设置执行时间.自动取当前时间
-//            if (executorTime == null) {
-//                executorTime = increment;
-//            } else {
-//                pushMessage.setTimestamp(executorTime);
-//            }
-//
-//            String lua = "local size = redis.call('zcard', KEYS[1]);\n" +
-//                    "if size and tonumber(size) >=" + queue.getQueueMaxSize() + " then  \n" +
-//                    "return -1;\n" +
-//                    "end\n" +
-//                    "redis.call('zadd', KEYS[1], ARGV[3], ARGV[2]);\n" +
-//                    "redis.call('publish', KEYS[2], ARGV[1]);\n" +
-//                    "return size";
-//            DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
-//            List<String> list = new ArrayList<>();
-//            list.add(queue.getQueueName() + SPLITE + num);
-//            list.add(RedisMQConstant.getTopic());
-//            message.setVirtualQueueName(queue.getQueueName() + SPLITE + num);
-//            Long size = -2L;
-//            int count = 0;
-//            beforeSend(Collections.singletonList(message));
-//            // 发送的重试 如果redis中数量超过1万也会重试.
-//            while (size == null || count < retryCount) {
-//                size = redisTemplate.execute(redisScript, list, pushMessage, message, executorTime);
-//                if (size == null || size < 0) {
-//                    try {
-//                        Thread.sleep(retrySleep);
-//                    } catch (InterruptedException ignored) {
-//                    }
-//                    count++;
-//                    log.warn("RedisMQ sendMessage retry");
-//                } else {
-//                    log.info("RedisMQ sendMessage success");
-//                    afterSend(Collections.singletonList(message));
-//                    return true;
-//                }
-//            }
-//            if (size == -1L) {
-//                log.error("RedisMQ Producer Queue Full");
-//                onFail(Collections.singletonList(message), new QueueFullException("RedisMQ Producer Queue Full"));
-//            } else {
-//                onFail(Collections.singletonList(message), null);
-//            }
-//            return false;
-//        } catch (Exception e) {
-//            log.error("RedisMQ Send Message Fail", e);
-//            onFail(Collections.singletonList(message), e);
-//            return false;
-//        }
-//    }
 
+    /**
+     * 发送成功后
+     *
+     * @param message 消息
+     */
     private void afterSend(List<Message> message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             try {
@@ -358,6 +333,12 @@ public class RedisMQProducer {
         }
     }
 
+    /**
+     * 监听失败
+     *
+     * @param message 消息
+     * @param e       e
+     */
     private void onFail(List<Message> message, Exception e) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             try {
@@ -370,6 +351,11 @@ public class RedisMQProducer {
         }
     }
 
+    /**
+     * 在发送之前
+     *
+     * @param message 消息
+     */
     private void beforeSend(List<Message> message) {
         if (!CollectionUtils.isEmpty(producerInterceptors)) {
             try {
@@ -390,6 +376,12 @@ public class RedisMQProducer {
     }
 
 
+    /**
+     * 校验队列是否存在
+     *
+     * @param topic 主题
+     * @return {@link Queue}
+     */
     private Queue hasQueue(String topic) {
         String queueName = RedisMQConstant.getQueueNameByTopic(topic);
         Queue queue = QueueManager.getQueue(queueName);
@@ -402,6 +394,12 @@ public class RedisMQProducer {
         return queue;
     }
 
+    /**
+     * 校验延迟队列
+     *
+     * @param topic 主题
+     * @return {@link Queue}
+     */
     private Queue hasDelayQueue(String topic) {
         String queueName = RedisMQConstant.getQueueNameByTopic(topic);
         Queue queue = QueueManager.getQueue(queueName);
@@ -414,6 +412,13 @@ public class RedisMQProducer {
         return queue;
     }
 
+    /**
+     * 分割列表
+     *
+     * @param list 列表
+     * @param len  len
+     * @return {@link List}<{@link List}<{@link T}>>
+     */
     private <T> List<List<T>> splitList(List<T> list, int len) {
         if (list == null || list.isEmpty() || len < 1) {
             return Collections.emptyList();
@@ -425,7 +430,7 @@ public class RedisMQProducer {
         int count = (size + len - 1) / len;
 
         for (int i = 0; i < count; i++) {
-            List<T> subList = list.subList(i * len, ((i + 1) * len > size ? size : len * (i + 1)));
+            List<T> subList = list.subList(i * len, (Math.min((i + 1) * len, size)));
             //主要是为了解决，修改新集合会影响老集合的问题
             List<T> newList = new ArrayList<>(subList);
             result.add(newList);
