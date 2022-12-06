@@ -2,7 +2,9 @@ package com.redismq.utils;
 
 import com.redismq.core.RedisMQProducer;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class RedisMQTemplate {
     private final RedisMQProducer redisMQProducer;
@@ -48,15 +50,33 @@ public class RedisMQTemplate {
     /**
      * 带tag的队列延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, String tag, Integer delayTime) {
-        return redisMQProducer.sendDelayMessage(obj, topic, tag, delayTime);
+    public boolean sendDelayMessage(Object obj, String topic, String tag, Long delayTime, TimeUnit timeUnit) {
+        long millis = timeUnit.toMillis(delayTime);
+        return redisMQProducer.sendDelayMessage(obj, topic, tag, millis);
     }
 
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, Integer delayTime) {
-        return redisMQProducer.sendDelayMessage(obj, topic, "", delayTime);
+    public boolean sendDelayMessage(Object obj, String topic, Long delayTime, TimeUnit timeUnit) {
+        long millis = timeUnit.toMillis(delayTime);
+        return redisMQProducer.sendDelayMessage(obj, topic, "", millis);
+    }
+
+    /**
+     * 带tag的队列延迟消息
+     */
+    public boolean sendDelayMessage(Object obj, String topic, String tag, Duration duration) {
+        long millis = duration.toMillis();
+        return redisMQProducer.sendDelayMessage(obj, topic, tag, millis);
+    }
+
+    /**
+     * 延迟消息
+     */
+    public boolean sendDelayMessage(Object obj, String topic, Duration duration) {
+        long millis = duration.toMillis();
+        return redisMQProducer.sendDelayMessage(obj, topic, "", millis);
     }
 
     /**

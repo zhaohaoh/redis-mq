@@ -3,19 +3,18 @@ package com.redismq.core;
 import com.google.common.collect.Lists;
 import com.redismq.Message;
 import com.redismq.connection.RedisClient;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.exception.QueueFullException;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ProducerInterceptor;
-import com.redismq.utils.RedisMQDataHelper;
 import com.redismq.pojo.SendMessageParam;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
+import com.redismq.utils.RedisMQDataHelper;
 import io.seata.core.context.RootContext;
 import io.seata.tm.api.transaction.TransactionHookAdapter;
 import io.seata.tm.api.transaction.TransactionHookManager;
-import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -27,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.*;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 
 /**
  * @Author: hzh
@@ -97,13 +96,13 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, String tag, Integer delayTime) {
+    public boolean sendDelayMessage(Object obj, String topic, String tag, Long delayTime) {
         Queue queue = hasDelayQueue(topic);
         Message message = new Message();
         message.setTopic(topic);
         message.setBody(obj);
         message.setTag(tag);
-        long executorTime = System.currentTimeMillis() + (delayTime * 1000);
+        long executorTime = System.currentTimeMillis() + (delayTime);
         return RedisMQProducer.this.sendSingleMessage(queue, message, executorTime);
     }
 
