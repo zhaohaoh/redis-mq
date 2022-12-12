@@ -123,7 +123,7 @@ public class RedisMQProducer {
      *
      * @param queue        队列
      * @param message      消息
-     * @param executorTime 遗嘱执行人时间
+     * @param executorTime 执行人时间
      * @return boolean
      */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
@@ -227,7 +227,7 @@ public class RedisMQProducer {
 
                         }
                     });
-                } else if (RootContext.inGlobalTransaction()) {
+                } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
                     TransactionHookAdapter adapter = new TransactionHookAdapter() {
                         @Override
                         public void afterCommit() {
@@ -264,6 +264,7 @@ public class RedisMQProducer {
                 "return -1;\n" +
                 "end\n");
         sb.append("redis.call('zadd', KEYS[1]");
+        // 只是为了决定发消息里面的参数的顺序 argv1是pushMessage  argv2=消息内容,argv3=消费的scope  所以i=0的时候是消息体
         for (int i = 0; i < params.size(); i++) {
             if (i % 2 == 0) {
                 sb.append(", ARGV[" + (i + 3) + "]");
@@ -279,11 +280,16 @@ public class RedisMQProducer {
         list.add(pushMessage.getQueue());
         list.add(RedisMQConstant.getTopic());
         Long size = -2L;
+
+        //第一个参数是发布订阅的消息
         Object[] array = new Object[params.size() + 1];
         array[0] = pushMessage;
+
+        //后续的消息
         for (int i = 0; i < params.size(); i++) {
             array[i + 1] = params.get(i);
         }
+
         int count = 0;
         while (size == null || count < GLOBAL_CONFIG.producerRetryCount) {
             size = redisClient.executeLua(lua, list, array);
@@ -307,7 +313,7 @@ public class RedisMQProducer {
     }
 
     private Long increment() {
-        String lua ="local count = redis.call('incrBy',KEYS[1],1) " +
+        String lua = "local count = redis.call('incrBy',KEYS[1],1) " +
                 "if tonumber(count) >= tonumber(ARGV[1]) then " +
                 "redis.call('set',KEYS[1],0) " +
                 "count = redis.call('incrBy',KEYS[1],1)" +

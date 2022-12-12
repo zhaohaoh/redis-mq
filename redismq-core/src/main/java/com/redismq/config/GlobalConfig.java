@@ -31,6 +31,10 @@ public class GlobalConfig {
      * 事务提交后发送
      */
     public boolean sendAfterCommit = true;
+    /**
+     * 开启seata事务
+     */
+    public boolean seataState = false;
 
     /**
      * 打印核心消费日志

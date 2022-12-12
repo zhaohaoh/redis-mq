@@ -6,8 +6,11 @@ import com.redismq.constant.RedisMQConstant;
 import com.redismq.interceptor.ConsumeInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
-
+/**
+ * @Author: hzh
+ * @Date: 2022/12/8 10:16
+ * 提供默认的对于消费失败的死信队列实现
+ */
 public class RedisDeadQueueHandleInterceptor implements ConsumeInterceptor {
     private final RedisClient redisClient;
     protected static final Logger log = LoggerFactory.getLogger(RedisDeadQueueHandleInterceptor.class);

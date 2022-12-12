@@ -19,7 +19,7 @@ public class QueueManager {
     public static final Map<String, Queue> QUEUES = new LinkedHashMap<>();
     //虚拟队列
     public static final Map<String, List<String>> VIRTUAL_QUEUES = new HashMap<>();
-    //当前客户端的虚拟队列
+    //当前客户端的虚拟队列  key是真实队列
     public static final Map<String, List<String>> CURRENT_VIRTUAL_QUEUES = new ConcurrentHashMap<>();
 
     public static int VIRTUAL_QUEUES_NUM;

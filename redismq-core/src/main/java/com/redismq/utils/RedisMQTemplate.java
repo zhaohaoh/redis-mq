@@ -84,12 +84,10 @@ public class RedisMQTemplate {
      */
     public boolean sendTimingMessage(Object obj, String topic, String tag, Long executorTime) {
         return redisMQProducer.sendTimingMessage(obj, topic, tag, executorTime);
-
     }
 
     public boolean sendTimingMessage(Object obj, String topic, Long executorTime) {
         return redisMQProducer.sendTimingMessage(obj, topic, "", executorTime);
-
     }
 
     /*

@@ -2,9 +2,10 @@ package com.redismq.autoconfigure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redismq.config.GlobalConfigCache;
+import com.redismq.config.RedisConnectionFactoryUtil;
+import com.redismq.config.RedisProperties;
 import com.redismq.connection.RedisClient;
 import com.redismq.connection.RedisTemplateAdapter;
-import com.redismq.constant.GlobalConstant;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
@@ -21,7 +22,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +37,8 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import static com.redismq.constant.RedisMQBeanNameConstant.*;
+
 /**
  * @author hzh
  * RedisMQ自动配置类
@@ -49,11 +51,11 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     private RedisMQProperties redisMqProperties;
     @Autowired
     private RedisProperties redisProperties;
-    @Resource(name = "redisMQRedisTemplate")
+    @Resource(name = REDISMQ_REDIS_TEMPLATE)
     private RedisTemplate<String, Object> redisMQRedisTemplate;
     @Autowired
     private RedisClient redisClient;
-    @Resource(name = "redismqInnerRedisMessageListenerContainer")
+    @Resource(name = REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
@@ -150,10 +152,10 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      *
      * @return {@link RedisMQProducer}
      */
-    @Bean("redismqInnerRedisMessageListenerContainer")
-    public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
+    @Bean(REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
+    public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
-        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
+        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactoryUtil.getSingleConnectionFactory());
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 设置核心线程数
         executor.setCorePoolSize(5);
@@ -177,10 +179,10 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      *
      * @return {@link RedisMessageListenerContainer}
      */
-    @Bean("redisMQMessageListenerContainer")
-    public RedisMessageListenerContainer redisMQMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
+    @Bean(REDISMQ_MESSAGE_LISTENERCONTAINER)
+    public RedisMessageListenerContainer redisMQMessageListenerContainer(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
-        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
+        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactoryUtil.getSingleConnectionFactory());
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 设置核心线程数
         executor.setCorePoolSize(8);
@@ -206,11 +208,12 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      *
      * @return {@link RedisTemplate}
      */
-    @Bean(name = "redisMQRedisTemplate")
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+    @Bean(name = REDISMQ_REDIS_TEMPLATE)
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         // 配置连接工厂
-        template.setConnectionFactory(redisConnectionFactory);
+        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
+        template.setConnectionFactory(connectionFactory);
 
         //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
         Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);
@@ -227,11 +230,24 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         return template;
     }
 
+    /**
+     * 连接工厂工具类,上面用的都是构造方法注入,这里的redisProperties也得用构造方法注入.spring早构造方法注入的时候还没有解析@Autowired,
+     * 此时Autowired是对象都是null
+     *
+     * @return {@link RedisConnectionFactoryUtil}
+     */
+    @Bean
+    public RedisConnectionFactoryUtil redisConnectionFactoryUtil(RedisProperties redisProperties) {
+        return new RedisConnectionFactoryUtil(redisProperties);
+    }
+
+
     @Bean
     @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable", havingValue = "true")
     public RedisDeadQueueHandleInterceptor redisDeadQueueHandleInterceptor() {
         return new RedisDeadQueueHandleInterceptor(redisClient);
     }
+
 
     /**
      * 初始化执行

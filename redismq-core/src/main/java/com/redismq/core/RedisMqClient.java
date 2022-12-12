@@ -2,8 +2,8 @@ package com.redismq.core;
 
 
 import com.redismq.connection.RedisClient;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.constant.PushMessage;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.ClientConfig;
@@ -15,7 +15,9 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +75,7 @@ public class RedisMqClient {
 
     public Long removeExpireClients() {
         // 过期的客户端
-        long max = System.currentTimeMillis() - CLIENT_EXPIRE * 1000;
+        long max = System.currentTimeMillis() - CLIENT_EXPIRE * 1000L;
         return redisClient.zRemoveRangeByScore(getClientKey(), 0, max);
     }
 
@@ -166,30 +168,39 @@ public class RedisMqClient {
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
         boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
+
+        //没有监听的队列取消订阅
         if (isEmpty) {
             unSubscribe();
             return;
         }
+
+        //监听队列消息的订阅
         subscribe();
+
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
                 return;
             }
             List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
-            for (String virtualQueue : virtualQueues) {
-                PushMessage pushMessage = new PushMessage();
-                pushMessage.setQueue(virtualQueue);
-                pushMessage.setTimestamp(System.currentTimeMillis());
-                LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
-                LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
-                boolean delayState = queue.getDelayState();
-                if (delayState) {
-                    delayBlockingQueue.add(pushMessage);
-                } else {
-                    linkedBlockingQueue.add(virtualQueue);
-                }
-            }
+
+            //获取虚拟队列重新推送到阻塞队列
+            virtualQueues.forEach(vq -> {
+                        PushMessage pushMessage = new PushMessage();
+                        pushMessage.setQueue(vq);
+                        pushMessage.setTimestamp(System.currentTimeMillis());
+
+                        //推送到指定的队列
+                        LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
+                        LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
+                        if (queue.getDelayState()) {
+                            delayBlockingQueue.add(pushMessage);
+                        } else {
+                            linkedBlockingQueue.add(vq);
+                        }
+                    }
+            );
         });
     }
 
@@ -203,6 +214,7 @@ public class RedisMqClient {
             isSub = true;
         }
     }
+
     /**
      * 取消监听队列消息的订阅
      */

@@ -21,7 +21,12 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-core</artifactId>
-        <version>0.0.2</version>
+            <version>0.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>3.7.1</version>
         </dependency>
     </dependencies>
 </project>

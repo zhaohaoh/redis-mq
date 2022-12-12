@@ -1,6 +1,7 @@
 package com.redismq.autoconfigure;
 
 import com.redismq.config.GlobalConfig;
+import com.redismq.config.RedisProperties;
 import com.redismq.constant.AckMode;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -52,6 +53,10 @@ public class RedisMQProperties {
      */
     private String group = "";
 
+    /**
+     * redis属性
+     */
+    private RedisProperties redisProperties;
 
     /**
      * 是否全局开启事务提交后发送.会在真实的发消息前,beforeInterceptor后执行发消息逻辑.

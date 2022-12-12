@@ -10,6 +10,7 @@ import static com.redismq.constant.GlobalConstant.SPLITE;
 
 public class RedisMQConstant {
 
+
     /**
      * 分组
      */
