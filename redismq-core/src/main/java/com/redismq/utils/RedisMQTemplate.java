@@ -6,13 +6,18 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * redisMQ操作模板
+ *
+ * @author hzh
+ * @date 2022/12/13
+ */
 public class RedisMQTemplate {
     private final RedisMQProducer redisMQProducer;
 
     public RedisMQTemplate(RedisMQProducer redisMQProducer) {
         this.redisMQProducer = redisMQProducer;
     }
-
 
     public RedisMQProducer getRedisMQProducer() {
         return redisMQProducer;

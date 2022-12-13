@@ -170,22 +170,30 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             semaphore.acquire();
                         } catch (InterruptedException e) {
                             if (isRunning()) {
-                                log.info("redismq acquire semaphore InterruptedException", e);
+                                log.info("redisMQ acquire semaphore InterruptedException", e);
                             }
                             Thread.currentThread().interrupt();
                         }
                         String id = super.getRunableKey(message.getTag());
                         RedisListenerRunnable runnable = super.getRedisListenerRunnable(id, message);
                         if (runnable == null) {
-                            throw new RedisMqException("redismq not found tag runnable");
+                            throw new RedisMqException("redisMQ not found tag runnable");
                         }
                         // 多线程执行完毕后semaphore.release();
                         work.execute(runnable);
                     } catch (Exception e) {
                         if (isRunning()) {
-                            log.error("redismq listener container error ", e);
+
+                            log.error("redisMQ listener container error ", e);
+
                             //如果异常直接释放资源，否则线程执行完毕才释放
                             localMessages.remove(message.getId());
+
+                            // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
+                            if (e instanceof RedisMqException) {
+                                log.error("RedisMqException removeMessage:{}", message, e);
+                                Long remove = redisClient.zRemove(queueName, message);
+                            }
                         }
                         semaphore.release();
                     }
@@ -193,9 +201,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             } catch (Exception e) {
                 if (isRunning()) {
                     //报错需要  semaphore.release();
-                    log.error("redismq pop error", e);
+                    log.error("redisMQ pop error", e);
                     if (e.getMessage().contains("WRONGTYPE Operation against a key holding the wrong kind of value")) {
-                        log.error("redismq [ERROR] queue not is zset type。 cancel pop");
+                        log.error("redisMQ [ERROR] queue not is zset type。 cancel pop");
                         stop();
                     }
                     try {
@@ -268,8 +276,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         });
         try {
             delayTimeoutTaskManager.schedule(timeoutTask, startTime);
-        }catch (Exception e){
-            log.error("delayTimeoutTaskManager schedule ",e);
+        } catch (Exception e) {
+            log.error("delayTimeoutTaskManager schedule ", e);
             redisClient.delete(virtualQueueLock);
         }
     }
