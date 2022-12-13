@@ -1,13 +1,15 @@
 package com.redismq;
 
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils; 
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import lombok.Data;
+
 import java.io.*;
-import java.util.Objects;
 /**
  * @Author: hzh
  * @Date: 2022/9/6 10:50
  * 消息体
  */
+@Data
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -27,67 +29,28 @@ public class Message implements Serializable {
         return outer;
     }
 
+    /**
+     * 消息主体
+     */
     private Object body;
 
+    /**
+     * 消息id
+     */
     private String id = NanoIdUtils.randomNanoId();
 
+    /**
+     * 主题
+     */
     private String topic;
-    //默认根据字符串匹配
+
+    /**
+     * 标签
+     */
     private String tag = "";
 
+    /**
+     * 虚拟队列名称 内部生成 外部设置无效
+     */
     private String virtualQueueName;
-
-    public String getVirtualQueueName() {
-        return virtualQueueName;
-    }
-
-    public void setVirtualQueueName(String virtualQueueName) {
-        this.virtualQueueName = virtualQueueName;
-    }
-
-    public String getTag() {
-        return tag;
-    }
-
-    public void setTag(String tag) {
-        this.tag = tag;
-    }
-
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public Object getBody() {
-        return body;
-    }
-
-    public void setBody(Object body) {
-        this.body = body;
-    }
-
-    public String getTopic() {
-        return topic;
-    }
-
-    public void setTopic(String topic) {
-        this.topic = topic;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Message message = (Message) o;
-        return Objects.equals(body, message.body) && Objects.equals(id, message.id) && Objects.equals(topic, message.topic) && Objects.equals(tag, message.tag) && Objects.equals(virtualQueueName, message.virtualQueueName);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(body, id, topic, tag, virtualQueueName);
-    }
 }

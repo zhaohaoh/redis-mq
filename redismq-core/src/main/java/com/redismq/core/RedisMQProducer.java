@@ -62,12 +62,27 @@ public class RedisMQProducer {
      * 队列消息
      */
     public boolean sendMessage(Object obj, String topic, String tag) {
-        Queue queue = hasQueue(topic);
         Message message = new Message();
         message.setTopic(topic);
         message.setBody(obj);
         message.setTag(tag);
+        return sendMessage(message);
+    }
+
+    public boolean sendMessage(Message message) {
+        Queue queue = hasQueue(message.getTopic());
         return sendSingleMessage(queue, message, null);
+    }
+
+    public boolean sendDelayMessage(Message message, Long delayTime) {
+        Queue queue = hasDelayQueue(message.getTopic());
+        long executorTime = System.currentTimeMillis() + (delayTime);
+        return sendSingleMessage(queue, message, executorTime);
+    }
+
+    public boolean sendTimingMessage(Message message, Long executorTime) {
+        Queue queue = hasDelayQueue(message.getTopic());
+        return sendSingleMessage(queue, message, executorTime);
     }
 
     /**
@@ -97,25 +112,22 @@ public class RedisMQProducer {
      * 延迟消息
      */
     public boolean sendDelayMessage(Object obj, String topic, String tag, Long delayTime) {
-        Queue queue = hasDelayQueue(topic);
         Message message = new Message();
         message.setTopic(topic);
         message.setBody(obj);
         message.setTag(tag);
-        long executorTime = System.currentTimeMillis() + (delayTime);
-        return RedisMQProducer.this.sendSingleMessage(queue, message, executorTime);
+        return sendDelayMessage(message, delayTime);
     }
 
     /**
      * 发送定时消息
      */
     public boolean sendTimingMessage(Object obj, String topic, String tag, Long executorTime) {
-        Queue queue = hasDelayQueue(topic);
         Message message = new Message();
         message.setTopic(topic);
         message.setBody(obj);
         message.setTag(tag);
-        return RedisMQProducer.this.sendSingleMessage(queue, message, executorTime);
+        return sendTimingMessage(message, executorTime);
     }
 
     /**

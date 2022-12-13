@@ -1,5 +1,6 @@
 package com.redismq.utils;
 
+import com.redismq.Message;
 import com.redismq.core.RedisMQProducer;
 
 import java.time.Duration;
@@ -21,6 +22,38 @@ public class RedisMQTemplate {
 
     public RedisMQProducer getRedisMQProducer() {
         return redisMQProducer;
+    }
+
+    /**
+     * 队列消息
+     */
+    public boolean sendMessage(Message message) {
+        return redisMQProducer.sendMessage(message);
+    }
+
+    /**
+     * 发送延时消息
+     */
+    public boolean sendDelayMessage(Message message, Long delayTime, TimeUnit timeUnit) {
+        long millis = timeUnit.toMillis(delayTime);
+        return redisMQProducer.sendDelayMessage(message, millis);
+    }
+
+    /**
+     * 发送延时消息
+     *
+     */
+    public boolean sendDelayMessage(Message message, Duration duration) {
+        long millis = duration.toMillis();
+        return redisMQProducer.sendDelayMessage(message, millis);
+    }
+
+    /**
+     * 发送定时消息
+     *
+     */
+    public boolean sendTimingMessage(Message message, Long excuteTime) {
+        return redisMQProducer.sendTimingMessage(message, excuteTime);
     }
 
     /**
@@ -101,6 +134,4 @@ public class RedisMQTemplate {
     public void publish(String topic, Object obj) {
         redisMQProducer.publish(topic, obj);
     }
-
-
 }
