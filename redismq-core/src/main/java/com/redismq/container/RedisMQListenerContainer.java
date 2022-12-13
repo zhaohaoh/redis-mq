@@ -10,6 +10,7 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
+import com.redismq.utils.RedisMQObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -191,7 +192,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
                             // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
                             if (e instanceof RedisMqException) {
-                                log.error("RedisMqException removeMessage:{}", message, e);
+                                log.error("RedisMqException removeMessage:{}", RedisMQObjectMapper.toJsonStr(message), e);
                                 Long remove = redisClient.zRemove(queueName, message);
                             }
                         }
