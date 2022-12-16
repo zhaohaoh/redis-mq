@@ -14,11 +14,11 @@ public class GlobalConfig {
     /**
      * 单个虚拟队列消费的锁定时间 有看门狗 如果有服务下线了  会锁定这个时间内其他服务不能消费
      */
-    public int virtualLockTime = 11;
+    public int virtualLockTime = 10;
     /**
      * 单个虚拟队列消费看门狗的续期时间
      */
-    public int virtualLockWatchDogTime = 5;
+    public int virtualLockWatchDogTime = 8;
     /**
      * 生产者重试次数
      */
