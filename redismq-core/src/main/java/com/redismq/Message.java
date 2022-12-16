@@ -16,6 +16,14 @@ public class Message implements Serializable {
     public Message() {
     }
 
+    public Message(Object body, String id, String topic, String tag, String virtualQueueName) {
+        this.body = body;
+        this.id = id;
+        this.topic = topic;
+        this.tag = tag;
+        this.virtualQueueName = virtualQueueName;
+    }
+
     private static final long serialVersionUID = 1L;
 
     public Message deepClone() {

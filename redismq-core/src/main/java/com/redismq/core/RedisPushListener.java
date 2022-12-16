@@ -12,7 +12,6 @@ import org.springframework.data.redis.connection.Message;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
 
@@ -38,9 +37,6 @@ public class RedisPushListener extends AbstractRedisPushListener {
             String realNameQueue = StringUtils.substringBeforeLast(queueName, SPLITE);
             //当前服务订阅的队列列表
             List<String> list = QueueManager.CURRENT_VIRTUAL_QUEUES.get(realNameQueue);
-            if (GLOBAL_CONFIG.printConsumeLog) {
-                log.info("RedisPushListener onMessage:{} Queue:{} currentVirtualQueues:{}", pushMessage, realNameQueue, list);
-            }
             if (list == null || !list.contains(queueName)) {
                 return;
             }

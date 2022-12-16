@@ -234,10 +234,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public void start(String virtualQueue, Long startTime) {
 
         running();
-        // 虚拟队列锁定执行任务默认时长,有看门狗机制
 
+        // 虚拟队列锁定执行任务默认时长,有看门狗机制
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
 
+        //这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
         Boolean success = redisClient.setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         if (GLOBAL_CONFIG.printConsumeLog) {
             log.info("current virtualQueue:{} lockSuccess:{} state:{}", virtualQueue, success, state);

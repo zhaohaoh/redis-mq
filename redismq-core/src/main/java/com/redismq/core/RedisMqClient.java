@@ -1,6 +1,7 @@
 package com.redismq.core;
 
 
+import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.redismq.connection.RedisClient;
 import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
@@ -45,7 +46,7 @@ public class RedisMqClient {
 
     public RedisMqClient(RedisClient redisClient, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
         this.redisClient = redisClient;
-        this.clientId = ClientConfig.getLocalAddress();
+        this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
     }
@@ -123,8 +124,8 @@ public class RedisMqClient {
             if (count != null && count > 0) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
                 rebalance();
-                //消费锁是30秒 这个值和消费所相关联
-                // 当其他客户端消费消息的锁肯定释放完后再重新消费一下
+                // 消费锁是30秒 这个值和消费所相关联
+                // 延时指定消费锁锁定的时间再去重新拉取一次消息,防止服务下线重启导致的消息没有被其他队列消费的问题
                 new ScheduledThreadPoolExecutor(1).schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
             }
         }
