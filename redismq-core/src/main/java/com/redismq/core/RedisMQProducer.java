@@ -15,6 +15,7 @@ import com.redismq.utils.RedisMQDataHelper;
 import io.seata.core.context.RootContext;
 import io.seata.tm.api.transaction.TransactionHookAdapter;
 import io.seata.tm.api.transaction.TransactionHookManager;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -96,14 +97,21 @@ public class RedisMQProducer {
      * 批量一次性打包发送队列消息  消费仍然是一对一消费
      */
     public boolean sendBatchMessage(List<?> objs, String topic, String tag) {
+        if (CollectionUtils.isEmpty(objs)) {
+            return true;
+        }
         Queue queue = hasQueue(topic);
         List<Message> messages = new ArrayList<>();
-        for (Object obj : objs) {
-            Message message = new Message();
-            message.setTopic(topic);
-            message.setBody(obj);
-            message.setTag(tag);
-            messages.add(message);
+        if (objs.get(0) instanceof Message) {
+            messages = (List<Message>) objs;
+        } else {
+            for (Object obj : objs) {
+                Message message = new Message();
+                message.setTopic(topic);
+                message.setBody(obj);
+                message.setTag(tag);
+                messages.add(message);
+            }
         }
         return sendBatchMessage(queue, messages);
     }
@@ -431,6 +439,18 @@ public class RedisMQProducer {
     }
 
     /**
+     * 试着取消消息
+     *
+     * @param message 消息
+     */
+    public void tryCancel(Message message) {
+        if (StringUtils.isBlank(message.getVirtualQueueName())) {
+            throw new RedisMqException("TryCancel Virtual Queue is empty");
+        }
+        redisClient.zRemove(message.getVirtualQueueName(), message);
+    }
+
+    /**
      * 分割列表
      *
      * @param list 列表
@@ -455,5 +475,6 @@ public class RedisMQProducer {
         }
         return result;
     }
+
 
 }

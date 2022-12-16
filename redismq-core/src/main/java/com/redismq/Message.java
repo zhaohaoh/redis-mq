@@ -1,6 +1,7 @@
 package com.redismq;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import lombok.Builder;
 import lombok.Data;
 
 import java.io.*;
@@ -10,7 +11,11 @@ import java.io.*;
  * 消息体
  */
 @Data
+@Builder
 public class Message implements Serializable {
+    public Message() {
+    }
+
     private static final long serialVersionUID = 1L;
 
     public Message deepClone() {

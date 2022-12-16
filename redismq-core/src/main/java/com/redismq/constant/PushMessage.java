@@ -3,6 +3,7 @@ package com.redismq.constant;
 import java.util.Objects;
 
 public class PushMessage {
+    //虚拟队列
     private String queue;
     private Long timestamp;
 

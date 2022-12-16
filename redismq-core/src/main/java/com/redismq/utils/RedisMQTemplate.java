@@ -134,4 +134,11 @@ public class RedisMQTemplate {
     public void publish(String topic, Object obj) {
         redisMQProducer.publish(topic, obj);
     }
+
+    /*
+     * 尝试取消删除消息-注意消息有可能已经被消费
+     */
+    public void tryCancel(Message message) {
+        redisMQProducer.tryCancel(message);
+    }
 }
