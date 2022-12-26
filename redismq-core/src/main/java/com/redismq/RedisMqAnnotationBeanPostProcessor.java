@@ -3,13 +3,13 @@ package com.redismq;
 
 import com.redismq.connection.RedisClient;
 import com.redismq.container.AbstractMessageListenerContainer;
+import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
 import com.redismq.exception.RedisMqException;
 import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.utils.RedisMQObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -41,14 +41,16 @@ import java.util.stream.Collectors;
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
 //Bean的后置处理器切入点
-public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean {
+public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean  {
     protected final Log logger = LogFactory.getLog(getClass());
     private volatile boolean isRunning = false;
     private ApplicationContext applicationContext;
     private final Set<Class<?>> nonAnnotatedClasses = Collections.newSetFromMap(new ConcurrentHashMap<>(64));
     private final Map<String, List<RedisListenerEndpoint>> redisListenerEndpointMap = new ConcurrentHashMap<>();
+//    为了让RedisMQAutoConfiguration加载执行init方法
     @Autowired
     private RedisMqClient redisMqClient;
+
 
     //bean初始化后的回调方法 查找出RedisListener注解标记的类
     @Override
@@ -266,4 +268,5 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         //名称完全对应的topic
         container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));
     }
+
 }

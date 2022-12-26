@@ -12,7 +12,7 @@ public class GlobalConfig {
      */
     public int delayQueuePullSize = 100;
     /**
-     * 单个虚拟队列消费的锁定时间 有看门狗 如果有服务下线了  会锁定这个时间内其他服务不能消费
+     * 单个虚拟队列消费的锁定时间 有看门狗 如果有服务下线了,并且是突然中断没有释放锁 kill-9  会锁定这个时间内其他服务不能消费
      */
     public int virtualLockTime = 10;
     /**

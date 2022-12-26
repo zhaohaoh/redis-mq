@@ -67,7 +67,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         lifeExtension();
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
                 60L, TimeUnit.SECONDS,
-                // 这个范围内的视为核心线程可以处理
+                // 这个范围内的视为核心线程可以处理 队列的数量
                 new CompositeQueue<>(getConcurrency() << 3), new ThreadFactory() {
             private final ThreadGroup group;
             private final AtomicInteger threadNumber = new AtomicInteger(1);

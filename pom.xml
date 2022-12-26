@@ -14,6 +14,7 @@
         <module>redismq-core</module>
         <module>redismq-spring-boot-autoconfigure</module>
         <module>redismq-spring-boot-starter</module>
+        <module>redismq-samples</module>
     </modules>
 
     <properties>

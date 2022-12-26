@@ -7,8 +7,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="redismq-spring-boot-autoconfigure" />
+        <module name="redismq-samples" />
         <module name="redismq-spring-boot-starter" />
+        <module name="redismq-spring-boot-autoconfigure" />
         <module name="redismq-core" />
       </profile>
     </annotationProcessing>

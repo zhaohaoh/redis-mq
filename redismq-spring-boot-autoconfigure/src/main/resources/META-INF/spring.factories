@@ -1,4 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.redismq.autoconfigure.EnableRedisMQConfiguration,\
-  com.redismq.autoconfigure.RedisMQAutoConfiguration
+  com.redismq.autoconfigure.RedisMQAutoConfiguration,\
+  com.redismq.autoconfigure.SpringRedisConfiguration,\
+  com.redismq.autoconfigure.EnableRedisMQConfiguration
 
