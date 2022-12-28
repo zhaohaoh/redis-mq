@@ -15,6 +15,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "spring.redismq.client")
 public class RedisProperties {
     private int database = 6;
+    //集群使用
     private String url;
     private String host = "localhost";
     private String username;
