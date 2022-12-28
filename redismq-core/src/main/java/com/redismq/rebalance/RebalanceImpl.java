@@ -2,12 +2,13 @@ package com.redismq.rebalance;
 
 
 import com.redismq.queue.QueueManager;
-import org.checkerframework.checker.units.qual.A;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import static com.redismq.queue.QueueManager.CURRENT_VIRTUAL_QUEUES;
 

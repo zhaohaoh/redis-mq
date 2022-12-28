@@ -36,7 +36,7 @@ public class SamplesConsumer {
         System.out.println(message);
     }
 
-    @RedisListener(topic = "time",tag = "bussiness1")
+    @RedisListener(topic = "time",tag = "bussiness1",delay = true)
     public void time(Message message) {
         System.out.println(message);
     }

@@ -148,7 +148,8 @@ public class RedisMqClient {
     public void doRebalance() {
         registerClient();
         redisListenerContainerManager.pauseAll();
-        //临时解决重平衡问题.这里主要是因为有可能出现某些客户端还没注册进来
+        //临时解决重平衡问题.这里主要是因为有可能出现某些客户端还没注册进来 ，等200毫秒等他们都注册进来。不是好方法但是行得通。主要是这个时间不好确定。
+        // 如果redis有延迟那么重平衡就有问题，那么后果就是消息分配不平均
         try {
             Thread.sleep(200L);
         } catch (InterruptedException e) {
@@ -164,7 +165,7 @@ public class RedisMqClient {
 
 
     /**
-     * 启动时对任务重新进行拉取
+     * 重平衡时对任务重新进行拉取
      */
     public void repush() {
         Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
@@ -179,13 +180,17 @@ public class RedisMqClient {
         //监听队列消息的订阅
         subscribe();
 
+        //此操作 On2 如果有几千个虚拟队列的话。那么最少也要有几百个topic 这里性能不会慢。但是另一边监听到会去redis中获取。线程数不多可能会阻塞
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
+                log.error("repush queue is null");
                 return;
             }
             List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
-
+            if (CollectionUtils.isEmpty(virtualQueues)) {
+                return;
+            }
             //获取虚拟队列重新推送到阻塞队列
             virtualQueues.forEach(vq -> {
                         PushMessage pushMessage = new PushMessage();

@@ -94,6 +94,9 @@ public class RedisListenerContainerManager {
         state = RUNNING;
     }
 
+    /**
+     * 开始轮询监听队列消息
+     */
     public void startRedisListener() {
         boss.execute(() -> {
             running();
@@ -103,6 +106,7 @@ public class RedisListenerContainerManager {
                     RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
                     boolean contains = isContains(virtualName);
                     int count = 0;
+                    // 如果消费者暂停了，重试几次。以防止暂停消息的延时导致的停止消费。这个方案可能不完善。停止消费但INVOKE_VIRTUAL_QUEUES还没被删除
                     while (contains && container.isPause()) {
                         if (count > 3) {
                             break;
