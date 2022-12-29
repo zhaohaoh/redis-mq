@@ -26,7 +26,7 @@ public class RedisDeadQueueHandleInterceptor implements ConsumeInterceptor {
         redisClient.zAdd(deadQueue, message, System.currentTimeMillis());
         Long size = redisClient.zSize(deadQueue);
         // 要加入告警自定义通知
-        if (size != null && size >= 100000) {
+        if (size != null && size >= 1000000) {
             log.error("RedisDeadQueueHandleInterceptor Full SIZE:{}", size);
         }
     }
