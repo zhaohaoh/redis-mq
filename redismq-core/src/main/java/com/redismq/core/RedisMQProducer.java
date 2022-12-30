@@ -12,6 +12,7 @@ import com.redismq.pojo.SendMessageParam;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQDataHelper;
+import com.redismq.utils.RedisMQObjectMapper;
 import io.seata.core.context.RootContext;
 import io.seata.tm.api.transaction.TransactionHookAdapter;
 import io.seata.tm.api.transaction.TransactionHookManager;
@@ -331,7 +332,9 @@ public class RedisMQProducer {
                 count++;
                 log.warn("RedisMQ sendMessage retry");
             } else {
-                log.info("RedisMQ sendMessage success");
+                if (GLOBAL_CONFIG.printProducerLog) {
+                    log.info("RedisMQ sendMessage success  message:{}", RedisMQObjectMapper.toJsonStr(array));
+                }
                 return true;
             }
         }

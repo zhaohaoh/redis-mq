@@ -40,4 +40,8 @@ public class GlobalConfig {
      * 打印核心消费日志
      */
     public boolean printConsumeLog = false;
+    /**
+     * 打印核心生产日志
+     */
+    public boolean printProducerLog = true;
 }
