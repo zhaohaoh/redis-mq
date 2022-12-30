@@ -2,6 +2,7 @@ package com.redismq.samples.controller;
 
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +34,7 @@ public class ProducerController {
      * 发送普通消息
      */
     @PostMapping("sendMessage")
+    @Transactional
     public void sendMessage() {
         redisMQTemplate.sendMessage("普通消息消费", "test1");
     }

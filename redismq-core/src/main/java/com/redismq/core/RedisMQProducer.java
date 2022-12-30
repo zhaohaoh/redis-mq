@@ -243,36 +243,42 @@ public class RedisMQProducer {
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            sendRedisMessage(pushMessage, params);
-
+                            boolean success = sendRedisMessage(pushMessage, params);
+                            afterSend(messageList, success);
                         }
                     });
                 } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
                     TransactionHookAdapter adapter = new TransactionHookAdapter() {
                         @Override
                         public void afterCommit() {
-                            sendRedisMessage(pushMessage, params);
+                            boolean success = sendRedisMessage(pushMessage, params);
+                            afterSend(messageList, success);
                         }
                     };
                     //seata事务提交后执行的方法
                     TransactionHookManager.registerHook(adapter);
                 } else {
                     success = this.sendRedisMessage(pushMessage, params);
+                    afterSend(messageList, success);
                 }
             } else {
                 success = this.sendRedisMessage(pushMessage, params);
-            }
-            //发送完成回调
-            if (success) {
-                afterSend(messageList);
-            } else {
-                onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
+                afterSend(messageList, success);
             }
             return success;
         } catch (Exception e) {
             onFail(messageList, e);
             log.error("RedisMQProducer doSendMessage Exception:", e);
             return false;
+        }
+    }
+
+    private void afterSend(List<Message> messageList, boolean success) {
+        //发送完成回调
+        if (success) {
+            afterSend(messageList);
+        } else {
+            onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
         }
     }
 

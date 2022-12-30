@@ -58,10 +58,6 @@ public class RedisMQProperties {
      */
     private RedisProperties redisProperties;
 
-    /**
-     * 是否全局开启事务提交后发送.会在真实的发消息前,beforeInterceptor后执行发消息逻辑.
-     */
-    private boolean sendAfterCommit = true;
 
     @NestedConfigurationProperty
     private GlobalConfig globalConfig = new GlobalConfig();

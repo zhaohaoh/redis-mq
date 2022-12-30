@@ -28,7 +28,7 @@ public class GlobalConfig {
      */
     public int producerRetrySleep = 200;
     /**
-     * 事务提交后发送
+     * 是否全局开启事务提交后发送
      */
     public boolean sendAfterCommit = true;
     /**
