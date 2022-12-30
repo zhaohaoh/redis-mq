@@ -236,7 +236,7 @@ public class RedisMQProducer {
                 params.add(message.getMessage());
                 params.add(message.getExecutorTime());
             }
-            boolean success = false;
+            Boolean success = null;
             Boolean sendAfterCommit = RedisMQDataHelper.get();
             if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
                 if (TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -265,7 +265,7 @@ public class RedisMQProducer {
                 success = this.sendRedisMessage(pushMessage, params);
                 afterSend(messageList, success);
             }
-            return success;
+            return success != null && success;
         } catch (Exception e) {
             onFail(messageList, e);
             log.error("RedisMQProducer doSendMessage Exception:", e);
@@ -273,12 +273,16 @@ public class RedisMQProducer {
         }
     }
 
-    private void afterSend(List<Message> messageList, boolean success) {
+    private void afterSend(List<Message> messageList, Boolean success) {
         //发送完成回调
-        if (success) {
-            afterSend(messageList);
+        if (success == null) {
+            onFail(messageList, new RedisMqException("success is null"));
         } else {
-            onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
+            if (success) {
+                afterSend(messageList);
+            } else {
+                onFail(messageList, new QueueFullException("RedisMQ Producer Queue Full"));
+            }
         }
     }
 
@@ -378,7 +382,7 @@ public class RedisMQProducer {
                     interceptor.onFail(message, e);
                 }
             } catch (Exception exception) {
-                log.error("RedisMQ onFail Exception:", exception);
+                log.error("RedisMQ onFail interceptor invoke Exception:", exception);
             }
         }
     }

@@ -1,11 +1,11 @@
-package com.redismq.autoconfigure;
+package com.redismq.interceptor;
 
 import com.redismq.Message;
 import com.redismq.connection.RedisClient;
 import com.redismq.constant.RedisMQConstant;
-import com.redismq.interceptor.ConsumeInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 /**
  * @Author: hzh
  * @Date: 2022/12/8 10:16
@@ -27,7 +27,7 @@ public class RedisDeadQueueHandleInterceptor implements ConsumeInterceptor {
         Long size = redisClient.zSize(deadQueue);
         // 要加入告警自定义通知
         if (size != null && size >= 1000000) {
-            log.error("RedisDeadQueueHandleInterceptor Full SIZE:{}", size);
+            log.error("RedisDeadQueueHandleInterceptor is Full SIZE:{}  message:{}", size, message);
         }
     }
 }

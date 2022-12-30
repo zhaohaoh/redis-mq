@@ -18,7 +18,6 @@ import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,7 +61,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisListenerContainerFactory.setRetryInterval(redisMqProperties.getRetryInterval());
         redisListenerContainerFactory.setRedisClient(redisClient);
         redisListenerContainerFactory.setTimeout(redisProperties.getTimeout());
-         redisListenerContainerFactory.setConsumeInterceptors(consumeInterceptors);
+        redisListenerContainerFactory.setConsumeInterceptors(consumeInterceptors);
         return redisListenerContainerFactory;
     }
 
@@ -92,23 +91,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) RedisTemplate<String, Object> redisMQRedisTemplate) {
         RedisClient redisClient = new RedisTemplateAdapter(redisMQRedisTemplate);
         return redisClient;
-    }
-
-
-
-    /**
-     * redisMQ默认外部使用的发布订阅
-     *
-     * @return {@link RedisMessageListenerContainer}
-     */
-
-
-
-
-    @Bean
-    @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable", havingValue = "true")
-    public RedisDeadQueueHandleInterceptor redisDeadQueueHandleInterceptor(RedisClient redisClient) {
-        return new RedisDeadQueueHandleInterceptor(redisClient);
     }
 
 

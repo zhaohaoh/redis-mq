@@ -5,11 +5,12 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ## 特点
 
 - **无侵入延时队列**：无需任何配置和额外的插件即可使用延时队列 
+- **兼容spring事务和seata事务**：支持消息在事务提交后发送
 - **优雅的api封装**:  对外暴露的api及其简单易用
 - **支持消息的负载均衡**：通过redis定时轮询注册心跳
 - **支持顺序消息**： 只需要把消费者和虚拟队列都设置为1
 - **支持定时消息**： 可以让消息在指定时间执行
-
+- **支持生产者消费者回调**： 消息发送结果通过回调通知用户
 ## 引入
 ``` xml
       <dependency>
@@ -34,6 +35,10 @@ spring.redismq.client.username=你的用户
 spring.redismq.client.password=你的密码
 #虚拟队列数量默认是1，单机redis配多了没有意义
 spring.redismq.virtual=1
+#默认值true 事务提交后发送
+spring.redismq.global-config.send-after-commit=true
+#如果有seata事务需要开启 默认值false
+spring.redismq.global-config.seata-state=true
 ```
 ### 案例代码
 
@@ -171,6 +176,26 @@ public class SamplesConsumer {
         }
         String name = Thread.currentThread().getName();
         System.out.println(name+message);
+    }
+}
+```
+### 如何处理消息堆积
+由于内存队列的特性，无法堆积消息。因为框架提供了发送消息的生产者前后回调和消费者前后回调。
+默认消费失败加入redis的死信队列
+默认生产发消息失败打印失败日志
+可自定义实现对消息持久化mysql等第三方存储库
+```java
+@Configuration
+public class RedisMQInterceptorConfiguration {
+    
+    @Bean 
+    public ConsumeInterceptor redisDeadQueueHandleInterceptor() {
+        return new 自定义ConsumeInterceptor实现类();
+    }
+    
+    @Bean 
+    public ProducerInterceptor producerInterceptor() {
+        return new 自定义ProducerInterceptor实现类();
     }
 }
 ```
