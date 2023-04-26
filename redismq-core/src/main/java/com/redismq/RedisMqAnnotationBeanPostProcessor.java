@@ -36,18 +36,19 @@ import org.springframework.util.CollectionUtils;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
 //Bean的后置处理器切入点
-public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean  {
+public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean {
     protected final Log logger = LogFactory.getLog(getClass());
     private volatile boolean isRunning = false;
     private ApplicationContext applicationContext;
     private final Set<Class<?>> nonAnnotatedClasses = Collections.newSetFromMap(new ConcurrentHashMap<>(64));
     private final Map<String, List<RedisListenerEndpoint>> redisListenerEndpointMap = new ConcurrentHashMap<>();
-//    为了让RedisMQAutoConfiguration加载执行init方法
+    //    为了让RedisMQAutoConfiguration加载执行init方法
     @Autowired
     private RedisMqClient redisMqClient;
 
@@ -156,24 +157,31 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     public void start() {
         this.registryBeanQueue();
         if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
-            isRunning = true;
-            this.createContainer();
-            redisMqClient.start();
+            isRunning = this.createContainer();
+            //如果没有创建容器说明是生产者，生产者不启动监听配置
+            if (isRunning){
+                redisMqClient.start();;
+            }
         }
     }
 
     /**
      * 创建容器
      */
-    private void createContainer() {
+    private boolean createContainer() {
         Map<String, Queue> queues = QueueManager.getAllQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
         DefaultRedisListenerContainerFactory containerFactory = applicationContext.getBean(DefaultRedisListenerContainerFactory.class);
         RedisClient redisClient = applicationContext.getBean("redisClient", RedisClient.class);
         containerFactory.setRedisClient(redisClient);
         //没有配置取全局配置
+        AtomicBoolean create = new AtomicBoolean(false);
         queues.forEach((name, queue) -> {
             List<RedisListenerEndpoint> listenerEndpoints = redisListenerEndpointMap.get(name);
+            if (CollectionUtils.isEmpty(listenerEndpoints)) {
+                return;
+            }
+            create.set(true);
             if (queue.getConcurrency() == null) {
                 queue.setConcurrency(containerFactory.getConcurrency());
             }
@@ -196,6 +204,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
         });
+        return create.get();
     }
 
     //继承SmartLifecycle   容器停止执行调用
