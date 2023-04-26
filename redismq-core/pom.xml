@@ -5,10 +5,10 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-    <version>0.0.5</version>
+    <version>0.0.6</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-core</artifactId>
