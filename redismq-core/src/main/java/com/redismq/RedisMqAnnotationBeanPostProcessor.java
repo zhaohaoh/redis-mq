@@ -129,7 +129,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.virtual() > 0) {
             queue.setVirtual(redisListener.virtual());
         }
-        queue.setQueueMaxSize(redisListener.queueMaxSize());
+        if (redisListener.queueMaxSize() > 0) {
+            queue.setQueueMaxSize(redisListener.queueMaxSize());
+        }
         //注册的queue
         Queue registerQueue = QueueManager.registerQueue(queue);
         //反射获取方法
@@ -159,8 +161,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
             isRunning = this.createContainer();
             //如果没有创建容器说明是生产者，生产者不启动监听配置
-            if (isRunning){
-                redisMqClient.start();;
+            if (isRunning) {
+                redisMqClient.start();
+                ;
             }
         }
     }

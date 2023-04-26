@@ -11,7 +11,6 @@ public class QueueConfig {
         Queue queue = new Queue();
         queue.setQueueName("delaytest1");
         queue.setDelayState(true);
-        queue.setQueueMaxSize(100000);
         return queue;
     }
 }

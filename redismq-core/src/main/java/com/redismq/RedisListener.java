@@ -34,5 +34,5 @@ public @interface RedisListener {
     int virtual() default -1;
 
     //队列最大长度 60万
-    int queueMaxSize() default 600000;
+    int queueMaxSize() default -1;
 }

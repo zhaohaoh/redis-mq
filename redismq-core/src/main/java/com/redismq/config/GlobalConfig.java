@@ -27,6 +27,11 @@ public class GlobalConfig {
      * 生产者重试间隔
      */
     public int producerRetrySleep = 200;
+
+    /**
+     * 队列最大大小
+     */
+    public int queueMaxSize = 600000;
     /**
      * 是否全局开启事务提交后发送
      */
