@@ -6,4 +6,7 @@ import lombok.Data;
 public class JavaBean  {
     private String a;
     private Integer b;
+
+    private String ggg;
+    private Integer ddd;
 }
