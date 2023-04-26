@@ -88,7 +88,7 @@ public abstract class AbstractMessageListenerContainer {
         this.redisClient = redisListenerContainerFactory.getRedisClient();
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
-        this.delay = queue.getDelayState();
+        this.delay = queue.isDelayState();
         this.retryMax = queue.getRetryMax();
         this.ackMode = queue.getAckMode();
         this.retryInterval = redisListenerContainerFactory.getRetryInterval();

@@ -427,7 +427,7 @@ public class RedisMQProducer {
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
         }
-        if (queue.getDelayState()) {
+        if (queue.isDelayState()) {
             throw new RedisMqException("Redismq Queue type mismatch");
         }
         return queue;
@@ -445,7 +445,7 @@ public class RedisMQProducer {
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
         }
-        if (!queue.getDelayState()) {
+        if (!queue.isDelayState()) {
             throw new RedisMqException("Redismq DelayQueue type mismatch");
         }
         return queue;

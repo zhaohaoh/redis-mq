@@ -1,10 +1,13 @@
 package com.redismq.queue;
 
+import lombok.Data;
+
 /**
  * @author hzh
  * @date 2021/8/12
  * redis队列    默认值都为空。如果不为空说明被注解或者配置填充了属性则替换DefaultRedisListenerContainerFactory中的默认值
  */
+@Data
 public class Queue {
     /**
      * 队列名称
@@ -39,72 +42,4 @@ public class Queue {
      * 虚拟队列数量
      */
     private Integer queueMaxSize;
-
-    public Integer getQueueMaxSize() {
-        return queueMaxSize;
-    }
-
-    public void setQueueMaxSize(Integer queueMaxSize) {
-        this.queueMaxSize = queueMaxSize;
-    }
-
-    public boolean isDelayState() {
-        return delayState;
-    }
-
-    public Integer getVirtual() {
-        return virtual;
-    }
-
-    public void setVirtual(Integer virtual) {
-        this.virtual = virtual;
-    }
-
-    public String getQueueName() {
-        return queueName;
-    }
-
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
-    }
-
-    public Integer getRetryMax() {
-        return retryMax;
-    }
-
-    public void setRetryMax(Integer retryMax) {
-        this.retryMax = retryMax;
-    }
-
-    public String getAckMode() {
-        return ackMode;
-    }
-
-    public void setAckMode(String ackMode) {
-        this.ackMode = ackMode;
-    }
-
-    public Integer getConcurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(Integer concurrency) {
-        this.concurrency = concurrency;
-    }
-
-    public Integer getMaxConcurrency() {
-        return maxConcurrency;
-    }
-
-    public void setMaxConcurrency(Integer maxConcurrency) {
-        this.maxConcurrency = maxConcurrency;
-    }
-
-    public boolean getDelayState() {
-        return delayState;
-    }
-
-    public void setDelayState(boolean delayState) {
-        this.delayState = delayState;
-    }
 }

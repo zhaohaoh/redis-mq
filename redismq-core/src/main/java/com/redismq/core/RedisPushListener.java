@@ -44,7 +44,7 @@ public class RedisPushListener extends AbstractRedisPushListener {
             if (queue == null) {
                 return;
             }
-            boolean delayState = queue.getDelayState();
+            boolean delayState = queue.isDelayState();
 
             //延时队列和普通队列分开处理
             if (delayState) {

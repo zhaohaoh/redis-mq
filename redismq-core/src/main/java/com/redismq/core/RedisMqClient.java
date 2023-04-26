@@ -200,7 +200,7 @@ public class RedisMqClient {
                         //推送到指定的队列
                         LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
                         LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
-                        if (queue.getDelayState()) {
+                        if (queue.isDelayState()) {
                             delayBlockingQueue.add(pushMessage);
                         } else {
                             linkedBlockingQueue.add(vq);
