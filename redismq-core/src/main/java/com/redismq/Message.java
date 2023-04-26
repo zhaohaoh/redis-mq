@@ -3,8 +3,9 @@ package com.redismq;
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.beans.BeanUtils;
 
-import java.io.*;
+import java.io.Serializable;
 /**
  * @Author: hzh
  * @Date: 2022/9/6 10:50
@@ -27,16 +28,10 @@ public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
 
     public Message deepClone() {
-        Message outer = null;
+        Message outer = new Message();
         try { // 将该对象序列化成流,因为写在流里的是对象的一个拷贝，而原对象仍然存在于JVM里面。所以利用这个特性可以实现对象的深拷贝
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(this);
-            // 将流序列化成对象
-            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-            ObjectInputStream ois = new ObjectInputStream(bais);
-            outer = (Message) ois.readObject();
-        } catch (IOException | ClassNotFoundException e) {
+            BeanUtils.copyProperties(this,outer);
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return outer;

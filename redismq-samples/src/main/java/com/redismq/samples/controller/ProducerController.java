@@ -1,5 +1,6 @@
 package com.redismq.samples.controller;
 
+import com.redismq.samples.consumer.JavaBean;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +27,10 @@ public class ProducerController {
      */
     @PostMapping("sendDelayMessage")
     public void sendDelayMessage() {
-        redisMQTemplate.sendDelayMessage("延时消息消费", "delaytest1", Duration.ofSeconds(60));
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", Duration.ofSeconds(1));
     }
 
 

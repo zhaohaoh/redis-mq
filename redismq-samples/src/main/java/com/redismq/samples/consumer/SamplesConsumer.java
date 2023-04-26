@@ -16,7 +16,7 @@ public class SamplesConsumer {
      * delaytest1消费延时队列
      */
     @RedisListener(topic = "delaytest1", delay = true)
-    public void delaytest1(String test) {
+    public void delaytest1(JavaBean test) {
         System.out.println(test);
     }
 
