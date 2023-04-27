@@ -16,6 +16,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -252,5 +253,31 @@ public class RedisMqClient {
      */
     public void startRebalanceTask() {
         rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
+    }
+
+    /**
+     * 队列寄存器
+     *
+     * @param queue 队列
+     */
+    public Queue registerQueue(Queue queue) {
+        Boolean redisQueue = redisClient.sIsMember(getQueueTopicKey(), queue);
+        if (redisQueue == null || !redisQueue) {
+            redisClient.sAdd(getQueueTopicKey(), queue);
+        }
+        return queue;
+    }
+
+    /**
+     * 获取所有队列
+     *
+     * @return {@link Set}<{@link Queue}>
+     */
+    public Set<Queue> getAllQueue() {
+        Set<Object> set = redisClient.sMembers(getQueueTopicKey());
+        if (CollectionUtils.isEmpty(set)) {
+            return new HashSet<>();
+        }
+        return set.stream().map(s -> (Queue) s).collect(Collectors.toSet());
     }
 }

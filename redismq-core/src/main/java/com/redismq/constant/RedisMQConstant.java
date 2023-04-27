@@ -6,6 +6,7 @@ package com.redismq.constant;
  * @Date: 2022/11/4 15:19
  * 全局常量
  */
+
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
 public class RedisMQConstant {
@@ -52,6 +53,11 @@ public class RedisMQConstant {
      * 虚拟队列锁
      */
     public static final String VIRTUAL_LOCK = "VIRTUAL_LOCK";
+
+
+    public static String getQueueTopicKey() {
+        return PREFIX + GROUP + SPLITE + "QUEUE";
+    }
 
     public static String getQueueNameByTopic(String topic) {
         return PREFIX + GROUP + SPLITE + topic;

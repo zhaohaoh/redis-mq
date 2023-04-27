@@ -1,6 +1,7 @@
 package com.redismq;
 
 
+import com.redismq.config.GlobalConfigCache;
 import com.redismq.connection.RedisClient;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
@@ -109,9 +110,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             handlerPubSub(redisListener, method, bean);
             return;
         }
-        Queue queue = new Queue();
-        // 注册时会加入组名
-        queue.setQueueName(redisListener.topic());
+        Queue queue = new Queue(redisListener.topic());
+
         //注解中有配置以注解的配置优先
         if (redisListener.concurrency() > 0) {
             queue.setConcurrency(redisListener.concurrency());
@@ -132,19 +132,20 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.queueMaxSize() > 0) {
             queue.setQueueMaxSize(redisListener.queueMaxSize());
         }
-        //注册的queue
-        Queue registerQueue = QueueManager.registerQueue(queue);
+
+        redisMqClient.registerQueue(queue);
+
         //反射获取方法
         Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
-        //监听端点 封装方法名 bean名字 和routingKey一对一。一个队列可能有多个
 
+        //监听端点 封装方法名 bean名字 和routingKey一对一。一个队列可能有多个
         List<RedisListenerEndpoint> redisListenerEndpoints = redisListenerEndpointMap.computeIfAbsent(queue.getQueueName(), q -> new ArrayList<>());
         for (String tag : redisListener.tag()) {
             RedisListenerEndpoint redisListenerEndpoint = new RedisListenerEndpoint();
             redisListenerEndpoint.setTag(tag);
             redisListenerEndpoint.setBean(bean);
             redisListenerEndpoint.setMethod(invocableMethod);
-            redisListenerEndpoint.setId(registerQueue.getQueueName() + SPLITE + tag);
+            redisListenerEndpoint.setId(queue.getQueueName() + SPLITE + tag);
             redisListenerEndpoints.add(redisListenerEndpoint);
         }
     }
@@ -158,6 +159,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     @Override
     public void start() {
         this.registryBeanQueue();
+        redisMqClient.getAllQueue().forEach(QueueManager::registerQueue);
         if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
             isRunning = this.createContainer();
             //如果没有创建容器说明是生产者，生产者不启动监听配置
@@ -203,6 +205,11 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             if (queue.getRetryMax() > 10) {
                 throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
             }
+            //设置队列默认大小
+            if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
+                queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
+            }
+
             AbstractMessageListenerContainer listenerContainer = containerFactory.createListenerContainer(queue);
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
@@ -264,7 +271,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                 throw new RedisMqException("redismq duplicate queueName");
             }
             for (Queue queue : queues) {
-                QueueManager.registerQueue(queue);
+                redisMqClient.registerQueue(queue);
             }
         }
     }

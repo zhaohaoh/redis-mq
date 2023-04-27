@@ -1,8 +1,6 @@
 package com.redismq.queue;
 
 
-import com.redismq.config.GlobalConfigCache;
-import com.redismq.constant.RedisMQConstant;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -26,11 +24,6 @@ public class QueueManager {
     public static int VIRTUAL_QUEUES_NUM;
 
     public static Queue registerQueue(Queue queue) {
-        queue.setQueueName(RedisMQConstant.getQueueNameByTopic(queue.getQueueName()));
-        //设置队列默认大小
-        if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
-            queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
-        }
         String queueName = queue.getQueueName();
         Queue returnQueue = QUEUES.computeIfAbsent(queueName, q -> queue);
         returnQueue.setVirtual(QueueManager.VIRTUAL_QUEUES_NUM);

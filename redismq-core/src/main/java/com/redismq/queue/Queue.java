@@ -1,5 +1,7 @@
 package com.redismq.queue;
 
+import com.redismq.config.GlobalConfigCache;
+import com.redismq.constant.RedisMQConstant;
 import lombok.Data;
 
 /**
@@ -9,6 +11,14 @@ import lombok.Data;
  */
 @Data
 public class Queue {
+    public Queue() {
+    }
+
+    public Queue(String queueName) {
+        this.queueName = RedisMQConstant.getQueueNameByTopic(queueName);
+        this.queueMaxSize = GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize();
+    }
+
     /**
      * 队列名称
      */
@@ -36,7 +46,7 @@ public class Queue {
     /**
      * 虚拟队列数量
      */
-    private Integer virtual ;
+    private Integer virtual;
 
     /**
      * 虚拟队列数量
