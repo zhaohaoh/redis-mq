@@ -8,7 +8,6 @@ import com.redismq.interceptor.ConsumeInterceptor;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 
@@ -37,6 +36,7 @@ public class RedisListenerRunnable implements Runnable {
     //真实队列名
     private String queueName;
     private Map<String, Message> localMessages;
+    private int retryCount;
 
     public void setLocalMessages(Map<String, Message> localMessages) {
         this.localMessages = localMessages;
@@ -51,6 +51,7 @@ public class RedisListenerRunnable implements Runnable {
     public void setConsumeInterceptors(List<ConsumeInterceptor> consumeInterceptors) {
         this.consumeInterceptors = consumeInterceptors;
     }
+
     public void setQueueName(String queueName) {
         this.queueName = queueName;
     }
@@ -123,8 +124,7 @@ public class RedisListenerRunnable implements Runnable {
     }
 
     private void run0() {
-        int i = 0;
-        i++;
+        retryCount++;
         try {
             Class<?>[] parameterTypes = method.getParameterTypes();
             if (ArrayUtils.isEmpty(parameterTypes)) {
@@ -148,7 +148,7 @@ public class RedisListenerRunnable implements Runnable {
             afterConsume(clone);
         } catch (Exception e) {
             log.error("RedisListenerRunnable consumeMessage run ERROR:", e);
-            if (i > retryMax) {
+            if (retryCount > retryMax) {
                 state.cancel();
                 log.error("redismq run0 retryMax:{} Cancel", retryMax);
                 throw new RedisMqException("RedisListenerRunnable retryMax run0:", e);

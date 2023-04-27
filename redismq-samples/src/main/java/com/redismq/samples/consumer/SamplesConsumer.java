@@ -15,9 +15,10 @@ public class SamplesConsumer {
     /**
      * delaytest1消费延时队列
      */
-    @RedisListener(topic = "delaytest1", virtual = 4,delay = true,maxConcurrency = 64,concurrency = 8)
+    @RedisListener(topic = "delaytest1", virtual = 4,delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
     public void delaytest1(JavaBean test) {
         System.out.println(test);
+        throw new RuntimeException();
     }
 
     /**
@@ -34,6 +35,7 @@ public class SamplesConsumer {
     @RedisListener(topic = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
     public void order(Message message) {
         System.out.println(message);
+        throw new RuntimeException();
     }
 
     @RedisListener(topic = "time",tag = "bussiness1",delay = true)
