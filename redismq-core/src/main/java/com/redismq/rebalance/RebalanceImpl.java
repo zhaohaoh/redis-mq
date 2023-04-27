@@ -9,6 +9,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.redismq.queue.QueueManager.CURRENT_VIRTUAL_QUEUES;
 
@@ -39,7 +40,8 @@ public class RebalanceImpl {
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, new ArrayList<>(clientIds));
             CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
         }
-        log.info("RebalanceImpl rebalance clientId:{}  vQueues:{} clientIds:{}", clientId, CURRENT_VIRTUAL_QUEUES, clientIds);
+        String vQueues = CURRENT_VIRTUAL_QUEUES.entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
+        log.info("RebalanceImpl rebalance clientId:{}  clientIds:{} vQueues:{}", clientId, clientIds,vQueues);
     }
 
 }
