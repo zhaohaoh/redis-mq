@@ -122,6 +122,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.retryMax() >= 0) {
             queue.setRetryMax(redisListener.retryMax());
         }
+        if (redisListener.retryInterval() > 0) {
+            queue.setRetryInterval(redisListener.retryInterval());
+        }
         if (StringUtils.isNotBlank(redisListener.ackMode())) {
             queue.setAckMode(redisListener.ackMode());
         }

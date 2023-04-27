@@ -91,7 +91,7 @@ public abstract class AbstractMessageListenerContainer {
         this.delay = queue.isDelayState();
         this.retryMax = queue.getRetryMax();
         this.ackMode = queue.getAckMode();
-        this.retryInterval = redisListenerContainerFactory.getRetryInterval();
+        this.retryInterval = queue.getRetryInterval();
         this.semaphore = new Semaphore(queue.getMaxConcurrency());
     }
 

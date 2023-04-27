@@ -12,6 +12,8 @@ public @interface RedisListener {
     //重试次数 默认配置文件上是0
     int retryMax() default -1;
 
+    int retryInterval() default -1;
+
     //并发消费数量 默认配置文件上是1
     int concurrency() default -1;
 

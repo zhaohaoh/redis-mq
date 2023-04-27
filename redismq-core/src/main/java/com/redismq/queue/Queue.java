@@ -28,6 +28,10 @@ public class Queue {
      */
     private Integer retryMax;
     /**
+     * 重试时间间隔
+     */
+    private Integer retryInterval;
+    /**
      * ack模式
      */
     private String ackMode;
