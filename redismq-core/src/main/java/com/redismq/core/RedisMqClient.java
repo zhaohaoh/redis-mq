@@ -261,10 +261,7 @@ public class RedisMqClient {
      * @param queue 队列
      */
     public Queue registerQueue(Queue queue) {
-        Boolean redisQueue = redisClient.sIsMember(getQueueTopicKey(), queue);
-        if (redisQueue == null || !redisQueue) {
-            redisClient.sAdd(getQueueTopicKey(), queue);
-        }
+        redisClient.sAdd(getQueueTopicKey(), queue);
         return queue;
     }
 

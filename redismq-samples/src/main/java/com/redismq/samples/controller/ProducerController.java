@@ -27,10 +27,13 @@ public class ProducerController {
      */
     @PostMapping("sendDelayMessage")
     public void sendDelayMessage() {
-        JavaBean javaBean = new JavaBean();
-        javaBean.setA("ff");
-        javaBean.setB(222);
-        redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", Duration.ofSeconds(1));
+        for (int i = 0; i < 100; i++) {
+            JavaBean javaBean = new JavaBean();
+            javaBean.setA("ff");
+            javaBean.setB(222);
+            redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", Duration.ofSeconds(1));
+        }
+
     }
 
 
