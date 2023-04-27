@@ -165,7 +165,6 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             //如果没有创建容器说明是生产者，生产者不启动监听配置
             if (isRunning) {
                 redisMqClient.start();
-                ;
             }
         }
     }

@@ -261,9 +261,15 @@ public class RedisMqClient {
      * @param queue 队列
      */
     public Queue registerQueue(Queue queue) {
-        Boolean redisQueue = redisClient.sIsMember(getQueueTopicKey(), queue);
-        if (redisQueue == null || !redisQueue) {
-            redisClient.sAdd(getQueueTopicKey(), queue);
+        Set<Queue> allQueue = getAllQueue();
+        if (!CollectionUtils.isEmpty(allQueue)) {
+            for (Queue redisQueue : allQueue) {
+                boolean equals = redisQueue.getQueueName().equals(queue.getQueueName());
+                if (equals) {
+                    redisClient.sRemove(getQueueTopicKey(), redisQueue);
+                    redisClient.sAdd(getQueueTopicKey(), queue);
+                }
+            }
         }
         return queue;
     }

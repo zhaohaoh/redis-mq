@@ -26,9 +26,11 @@ public class QueueManager {
     public static Queue registerQueue(Queue queue) {
         String queueName = queue.getQueueName();
         Queue returnQueue = QUEUES.computeIfAbsent(queueName, q -> queue);
-        returnQueue.setVirtual(QueueManager.VIRTUAL_QUEUES_NUM);
+        if (returnQueue.getVirtual()==null||returnQueue.getVirtual() <= 0) {
+            returnQueue.setVirtual(QueueManager.VIRTUAL_QUEUES_NUM);
+        }
         List<String> arrayList = new ArrayList<>();
-        for (int i = 0; i < VIRTUAL_QUEUES_NUM; i++) {
+        for (int i = 0; i < returnQueue.getVirtual(); i++) {
             arrayList.add(returnQueue.getQueueName() + SPLITE + i);
         }
         VIRTUAL_QUEUES.put(returnQueue.getQueueName(), arrayList);
