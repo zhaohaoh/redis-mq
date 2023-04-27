@@ -261,15 +261,13 @@ public class RedisMqClient {
      * @param queue 队列
      */
     public Queue registerQueue(Queue queue) {
-        redisClient.sAdd(getQueueTopicKey(), queue);
+        Boolean redisQueue = redisClient.sIsMember(getQueueTopicKey(), queue);
+        if (redisQueue == null || !redisQueue) {
+            redisClient.sAdd(getQueueTopicKey(), queue);
+        }
         return queue;
     }
 
-    /**
-     * 获取所有队列
-     *
-     * @return {@link Set}<{@link Queue}>
-     */
     public Set<Queue> getAllQueue() {
         Set<Object> set = redisClient.sMembers(getQueueTopicKey());
         if (CollectionUtils.isEmpty(set)) {
