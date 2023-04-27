@@ -15,7 +15,7 @@ public class SamplesConsumer {
     /**
      * delaytest1消费延时队列
      */
-    @RedisListener(topic = "delaytest1", virtual = 3,delay = true,maxConcurrency = 64,concurrency = 8)
+    @RedisListener(topic = "delaytest1", virtual = 4,delay = true,maxConcurrency = 64,concurrency = 8)
     public void delaytest1(JavaBean test) {
         System.out.println(test);
     }
