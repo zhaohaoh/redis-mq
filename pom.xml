@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.zhaohaoh</groupId>
     <artifactId>redismq</artifactId>
-   <version>0.1.0</version>
+   <version>0.1.1</version>
 
     <packaging>pom</packaging>
 
@@ -70,6 +70,12 @@
     </distributionManagement>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-test</artifactId>
+                <version>${spring-boot.version}</version>
+                <scope>test</scope>
+            </dependency>
             <dependency>
                 <groupId>io.seata</groupId>
                 <artifactId>seata-all</artifactId>

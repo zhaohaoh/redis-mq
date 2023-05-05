@@ -13,9 +13,8 @@ import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQDataHelper;
 import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.SeataUtil;
 import io.seata.core.context.RootContext;
-import io.seata.tm.api.transaction.TransactionHookAdapter;
-import io.seata.tm.api.transaction.TransactionHookManager;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +38,7 @@ public class RedisMQProducer {
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
     private final RedisClient redisClient;
     private List<ProducerInterceptor> producerInterceptors;
+    private SeataUtil seataUtil;
 
     public List<ProducerInterceptor> getProducerInterceptors() {
         return producerInterceptors;
@@ -51,6 +51,9 @@ public class RedisMQProducer {
 
     public RedisMQProducer(RedisClient redisClient) {
         this.redisClient = redisClient;
+        if (GLOBAL_CONFIG.seataState) {
+            this.seataUtil = new SeataUtil();
+        }
     }
 
     /**
@@ -249,15 +252,10 @@ public class RedisMQProducer {
                         }
                     });
                 } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
-                    TransactionHookAdapter adapter = new TransactionHookAdapter() {
-                        @Override
-                        public void afterCommit() {
-                            boolean success = sendRedisMessage(pushMessage, params);
-                            afterSend(messageList, success);
-                        }
-                    };
-                    //seata事务提交后执行的方法
-                    TransactionHookManager.registerHook(adapter);
+                    seataUtil.registerHook(() -> {
+                        boolean success1 = sendRedisMessage(pushMessage, params);
+                        afterSend(messageList, success1);
+                    });
                 } else {
                     success = this.sendRedisMessage(pushMessage, params);
                     afterSend(messageList, success);
