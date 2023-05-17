@@ -13,6 +13,7 @@ public class CompositeQueue<E> extends AbstractQueue<E> implements BlockingQueue
     private static final long serialVersionUID = -6903933977591709194L;
 
     //队列的数量，自定义实现队列，只有队列的size满的时候才开启更多线程消费,消费者线程数满的时候。利用了信号量进行阻塞处理。
+    //多余了，线程池默认的就是这样。这里本来是想先创建非核心线程，然后再加入队列，那么这里换位置是可以实现的
     public CompositeQueue(int size) {
         blockingQueues.add(new LinkedBlockingQueue<>(size));
         blockingQueues.add(new SynchronousQueue<>());
