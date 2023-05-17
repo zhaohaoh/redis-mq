@@ -1,10 +1,7 @@
 package com.redismq;
 
 import java.util.*;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * @Author: hzh
@@ -16,7 +13,6 @@ public class CompositeQueue<E> extends AbstractQueue<E> implements BlockingQueue
     private static final long serialVersionUID = -6903933977591709194L;
 
     //队列的数量，自定义实现队列，只有队列的size满的时候才开启更多线程消费,消费者线程数满的时候。利用了信号量进行阻塞处理。
-    //和直接直接使用队列队列满了开启非核心线程的区别是。这个SynchronousQueue会一直阻塞。不会进入线程池拒绝策略
     public CompositeQueue(int size) {
         blockingQueues.add(new LinkedBlockingQueue<>(size));
         blockingQueues.add(new SynchronousQueue<>());
@@ -121,5 +117,27 @@ public class CompositeQueue<E> extends AbstractQueue<E> implements BlockingQueue
             }
         }
         return null;
+    }
+
+    public static void main(String[] args) {
+        ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(1, 1, 1, TimeUnit.MILLISECONDS,
+                new SynchronousQueue<>(), new RejectedExecutionHandler() {
+            @Override
+            public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+                System.out.println("被拒绝");
+            }
+        });
+        for (int i = 0; i < 100; i++) {
+            threadPoolExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Thread.sleep(10000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
     }
 }
