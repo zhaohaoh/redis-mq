@@ -17,6 +17,12 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>4.2.2</version>
+        </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
@@ -36,11 +42,11 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>io.seata</groupId>-->
-<!--            <artifactId>seata-all</artifactId>-->
-<!--            <version>${seata.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>io.seata</groupId>
+            <artifactId>seata-all</artifactId>
+            <version>${seata.version}</version>
+        </dependency>
         <!--        <dependency>-->
         <!--            <groupId>com.framework</groupId>-->
         <!--            <artifactId>framework-knife4j</artifactId>-->
