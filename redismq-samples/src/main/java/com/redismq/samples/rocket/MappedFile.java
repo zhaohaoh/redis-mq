@@ -210,7 +210,7 @@ public class MappedFile extends ReferenceResource {
             AppendMessageResult result;
             result = cb.doAppend(this.getFileFromOffset(), byteBuffer, messageExt);
             //追加偏移量
-            this.wrotePosition.addAndGet(result.getWroteBytes());
+            this.wrotePosition.addAndGet(result.getTotalSize());
             //追加的时间戳
             this.storeTimestamp = result.getStoreTimestamp();
             return result;

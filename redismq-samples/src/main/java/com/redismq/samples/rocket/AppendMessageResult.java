@@ -27,7 +27,7 @@ public class AppendMessageResult {
     // Where to start writing
     private long wroteOffset;
     // Write Bytes
-    private int wroteBytes;
+    private int totalSize;
     // Message ID
     private String msgId;
     private Supplier<String> msgIdSupplier;
@@ -47,7 +47,7 @@ public class AppendMessageResult {
         long storeTimestamp, long logicsOffset, long pagecacheRT) {
         this.status = status;
         this.wroteOffset = wroteOffset;
-        this.wroteBytes = wroteBytes;
+        this.totalSize = wroteBytes;
         this.msgId = msgId;
         this.storeTimestamp = storeTimestamp;
         this.logicsOffset = logicsOffset;
@@ -58,7 +58,7 @@ public class AppendMessageResult {
             long storeTimestamp, long logicsOffset, long pagecacheRT) {
         this.status = status;
         this.wroteOffset = wroteOffset;
-        this.wroteBytes = wroteBytes;
+        this.totalSize = wroteBytes;
         this.msgIdSupplier = msgIdSupplier;
         this.storeTimestamp = storeTimestamp;
         this.logicsOffset = logicsOffset;
@@ -93,12 +93,12 @@ public class AppendMessageResult {
         this.wroteOffset = wroteOffset;
     }
 
-    public int getWroteBytes() {
-        return wroteBytes;
+    public int getTotalSize() {
+        return totalSize;
     }
 
-    public void setWroteBytes(int wroteBytes) {
-        this.wroteBytes = wroteBytes;
+    public void setTotalSize(int totalSize) {
+        this.totalSize = totalSize;
     }
 
     public String getMsgId() {
@@ -141,7 +141,7 @@ public class AppendMessageResult {
         return "AppendMessageResult{" +
             "status=" + status +
             ", wroteOffset=" + wroteOffset +
-            ", wroteBytes=" + wroteBytes +
+            ", wroteBytes=" + totalSize +
             ", msgId='" + msgId + '\'' +
             ", storeTimestamp=" + storeTimestamp +
             ", logicsOffset=" + logicsOffset +

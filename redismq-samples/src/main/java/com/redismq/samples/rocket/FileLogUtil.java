@@ -8,8 +8,8 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class FileLogUtil {
 
-    public static MessageCommitLog  checkMessageAndReturnSize(java.nio.ByteBuffer byteBuffer, final boolean checkCRC,
-                                                      final boolean readBody) {
+    public static Message getMessage(java.nio.ByteBuffer byteBuffer, final boolean checkCRC,
+                                     final boolean readBody) {
         try {
             // 1 TOTAL SIZE
             int totalSize = byteBuffer.getInt();
@@ -19,26 +19,27 @@ public class FileLogUtil {
             switch (magicCode) {
                 case -626843481:
                     break;
-//                case BLANK_MAGIC_CODE:
-//                    return new DispatchRequest(0, true /* success */);
-//                default:
-//                    log.warn("found a illegal magic code 0x" + Integer.toHexString(magicCode));
-//                    return new DispatchRequest(-1, false /* success */);
             }
 
             byte[] bytesContent = new byte[totalSize];
-
+            // 3 bodyCRC
             int bodyCRC = byteBuffer.getInt();
+            // 4 QUEUEID
 
-            int queueId = byteBuffer.getInt();
+            int queueLen = byteBuffer.getInt();
+            byte[] queue = new byte[queueLen];
+            byteBuffer.get(queue);
+            System.out.println(new String(queue));
 
+            // 5 PHYSICALOFFSET
             long physicOffset = byteBuffer.getLong();
-
+            // 6 BODY
             int bodyLen = byteBuffer.getInt();
+            String body = null;
             if (bodyLen > 0) {
                 if (readBody) {
-                    byteBuffer.get(bytesContent, 0, bodyLen);
-
+                  byteBuffer.get(bytesContent, 0, bodyLen);
+                    body=new String(bytesContent,0,bodyLen,StandardCharsets.UTF_8);
                     if (checkCRC) {
                         int crc = CrcUtil.crc32(bytesContent, 0, bodyLen);
                         if (crc != bodyCRC) {
@@ -51,15 +52,24 @@ public class FileLogUtil {
                 }
             }
 
-            byte topicLen = byteBuffer.get();
+            // 7 topic
+            int topicLen = byteBuffer.getInt();
             byteBuffer.get(bytesContent, 0, topicLen);
             String topic = new String(bytesContent, 0, topicLen, StandardCharsets.UTF_8);
 
-            MessageCommitLog commitLog = new MessageCommitLog();
-            commitLog.setTopic(topic);
-            commitLog.setTotalSize(totalSize);
-            commitLog.setTopic(topic);
-            return commitLog;
+            // 7 tag
+            int tagLen = byteBuffer.getInt();
+            byte[] tag = new byte[tagLen];
+            byteBuffer.get(tag);
+            String tagStr = new String(tag);
+
+            Message message = new Message();
+            message.setTopic(topic);
+            message.setVirtualQueueName(new String(queue));
+            message.setBody(body);
+            message.setTag(tagStr);
+            System.out.println(message);
+            return message;
         } catch (Exception e) {
             System.out.println(e);
         }

@@ -3,6 +3,7 @@ package com.redismq.samples.rocket;
 import com.redismq.utils.RedisMQObjectMapper;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 class DefaultAppendMessageCallback {
     // File at the end of the minimum fixed length empty
@@ -35,12 +36,16 @@ class DefaultAppendMessageCallback {
         // PHY OFFSET
         long wroteOffset = fileFromOffset + byteBuffer.position();
 
-        byte[] body = RedisMQObjectMapper.toJsonStr(msgInner.getBody()).getBytes();
+        String s = RedisMQObjectMapper.toJsonStr(msgInner.getBody());
+        byte[] body = s.getBytes(StandardCharsets.UTF_8);
 
         byte[] queue = msgInner.getVirtualQueueName().getBytes();
         final int bodyLength = msgInner.getBody() == null ? 0 : body.length;
         byte[] topic = msgInner.getTopic().getBytes();
-        int totalLength = bodyLength + queue.length + topic.length + 8 + 4;
+
+        byte[] tag = msgInner.getTag().getBytes();
+        //  totalLength=4 MAGICCODE=4   BODYCRC=4  PHYSICALOFFSET=8  bodyLength=4  queueLen=4   topicLen=4 tagLen=4
+        int totalLength = bodyLength + queue.length + topic.length +tag.length +  4 + 4 + 4 +4  +4 +4+ 8 +4;
         // Initialization of storage space
         //切换位置到0，并且可以读写的位置是消息的长度。这个缓存区只是临时存储内存消息用的。所以切换到0可以初始化空间
         this.msgStoreItemMemory.flip();
@@ -52,19 +57,28 @@ class DefaultAppendMessageCallback {
         // 3 BODYCRC
         this.msgStoreItemMemory.putInt(CrcUtil.crc32(body));
         // 4 QUEUEID
+        this.msgStoreItemMemory.putInt(queue.length);
         this.msgStoreItemMemory.put(queue);
         // 7 PHYSICALOFFSET
-        this.msgStoreItemMemory.putLong(fileFromOffset + byteBuffer.position());
+        long value = fileFromOffset + byteBuffer.position();
+        this.msgStoreItemMemory.putLong(value);
         // 15 BODY
         this.msgStoreItemMemory.putInt(bodyLength);
         if (bodyLength > 0)
             this.msgStoreItemMemory.put(body);
         // 16 TOPIC
+        this.msgStoreItemMemory.putInt(topic.length);
         this.msgStoreItemMemory.put(topic);
+        // TAG
+        this.msgStoreItemMemory.putInt(tag.length);
+        this.msgStoreItemMemory.put(tag);
+
         // Write messages to the queue buffer
         byteBuffer.put(this.msgStoreItemMemory.array(), 0, msgStoreItemMemory.limit());
 
-        return null;
+        AppendMessageResult appendMessageResult = new AppendMessageResult(AppendMessageStatus.PUT_OK);
+        appendMessageResult.setTotalSize(totalLength);
+        return appendMessageResult;
     }
 
 

@@ -39,6 +39,8 @@ spring.redismq.virtual=1
 spring.redismq.global-config.send-after-commit=true
 #如果有seata事务需要开启 默认值false
 spring.redismq.global-config.seata-state=true
+#默认单个队列消息堆积上限值
+spring.redismq.global-config.queueMaxSize=600000
 ```
 ### 案例代码
 
@@ -184,6 +186,7 @@ public class SamplesConsumer {
 默认消费失败加入redis的死信队列
 默认生产发消息失败打印失败日志
 可自定义实现对消息持久化mysql等第三方存储库
+框架默认限制了单个队列的消息数量最大size=600000  可根据redis内存配置自行增大缩小
 ```java
 @Configuration
 public class RedisMQInterceptorConfiguration {
