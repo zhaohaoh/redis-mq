@@ -16,6 +16,8 @@
  */
 package com.redismq.samples.rocket;
 
+import com.redismq.samples.rocket.store.MappedFile;
+
 import java.nio.ByteBuffer;
 
 public class SelectMappedBufferResult {

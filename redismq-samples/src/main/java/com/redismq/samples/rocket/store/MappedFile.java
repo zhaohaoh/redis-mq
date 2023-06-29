@@ -1,10 +1,11 @@
-package com.redismq.samples.rocket;
+package com.redismq.samples.rocket.store;
 
+import com.redismq.constant.FlushDiskType;
+import com.redismq.samples.rocket.*;
 import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 import lombok.extern.slf4j.Slf4j;
 import sun.nio.ch.DirectBuffer;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -36,6 +37,7 @@ public class MappedFile extends ReferenceResource {
      */
 //    protected TransientStorePool transientStorePool = null;
     private String fileName;
+    //文件的起始偏移量，在文件名上
     private long fileFromOffset;
     private File file;
     private MappedByteBuffer mappedByteBuffer;
@@ -59,7 +61,10 @@ public class MappedFile extends ReferenceResource {
         }
     }
 
-    public SelectMappedBufferResult selectCurrentMappedBuffer(int pos) {
+    /**
+     *  获取从偏移量开始到文件末尾的缓存区
+     */
+    public SelectMappedBufferResult selectMappedBuffer(int pos) {
         int readPosition = getReadPosition();
         if (pos < readPosition && pos >= 0) {
             if (this.hold()) {
@@ -75,7 +80,7 @@ public class MappedFile extends ReferenceResource {
         return null;
     }
 
-    public SelectMappedBufferResult selectCurrentMappedBuffer(int pos, int size) {
+    public SelectMappedBufferResult selectMappedBuffer(int pos, int size) {
         int readPosition = getReadPosition();
         if ((pos + size) <= readPosition) {
             if (this.hold()) {
@@ -270,7 +275,7 @@ public class MappedFile extends ReferenceResource {
      * @return The current flushed position
      */
     public int flush(final int flushLeastPages) {
-        if (this.isAbleToFlush(flushLeastPages)) {
+        if (this.isCanFlush(flushLeastPages)) {
             if (this.hold()) {
                 //读偏移量
                 int value = getReadPosition();
@@ -296,13 +301,38 @@ public class MappedFile extends ReferenceResource {
         return this.getFlushedPosition();
     }
 
-//    public int commit(final int commitLeastPages) {
-//        //no need to commit data to file channel, so just regard wrotePosition as committedPosition.
-//        return this.wrotePosition.get();
-//    }
 
+    /**
+     * 销毁文件
+     */
+    public boolean destroy(final long intervalForcibly) {
+        this.shutdown(intervalForcibly);
 
-    private boolean isAbleToFlush(final int flushLeastPages) {
+        if (this.isCleanupOver()) {
+            try {
+                //关闭文件通道
+                this.fileChannel.close();
+                log.info("close file channel " + this.fileName + " OK");
+
+                long beginTime = System.currentTimeMillis();
+                boolean result = this.file.delete();
+            } catch (Exception e) {
+                log.warn("close file channel " + this.fileName + " Failed. ", e);
+            }
+
+            return true;
+        } else {
+            log.warn("destroy mapped file[REF:" + this.getRefCount() + "] " + this.fileName
+                    + " Failed. cleanupOver: " + this.cleanupOver);
+        }
+
+        return false;
+    }
+
+    /**
+     *  是否能够刷盘。  flushLeastPages一次刷新的页数默认4 如果没达到4就不刷
+     */
+    private boolean isCanFlush(final int flushLeastPages) {
         int flush = this.flushedPosition.get();
         int write = getReadPosition();
         //偏移量是否已经达到了文件大小
@@ -317,7 +347,11 @@ public class MappedFile extends ReferenceResource {
         return write > flush;
     }
 
-    protected boolean isAbleToCommit(final int commitLeastPages) {
+    /**
+     * 是否可以提交 一次提交的页数commitLeastPages
+     *
+     */
+    protected boolean isCanCommit(final int commitLeastPages) {
         //提交的偏移量
         int commit = this.committedPosition.get();
         int write = this.wrotePosition.get();
@@ -341,6 +375,9 @@ public class MappedFile extends ReferenceResource {
         this.flushedPosition.set(pos);
     }
 
+    /**
+     *  是否写满了文件
+     */
     public boolean isFull() {
         return this.fileSize == this.wrotePosition.get();
     }

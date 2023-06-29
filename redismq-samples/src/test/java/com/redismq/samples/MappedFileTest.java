@@ -20,7 +20,7 @@
  */
 package com.redismq.samples;
 
-import com.redismq.samples.rocket.MappedFile;
+import com.redismq.samples.rocket.store.MappedFile;
 import com.redismq.samples.rocket.SelectMappedBufferResult;
 import org.junit.After;
 import org.junit.Test;
@@ -37,7 +37,7 @@ public class MappedFileTest {
         boolean result = mappedFile.appendMessage(storeMessage.getBytes());
         System.out.println(result);
 
-        SelectMappedBufferResult selectMappedBufferResult = mappedFile.selectCurrentMappedBuffer(0);
+        SelectMappedBufferResult selectMappedBufferResult = mappedFile.selectMappedBuffer(0);
         byte[] data = new byte[storeMessage.length()];
         selectMappedBufferResult.getByteBuffer().get(data);
         String readString = new String(data);
