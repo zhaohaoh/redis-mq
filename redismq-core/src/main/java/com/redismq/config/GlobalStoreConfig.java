@@ -39,4 +39,24 @@ public class GlobalStoreConfig {
      * 刷盘超时时间
      */
     private int flushTimeOut = 500;
+
+    /**
+     * 定时刷盘时间间隔
+     */
+    private int flushInterval = 500;
+
+    /**
+     *  是否定时刷盘
+     */
+    private boolean isScheduleTimeFlush=true;
+
+    /**
+     *  至少提交日志页面
+     */
+    private int flushCommitLogLeastPages=4;
+
+    /**
+     *  提交日志彻底间隔
+     */
+    private int flushCommitLogThoroughInterval = 1000 * 10;
 }
