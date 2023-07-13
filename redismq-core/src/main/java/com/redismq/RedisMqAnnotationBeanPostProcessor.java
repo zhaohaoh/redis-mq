@@ -138,6 +138,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
         redisMqClient.registerQueue(queue);
 
+        QueueManager.registerLocalQueue(queue);
+
         //反射获取方法
         Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
 
@@ -162,8 +164,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     @Override
     public void start() {
         this.registryBeanQueue();
-        redisMqClient.getAllQueue().forEach(QueueManager::registerQueue);
-        if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
+        redisMqClient.getAllQueue().forEach(QueueManager::registerRedisQueue);
+        if (!CollectionUtils.isEmpty(QueueManager.getLocalQueues())) {
             isRunning = this.createContainer();
             //如果没有创建容器说明是生产者，生产者不启动监听配置
             if (isRunning) {
@@ -176,7 +178,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
      * 创建容器
      */
     private boolean createContainer() {
-        Map<String, Queue> queues = QueueManager.getAllQueueMap();
+        Map<String, Queue> queues = QueueManager.getLocalQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
         DefaultRedisListenerContainerFactory containerFactory = applicationContext.getBean(DefaultRedisListenerContainerFactory.class);
         RedisClient redisClient = applicationContext.getBean("redisClient", RedisClient.class);
@@ -238,7 +240,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
     @Override
     public void stop() {
-        if (!CollectionUtils.isEmpty(QueueManager.getAllQueues())) {
+        if (!CollectionUtils.isEmpty(QueueManager.getLocalQueues())) {
             redisMqClient.destory();
             isRunning = false;
         }

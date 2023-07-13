@@ -36,7 +36,7 @@ public class RedisPushListener extends AbstractRedisPushListener {
             String queueName = pushMessage.getQueue();
             String realNameQueue = StringUtils.substringBeforeLast(queueName, SPLITE);
             //当前服务订阅的队列列表
-            List<String> list = QueueManager.CURRENT_VIRTUAL_QUEUES.get(realNameQueue);
+            List<String> list = QueueManager.getCurrentVirtualQueues().get(realNameQueue);
             if (list == null || !list.contains(queueName)) {
                 return;
             }

@@ -91,7 +91,7 @@ public class RedisMqClient {
         redisClient.zRemove(getClientKey(), clientId);
         redisListenerContainerManager.stopAll();
         publishRebalance();
-        log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.CURRENT_VIRTUAL_QUEUES);
+        log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.getCurrentVirtualQueues());
     }
 
     public void start() {
@@ -169,7 +169,7 @@ public class RedisMqClient {
      * 重平衡时对任务重新进行拉取
      */
     public void repush() {
-        Map<String, List<String>> queues = QueueManager.CURRENT_VIRTUAL_QUEUES;
+        Map<String, List<String>> queues = QueueManager.getCurrentVirtualQueues();
         boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
 
         //没有监听的队列取消订阅
@@ -188,7 +188,7 @@ public class RedisMqClient {
                 log.error("repush queue is null");
                 return;
             }
-            List<String> virtualQueues = QueueManager.CURRENT_VIRTUAL_QUEUES.get(k);
+            List<String> virtualQueues = QueueManager.getCurrentVirtualQueues().get(k);
             if (CollectionUtils.isEmpty(virtualQueues)) {
                 return;
             }
