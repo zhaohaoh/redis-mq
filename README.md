@@ -11,12 +11,12 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 - **支持顺序消息**： 只需要把消费者和虚拟队列都设置为1
 - **支持定时消息**： 可以让消息在指定时间执行
 - **支持生产者消费者回调**： 消息发送结果通过回调通知用户
-## 引入 目前可用的版本是0.1.1 已在生产使用。
+## 引入 目前可用的版本是0.1.3
 ``` xml
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
-            <version>0.1.1</version>
+            <version>0.1.3</version>
         </dependency>
 ```
 

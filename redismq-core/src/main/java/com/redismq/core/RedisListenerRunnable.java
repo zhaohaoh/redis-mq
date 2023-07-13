@@ -108,15 +108,18 @@ public class RedisListenerRunnable implements Runnable {
         state.starting();
         try {
             do {
-                run0();
+                try {
+                    run0();
+                } catch (RedisMqException e) {
+                    onFail((Message) args, e);
+                    break;
+                }
             } while (state.isActive());
-        } catch (Exception e) {
-            onFail((Message) args, e);
         } finally {
             Message message = (Message) args;
             semaphore.release();
             //如果是手动确认的话需要手动删除
-            if (state.isFinsh() && AckMode.MAUAL.equals(ackMode)) {
+            if (AckMode.MAUAL.equals(ackMode)) {
                 Long count = redisClient.zRemove(message.getVirtualQueueName(), args);
             }
             localMessages.remove(message.getId());
@@ -159,6 +162,7 @@ public class RedisListenerRunnable implements Runnable {
                     log.error("redismq consumeMessage InterruptedException", interruptedException);
                     Thread.currentThread().interrupt();
                 }
+                System.out.println(retryCount);
             }
         }
     }

@@ -209,6 +209,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             if (queue.getRetryMax() > 10) {
                 throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
             }
+            if (queue.getRetryInterval() ==null) {
+                queue.setRetryInterval(containerFactory.getRetryInterval());
+            }
             //设置队列默认大小
             if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
                 queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
