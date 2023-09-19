@@ -42,7 +42,7 @@ public class RebalanceImpl {
             putCurrentVirtualQueues(queue, vQueues);
         }
         String vQueues = getCurrentVirtualQueues().entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
-        log.info("RebalanceImpl rebalance clientId:{}  clientIds:{} vQueues:{}", clientId, clientIds,vQueues);
+        log.info("RebalanceImpl rebalance clientId:{} \n clientIds:{} \n VirtualQueueList:\n{}", clientId, clientIds,vQueues);
     }
 
 }
