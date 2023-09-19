@@ -19,6 +19,8 @@ Redis-MQ 是利用redis实现mq的功能的中间件
             <version>0.1.4</version>
         </dependency>
 ```
+## 注意事务
+队列名称存储在redis中。如果一个队列无用了。需要去redis中手动删除
 
 ## 快速开始
 
