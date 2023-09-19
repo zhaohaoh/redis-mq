@@ -20,7 +20,7 @@ Redis-MQ 是利用redis实现mq的功能的中间件
         </dependency>
 ```
 ## 注意事务
-队列名称存储在redis中。如果一个队列无用了。需要去redis中手动删除
+队列名称存储在redis中。如果一个队列无用了。需要去redis中手动删除。前缀REDISMQ+你的命名空间
 
 ## 快速开始
 
