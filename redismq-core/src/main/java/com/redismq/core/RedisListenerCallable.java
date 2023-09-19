@@ -11,36 +11,61 @@ import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.Callable;
 
 /**
  * @Author: hzh
  * @Date: 2022/5/19 11:28
  * 执行器
  */
-public class RedisListenerRunnable implements Runnable {
-    protected static final Logger log = LoggerFactory.getLogger(RedisListenerRunnable.class);
-    //重试最大次数
+public class RedisListenerCallable implements Callable<Boolean> {
+    protected static final Logger log = LoggerFactory.getLogger(RedisListenerCallable.class);
+
+    /**
+     *重试最大次数
+     */
     private final int retryMax;
+    /**
+     *目标类
+     */
     private final Object target;
+    /**
+     *参数
+     */
     private Object args;
+    /**
+     *方法
+     */
     private final Method method;
+    /**
+     *消费状态
+     */
     private final PollState state = new PollState();
+    /**
+     *redis的客户端
+     */
     private final RedisClient redisClient;
-    private Semaphore semaphore;
+    /**
+     * ack的模式
+     */
     private String ackMode;
+    /**
+     *重试间隔 睡眠时间
+     */
     private Integer retryInterval;
-    //真实队列名
+    /**
+     *真实队列名
+     */
     private String queueName;
-    private Map<String, Message> localMessages;
+
+    /**
+     *最大重试次数
+     */
     private int retryCount;
 
-    public void setLocalMessages(Map<String, Message> localMessages) {
-        this.localMessages = localMessages;
-    }
 
     public String getQueueName() {
         return queueName;
@@ -69,13 +94,6 @@ public class RedisListenerRunnable implements Runnable {
     }
 
 
-    public Semaphore getSemaphore() {
-        return semaphore;
-    }
-
-    public void setSemaphore(Semaphore semaphore) {
-        this.semaphore = semaphore;
-    }
 
     public RedisClient getRedisClient() {
         return redisClient;
@@ -95,16 +113,15 @@ public class RedisListenerRunnable implements Runnable {
         return this.method;
     }
 
-    public RedisListenerRunnable(Object target, Method method, int retryMax, Semaphore semaphore, RedisClient redisClient) {
+    public RedisListenerCallable(Object target, Method method, int retryMax, RedisClient redisClient) {
         this.target = target;
         this.method = method;
         this.retryMax = retryMax;
-        this.semaphore = semaphore;
         this.redisClient = redisClient;
     }
 
     @Override
-    public void run() {
+    public Boolean call()   {
         state.starting();
         try {
             do {
@@ -117,13 +134,12 @@ public class RedisListenerRunnable implements Runnable {
             } while (state.isActive());
         } finally {
             Message message = (Message) args;
-            semaphore.release();
             //如果是手动确认的话需要手动删除
             if (AckMode.MAUAL.equals(ackMode)) {
                 Long count = redisClient.zRemove(message.getVirtualQueueName(), args);
             }
-            localMessages.remove(message.getId());
         }
+        return true;
     }
 
     private void run0() {
@@ -147,22 +163,24 @@ public class RedisListenerRunnable implements Runnable {
                 this.method.invoke(this.target, clone.getBody());
             }
             state.finsh();
-            log.debug("redismq consumeMessage success topic:{} tag:{}", message.getTopic(), message.getTag());
+            log.debug("redisMQ consumeMessage success topic:{} tag:{}", message.getTopic(), message.getTag());
             afterConsume(clone);
         } catch (Exception e) {
-            log.error("RedisListenerRunnable consumeMessage run ERROR:", e);
-            if (retryCount > retryMax) {
+            if (e instanceof InvocationTargetException){
+                e = (Exception) e.getCause();
+            }
+            if (retryCount > retryMax +1) {
                 state.cancel();
-                log.error("redismq run0 retryMax:{} Cancel", retryMax);
-                throw new RedisMqException("RedisListenerRunnable retryMax run0:", e);
+                log.error("redisMQ run retryMax:{} Cancel", retryMax);
+                throw new RedisMqException("RedisListenerRunnable retryMax :", e);
             } else {
+                log.error("RedisListenerRunnable consumeMessage run ERROR:", e);
                 try {
                     Thread.sleep(retryInterval);
                 } catch (InterruptedException interruptedException) {
-                    log.error("redismq consumeMessage InterruptedException", interruptedException);
+                    log.error("redisMQ consumeMessage InterruptedException", interruptedException);
                     Thread.currentThread().interrupt();
                 }
-                System.out.println(retryCount);
             }
         }
     }
@@ -199,6 +217,7 @@ public class RedisListenerRunnable implements Runnable {
     }
 
 
+
     public static class PollState {
         enum State {
             CREATED, STARTING, RUNNING, CANCELLED, FINSH;
@@ -212,10 +231,6 @@ public class RedisListenerRunnable implements Runnable {
 
         boolean isActive() {
             return state == State.STARTING || state == State.RUNNING;
-        }
-
-        boolean isFinsh() {
-            return state == State.FINSH;
         }
 
         void starting() {

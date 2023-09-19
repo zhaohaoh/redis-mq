@@ -1,18 +1,15 @@
 package com.redismq.container;
 
-import com.redismq.Message;
 import com.redismq.connection.RedisClient;
+import com.redismq.core.RedisListenerCallable;
 import com.redismq.core.RedisListenerEndpoint;
-import com.redismq.core.RedisListenerRunnable;
 import com.redismq.exception.RedisMqException;
-import com.redismq.factory.DefaultRedisListenerContainerFactory;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
+import lombok.Data;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
 
 import static com.redismq.constant.GlobalConstant.SPLITE;
 import static com.redismq.constant.StateConstant.*;
@@ -20,6 +17,7 @@ import static com.redismq.constant.StateConstant.*;
 /**
  * 容器抽象类
  */
+@Data
 public abstract class AbstractMessageListenerContainer {
 
     /**
@@ -60,12 +58,6 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected Map<String, RedisListenerEndpoint> redisListenerEndpointMap;
     /**
-     * 信号量
-     */
-    protected Semaphore semaphore;
-
-    protected final Map<String, Message> localMessages = new ConcurrentHashMap<>();
-    /**
      * 消费拦截器
      */
     protected List<ConsumeInterceptor> consumeInterceptorList;
@@ -83,83 +75,41 @@ public abstract class AbstractMessageListenerContainer {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
     }
 
-    public AbstractMessageListenerContainer(DefaultRedisListenerContainerFactory redisListenerContainerFactory, Queue queue) {
+    public AbstractMessageListenerContainer(RedisClient redisClient, Queue queue,List<ConsumeInterceptor> consumeInterceptorList) {
         this.queueName = queue.getQueueName();
-        this.redisClient = redisListenerContainerFactory.getRedisClient();
+        this.redisClient = redisClient;
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
         this.delay = queue.isDelayState();
         this.retryMax = queue.getRetryMax();
         this.ackMode = queue.getAckMode();
         this.retryInterval = queue.getRetryInterval();
-        this.semaphore = new Semaphore(queue.getMaxConcurrency());
+        this.consumeInterceptorList =  consumeInterceptorList;
     }
 
+    /**
+     * 当前容器暂停拉取消息
+     */
     public int pause() {
         return state = PAUSE;
     }
-
+    /**
+     * 当前容器是否暂停了
+     */
     public boolean isPause() {
         return state == PAUSE;
     }
 
     public abstract void repush();
-
+    /**
+     * 当前容器是否停止了
+     */
     public void stop() {
         this.state = STOP;
         doStop();
     }
 
     public abstract void doStop();
-
-    public String getQueueName() {
-        return queueName;
-    }
-
-
-    public void setQueueName(String queueName) {
-        this.queueName = queueName;
-    }
-
-    public RedisClient redisClient() {
-        return redisClient;
-    }
-
-    public void setRedisClient(RedisClient redisClient) {
-        this.redisClient = redisClient;
-    }
-
-    public int getConcurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
-    }
-
-    public int getMaxConcurrency() {
-        return maxConcurrency;
-    }
-
-    public void setMaxConcurrency(int maxConcurrency) {
-        this.maxConcurrency = maxConcurrency;
-    }
-
-    public int getRetryMax() {
-        return retryMax;
-    }
-
-    public void setRetryMax(int retryMax) {
-        this.retryMax = retryMax;
-    }
-
-    public Semaphore getSemaphore() {
-        return semaphore;
-    }
-
-    public Integer getRetryInterval() {
-        return retryInterval;
-    }
 
     public boolean isRunning() {
         return state == RUNNING;
@@ -171,24 +121,19 @@ public abstract class AbstractMessageListenerContainer {
         }
     }
 
-    public String getAckMode() {
-        return ackMode;
-    }
-
-    protected RedisListenerRunnable getRedisListenerRunnable(String id, Object message) {
+    protected RedisListenerCallable getRedisListenerCallable(String id, Object message) {
         RedisListenerEndpoint redisListenerEndpoint = redisListenerEndpointMap.get(id);
         if (redisListenerEndpoint == null) {
             throw new RedisMqException("not found RedisListenerEndpoint check your queue or tag");
         }
-        RedisListenerRunnable runnable = new RedisListenerRunnable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
-                this.getRetryMax(), this.getSemaphore(),
+        RedisListenerCallable runnable = new RedisListenerCallable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
+                this.getRetryMax(),
                 this.redisClient);
         runnable.setArgs(message);
         runnable.setAckMode(this.getAckMode());
         runnable.setRetryInterval(this.getRetryInterval());
         runnable.setQueueName(queueName);
         runnable.setConsumeInterceptors(consumeInterceptorList);
-        runnable.setLocalMessages(localMessages);
         return runnable;
     }
 

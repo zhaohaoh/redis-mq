@@ -23,28 +23,28 @@ public class GlobalConstant {
     public static int BLOCKING_QUEUE_SIZE = 2048;
 
     /**
-     * boss线程
+     * boss线程 2个，一个普通队列一个延时队列
      */
     public static int BOSS_NUM = 2;
 
     /**
      * 客户端过期时间 秒
      */
-    public static int CLIENT_EXPIRE = 40;
+    public static int CLIENT_EXPIRE = 15;
 
     /**
      * 客户端循环重平衡时间  秒
      */
-    public static int CLIENT_RABALANCE_TIME = 36;
+    public static int CLIENT_RABALANCE_TIME = 20;
 
     /**
-     * 客户端循环注册时间 秒
+     * 客户端循环注册心跳时间 秒
      */
-    public static int CLIENT_REGISTER_TIME = 30;
+    public static int CLIENT_REGISTER_TIME = 6;
 
     /**
      * 工作线程等待停止的时间
      */
-    public static int WORK_THREAD_STOP_WAIT = 10;
+    public static int WORK_THREAD_STOP_WAIT = 60;
 
 }

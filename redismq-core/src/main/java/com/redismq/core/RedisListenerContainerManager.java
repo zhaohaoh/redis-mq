@@ -15,11 +15,11 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
+
 
 /**
  * @author hzh
@@ -27,13 +27,26 @@ import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
  * 监听器容器注册类。一个或多个boss线程轮询从redis队列中取数据。交给多个监听器多个线程池进行消费
  */
 public class RedisListenerContainerManager {
-    protected static final Logger log = LoggerFactory.getLogger(RedisListenerEndpoint.class);
-    //延时队列每次的携带队列和时间戳.数据可能会不同.队列数量要求比较高
+    protected static final Logger log = LoggerFactory.getLogger(RedisListenerContainerManager.class);
+    /**
+     * 延时队列每次的携带队列和时间戳.数据可能会不同.队列数量要求比较高
+     */
     private final LinkedBlockingQueue<PushMessage> delayBlockingQueue = new LinkedBlockingQueue<>(DELAY_BLOCKING_QUEUE_SIZE);
+    /**
+     * 普通消息队列
+     */
     private final LinkedBlockingQueue<String> linkedBlockingQueue = new LinkedBlockingQueue<>(BLOCKING_QUEUE_SIZE);
+    /**
+     * boss线程 负责调度普通队列和线程队列。获取队列开启拉取任务的消息
+     */
     private ThreadPoolExecutor boss;
-    // 队列的容器
-    private final Map<String, AbstractMessageListenerContainer> redisDelayListenerContainerMap = new ConcurrentHashMap<>();
+    /**
+     * 队列的容器
+     */
+    private final Map<String, AbstractMessageListenerContainer> redisListenerContainerMap = new ConcurrentHashMap<>();
+    /**
+     * 状态 目前没有
+     */
     private volatile int state = 0;
 
     public LinkedBlockingQueue<String> getLinkedBlockingQueue() {
@@ -44,8 +57,8 @@ public class RedisListenerContainerManager {
         return delayBlockingQueue;
     }
 
-    public RedisMQListenerContainer getRedisPublishDelayListenerContainer(String queueName) {
-        return (RedisMQListenerContainer) redisDelayListenerContainerMap.get(queueName);
+    public RedisMQListenerContainer getRedisistenerContainer(String queueName) {
+        return (RedisMQListenerContainer) redisListenerContainerMap.get(queueName);
     }
 
     public RedisListenerContainerManager() {
@@ -53,8 +66,8 @@ public class RedisListenerContainerManager {
     }
 
     /*
-              boss线程数
-           */
+        boss线程数
+     */
     public void setBoss(int bossNum) {
         if (bossNum > BOSS_NUM) {
             throw new RedisMqException("boos线程初始化超过最大限制");
@@ -86,7 +99,7 @@ public class RedisListenerContainerManager {
         }, new ThreadPoolExecutor.DiscardPolicy());
     }
 
-    boolean isActive() {
+    boolean isRunning() {
         return state == RUNNING;
     }
 
@@ -100,49 +113,36 @@ public class RedisListenerContainerManager {
     public void startRedisListener() {
         boss.execute(() -> {
             running();
-            while (isActive()) {
+            while (isRunning()) {
                 try {
                     String virtualName = linkedBlockingQueue.take();
-                    RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
-                    boolean contains = isContains(virtualName);
-                    int count = 0;
-                    // 如果消费者暂停了，重试几次。以防止暂停消息的延时导致的停止消费。这个方案可能不完善。停止消费但INVOKE_VIRTUAL_QUEUES还没被删除
-                    while (contains && container.isPause()) {
-                        if (count > 3) {
-                            break;
-                        }
-                        Thread.sleep(1000L);
-                        contains = INVOKE_VIRTUAL_QUEUES.contains(virtualName);
-                        if (GLOBAL_CONFIG.printConsumeLog) {
-                            log.info("invoke_virtual_queues exclusive virtualName:{} count:{} retryContains:{}", virtualName, count, contains);
-                        }
-                        count++;
-                    }
-                    if (!contains) {
-                        container.start(virtualName, System.currentTimeMillis());
-                    }
+                    RedisMQListenerContainer container = getRedisistenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
+                    container.start(virtualName, System.currentTimeMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    log.error("RedisListener take queue error", e);
                 }
             }
         });
     }
 
-    private boolean isContains(String virtualName) {
-        return INVOKE_VIRTUAL_QUEUES.contains(virtualName);
-    }
 
-
+    /**
+     * 开始轮询监听延时队列消息
+     */
     public void startDelayRedisListener() {
         boss.execute(() -> {
             running();
-            while (isActive()) {
+            while (isRunning()) {
                 try {
                     PushMessage pushMessage = delayBlockingQueue.take();
-                    RedisMQListenerContainer container = getRedisPublishDelayListenerContainer(QueueManager.getQueueNameByVirtual(pushMessage.getQueue()));
+                    RedisMQListenerContainer container = getRedisistenerContainer(QueueManager.getQueueNameByVirtual(pushMessage.getQueue()));
                     container.start(pushMessage.getQueue(), pushMessage.getTimestamp());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                } catch (Exception e) {
+                    log.error("DelayRedisListener take queue error", e);
                 }
             }
         });
@@ -150,39 +150,44 @@ public class RedisListenerContainerManager {
 
     public void registerContainer(AbstractMessageListenerContainer listenerContainer, List<RedisListenerEndpoint> redisListenerEndpoints) {
         //id是队列的名称
-        AbstractMessageListenerContainer container = redisDelayListenerContainerMap.computeIfAbsent(listenerContainer.getQueueName(), c -> listenerContainer);
+        AbstractMessageListenerContainer container = redisListenerContainerMap.computeIfAbsent(listenerContainer.getQueueName(), c -> listenerContainer);
         // 端点的容器 id是queue:tag
         Map<String, RedisListenerEndpoint> redisListenerEndpointMap = redisListenerEndpoints.stream().collect(
                 Collectors.toMap(RedisListenerEndpoint::getId, r -> r));
         container.setRedisListenerEndpointMap(redisListenerEndpointMap);
     }
 
+
+    /**
+     * 全部停止 RedisListenerContainer.start方法中会自动退出并且删除redis的key
+     */
     public void stopAll() {
-        redisDelayListenerContainerMap.values().forEach(r -> {
+        redisListenerContainerMap.values().forEach(r -> {
+            r.stop();
             List<String> list = new ArrayList<>();
             for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
                 list.add(getVirtualQueueLock(virtualQueue));
             }
-            r.stop();
-            r.redisClient().delete(list);
+            r.getRedisClient().delete(list);
         });
         boss.shutdownNow();
-        log.info("Shutdown  redismq All ThreadPollExecutor");
+        log.info("redisMQ shutdown All ThreadPollExecutor");
     }
 
+    /**
+     * 暂停所有  RedisListenerContainer.start方法中会自动退出并且删除redis的key
+     * 需要注意这里删除了队列的锁。说明任何人可以获取到。那么就存在有任务正在线程中消费。从而存在重复消费
+     */
     public void pauseAll() {
-        redisDelayListenerContainerMap.values().forEach(r -> {
-
-
-            //改为重试来获取消息
-//            INVOKE_VIRTUAL_QUEUES.clear();
+        redisListenerContainerMap.values().forEach(r -> {
+            if (log.isDebugEnabled()) {
+                log.debug("redisMQ pause queue:{}", r.getQueueName());
+            }
             r.pause();
-            log.info("pause queue:{}", r.getQueueName());
-
             // 删除队列锁
             List<String> list = new ArrayList<>();
             INVOKE_VIRTUAL_QUEUES.forEach(virtualQueue -> list.add(getVirtualQueueLock(virtualQueue)));
-            r.redisClient().delete(list);
+            r.getRedisClient().delete(list);
         });
     }
 }

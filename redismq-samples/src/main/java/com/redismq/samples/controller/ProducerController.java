@@ -70,6 +70,7 @@ public class ProducerController {
      */
     @PostMapping("sendMultiTagMessage")
     public void sendMultiTagMessage() {
+        for (int i = 0; i < 100; i++) {
             redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
             redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
             redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
@@ -78,6 +79,8 @@ public class ProducerController {
             redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
             redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
             redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
+        }
+
     }
 
 

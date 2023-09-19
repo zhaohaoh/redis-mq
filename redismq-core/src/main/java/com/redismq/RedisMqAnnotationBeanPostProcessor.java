@@ -4,11 +4,12 @@ package com.redismq;
 import com.redismq.config.GlobalConfigCache;
 import com.redismq.connection.RedisClient;
 import com.redismq.container.AbstractMessageListenerContainer;
+import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
 import com.redismq.exception.RedisMqException;
-import com.redismq.factory.DefaultRedisListenerContainerFactory;
+import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQObjectMapper;
@@ -180,9 +181,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     private boolean createContainer() {
         Map<String, Queue> queues = QueueManager.getLocalQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
-        DefaultRedisListenerContainerFactory containerFactory = applicationContext.getBean(DefaultRedisListenerContainerFactory.class);
+
         RedisClient redisClient = applicationContext.getBean("redisClient", RedisClient.class);
-        containerFactory.setRedisClient(redisClient);
+        Map<String, ConsumeInterceptor> consumeInterceptorMap = applicationContext.getBeansOfType(ConsumeInterceptor.class);
         //没有配置取全局配置
         AtomicBoolean create = new AtomicBoolean(false);
         queues.forEach((name, queue) -> {
@@ -192,16 +193,16 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             }
             create.set(true);
             if (queue.getConcurrency() == null) {
-                queue.setConcurrency(containerFactory.getConcurrency());
+                queue.setConcurrency(GlobalConfigCache.QUEUE_CONFIG.getConcurrency());
             }
             if (queue.getMaxConcurrency() == null) {
-                queue.setMaxConcurrency(containerFactory.getMaxConcurrency());
+                queue.setMaxConcurrency(GlobalConfigCache.QUEUE_CONFIG.getMaxConcurrency());
             }
             if (queue.getAckMode() == null) {
-                queue.setAckMode(containerFactory.getAckMode());
+                queue.setAckMode(GlobalConfigCache.QUEUE_CONFIG.getAckMode());
             }
             if (queue.getRetryMax() == null) {
-                queue.setRetryMax(containerFactory.getRetryMax());
+                queue.setRetryMax(GlobalConfigCache.QUEUE_CONFIG.getConsumeRetryMax());
             }
             if (queue.getConcurrency() > queue.getMaxConcurrency()) {
                 throw new RedisMqException("MaxConcurrency cannot be less than Concurrency");
@@ -209,15 +210,16 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             if (queue.getRetryMax() > 10) {
                 throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
             }
-            if (queue.getRetryInterval() ==null) {
-                queue.setRetryInterval(containerFactory.getRetryInterval());
+            if (queue.getRetryInterval() == null) {
+                queue.setRetryInterval(GlobalConfigCache.QUEUE_CONFIG.getRetryInterval());
             }
             //设置队列默认大小
             if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
                 queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
             }
 
-            AbstractMessageListenerContainer listenerContainer = containerFactory.createListenerContainer(queue);
+            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisClient, queue, CollectionUtils.isEmpty(consumeInterceptorMap) ?
+                    new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values()));
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
         });

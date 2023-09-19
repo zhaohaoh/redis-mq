@@ -8,8 +8,6 @@ import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
-import com.redismq.factory.DefaultRedisListenerContainerFactory;
-import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.AllocateMessageQueueAveragely;
@@ -44,34 +42,14 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Resource(name = REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
-    private List<ConsumeInterceptor> consumeInterceptors;
-    @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
 
-    /**
-     * @return 默认的监听队列容器工厂
-     */
-    @Bean
-    public DefaultRedisListenerContainerFactory redisListenerContainerFactory(RedisClient redisClient) {
-        DefaultRedisListenerContainerFactory redisListenerContainerFactory = new DefaultRedisListenerContainerFactory();
-        redisListenerContainerFactory.setConcurrency(redisMqProperties.getConcurrency());
-        redisListenerContainerFactory.setMaxConcurrency(redisMqProperties.getMaxConcurrency());
-        redisListenerContainerFactory.setRetryMax(redisMqProperties.getConsumeRetryMax());
-        redisListenerContainerFactory.setAckMode(redisMqProperties.getAckMode());
-        redisListenerContainerFactory.setRetryInterval(redisMqProperties.getRetryInterval());
-        redisListenerContainerFactory.setRedisClient(redisClient);
-        redisListenerContainerFactory.setTimeout(redisProperties.getTimeout());
-        redisListenerContainerFactory.setConsumeInterceptors(consumeInterceptors);
-        return redisListenerContainerFactory;
-    }
 
-    //
-//
-//    /**
-//     * redisMQ客户端
-//     *
-//     * @return {@link RedisMQProducer}
-//     */
+    /**
+      * redisMQ客户端
+      *
+      * @return {@link RedisMQProducer}
+    */
     @Bean
     public RedisMqClient redisMqClient(RedisClient redisClient) {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
@@ -81,12 +59,12 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         return redisMqClient;
     }
 
-    //
-//    /**
-//     * redis客户端
-//     *
-//     * @return {@link RedisMQProducer}
-//     */
+
+     /**
+       * redis客户端
+       *
+       * @return {@link RedisMQProducer}
+     */
     @Bean
     public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) RedisTemplate<String, Object> redisMQRedisTemplate) {
         RedisClient redisClient = new RedisTemplateAdapter(redisMQRedisTemplate);
@@ -111,8 +89,9 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      */
     @Override
     public void afterPropertiesSet() throws Exception {
-        QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getVirtual();
+        QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getQueueConfig().getVirtual();
         RedisMQConstant.GROUP = redisMqProperties.getGroup();
         GlobalConfigCache.GLOBAL_CONFIG = redisMqProperties.getGlobalConfig();
+        GlobalConfigCache.QUEUE_CONFIG = redisMqProperties.getQueueConfig();
     }
 }

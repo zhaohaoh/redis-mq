@@ -13,6 +13,9 @@ import static com.redismq.constant.GlobalConstant.SPLITE;
  * @Date: 2021/11/25 16:03
  */
 public class QueueManager {
+    /**
+     * 正在拉取消息的队列任务
+     */
     public static final Set<String> INVOKE_VIRTUAL_QUEUES = Collections.newSetFromMap(new ConcurrentHashMap<>());
     //redis队列  用来决定是否能消息
     public static final Map<String, Queue> REDIS_QUEUES = new LinkedHashMap<>();

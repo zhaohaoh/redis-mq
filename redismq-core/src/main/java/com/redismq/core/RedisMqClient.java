@@ -14,7 +14,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
-
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -24,25 +23,49 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.*;
 import static com.redismq.constant.RedisMQConstant.*;
 
+
 /**
  * @Author: hzh
  * @Date: 2022/11/4 16:44
- * RedisMQ客户端
+ * RedisMQ客户端  实现负载均衡
  */
 public class RedisMqClient {
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
+    /**
+     * 注册线程客户端维持心跳线程
+     */
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
+    /**
+     * 负载均衡心跳线程
+     */
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
+    /**
+     * 容器管理者
+     */
     private final RedisListenerContainerManager redisListenerContainerManager;
+    /**
+     * redisClient客户端 可以是jedis luccute 和spring
+     */
     private final RedisClient redisClient;
+    /**
+     * 客户端id
+     */
     private final String clientId;
+    /**
+     * 负载均衡机制
+     */
     private final RebalanceImpl rebalance;
+    /**
+     * 容器
+     */
     private RedisMessageListenerContainer redisMessageListenerContainer;
+    /**
+     * 是否订阅消息
+     */
     private boolean isSub;
 
     public RedisMqClient(RedisClient redisClient, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
@@ -268,6 +291,11 @@ public class RedisMqClient {
         return queue;
     }
 
+    /**
+     * 获取所有队列
+     *
+     * @return {@link Set}<{@link Queue}>
+     */
     public Set<Queue> getAllQueue() {
         Set<Object> set = redisClient.sMembers(getQueueTopicKey());
         if (CollectionUtils.isEmpty(set)) {

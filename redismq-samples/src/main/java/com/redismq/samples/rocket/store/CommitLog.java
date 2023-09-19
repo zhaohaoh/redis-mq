@@ -67,27 +67,56 @@ public class CommitLog {
         return result;
     }
 
+    /**
+     * 开始文件任务
+     */
     public void start() {
         this.serviceThread.start();
     }
 
+    /**
+     * 关闭文件任务
+     */
     public void shutdown() {
         this.serviceThread.shutdown();
+        this.mappedFileQueue.destroy();
     }
 
+    /**
+     *  立即刷盘 0 代表不指定到达页数才刷盘 即立即刷
+     *
+     */
     public long flush() {
         this.mappedFileQueue.flush(0);
         return this.mappedFileQueue.getFlushedWhere();
     }
 
+    /**
+     * 获取整个队列最后一个偏移量，也就是最新的偏移量
+     *
+     * @return long
+     */
     public long getMaxOffset() {
         return this.mappedFileQueue.getMaxOffset();
     }
 
+    /**
+     * 当前还有多少数据没刷盘
+     *
+     * @return long
+     */
     public long remainHowManyDataToFlush() {
         return this.mappedFileQueue.remainHowManyDataToFlush();
     }
 
+    /**
+     * 删除过期文件
+     *
+     * @param expiredTime         过期时间
+     * @param deleteFilesInterval 删除文件时间间隔
+     * @param intervalForcibly    间隔强行
+     * @param cleanImmediately    立即清洁
+     */
     public int deleteExpiredFile(
             final long expiredTime,
             final int deleteFilesInterval,
@@ -104,6 +133,13 @@ public class CommitLog {
         return this.getData(offset, offset == 0);
     }
 
+    /**
+     * 获取数据
+     *
+     * @param offset                抵消
+     * @param returnFirstOnNotFound 返回第一个未找到
+     * @return {@link SelectMappedBufferResult}
+     */
     public SelectMappedBufferResult getData(final long offset, final boolean returnFirstOnNotFound) {
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, returnFirstOnNotFound);
         if (mappedFile != null) {
@@ -187,10 +223,9 @@ public class CommitLog {
         this.confirmOffset = phyOffset;
     }
 
-    private void notifyMessageArriving() {
-
-    }
-
+    /**
+     * 重置偏移量
+     */
     public boolean resetOffset(long offset) {
         return this.mappedFileQueue.resetOffset(offset);
     }
@@ -199,6 +234,12 @@ public class CommitLog {
         return beginTimeInLock;
     }
 
+    /**
+     * 异步推送消息
+     *
+     * @param msg 味精
+     * @return {@link CompletableFuture}<{@link PutMessageResult}>
+     */
     public CompletableFuture<PutMessageResult> asyncPutMessage(final Message msg) {
 
         // Back to Results
@@ -276,6 +317,7 @@ public class CommitLog {
 
     }
 
+
     public PutMessageResult putMessage(final Message msg) {
 
         // Back to Results
@@ -347,6 +389,12 @@ public class CommitLog {
         return putMessageResult;
     }
 
+    /**
+     * 提交刷新请求
+     *
+     * @param result 结果
+     * @return {@link CompletableFuture}<{@link PutMessageStatus}>
+     */
     public CompletableFuture<PutMessageStatus> submitFlushRequest(AppendMessageResult result) {
         // Synchronization flush
         if (FlushDiskType.SYNC_FLUSH == GlobalConfigCache.GLOBAL_STORE_CONFIG.getFlushDiskType()) {
@@ -359,6 +407,13 @@ public class CommitLog {
         return null;
     }
 
+    /**
+     * 处理磁盘刷新
+     *
+     * @param result           结果
+     * @param putMessageResult 把消息结果
+     * @param message          消息
+     */
     public void handleDiskFlush(AppendMessageResult result, PutMessageResult putMessageResult, Message message) {
         // Synchronization flush
         if (FlushDiskType.SYNC_FLUSH == GlobalConfigCache.GLOBAL_STORE_CONFIG.getFlushDiskType()) {
@@ -382,6 +437,11 @@ public class CommitLog {
     }
 
 
+    /**
+     * 获取最小值偏移量
+     *
+     * @return long
+     */
     public long getMinOffset() {
         MappedFile mappedFile = this.mappedFileQueue.getFirstMappedFile();
         if (mappedFile != null) {
@@ -395,6 +455,9 @@ public class CommitLog {
         return -1;
     }
 
+    /**
+     *  根据偏移量和长度获取消息
+     */
     public SelectMappedBufferResult getMessage(final long offset, final int size) {
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, offset == 0);
         if (mappedFile != null) {
@@ -404,22 +467,17 @@ public class CommitLog {
         return null;
     }
 
+    /**
+     * 滚动到下一个文件的位置
+     *
+     */
     public long rollNextFile(final long offset) {
         return offset + mappedFileSize - offset % mappedFileSize;
     }
 
-    public HashMap<String, Long> getTopicQueueTable() {
-        return topicQueueTable;
-    }
-
-    public void setTopicQueueTable(HashMap<String, Long> topicQueueTable) {
-        this.topicQueueTable = topicQueueTable;
-    }
-
-    public void destroy() {
-        this.mappedFileQueue.destroy();
-    }
-
+    /**
+     *  直接写入文件
+     */
     public boolean appendData(long startOffset, byte[] data) {
         putMessageLock.lock();
         try {
@@ -443,22 +501,6 @@ public class CommitLog {
 
         log.info("removeQueueFromTopicQueueTable OK Topic: {} QueueId: {}", topic, queueId);
     }
-
-    public long lockTimeMills() {
-        long diff = 0;
-        long begin = this.beginTimeInLock;
-        if (begin > 0) {
-            diff = System.currentTimeMillis() - begin;
-        }
-
-        if (diff < 0) {
-            diff = 0;
-        }
-
-        return diff;
-    }
-
-
 
     /**
      * 异步刷新服务
