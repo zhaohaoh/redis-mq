@@ -55,7 +55,8 @@ public class RedisConnectionFactoryUtil {
                         redisConnectionFactory = jedisConnectionFactory;
                         return redisConnectionFactory;
                     } else {
-                        RedisConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
+                        LettuceConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
+                        lettuceConnectionFactory.afterPropertiesSet();
                         redisConnectionFactory = lettuceConnectionFactory;
                         return redisConnectionFactory;
                     }
@@ -71,7 +72,8 @@ public class RedisConnectionFactoryUtil {
             jedisConnectionFactory.afterPropertiesSet();
             return jedisConnectionFactory;
         } else {
-            RedisConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
+            LettuceConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
+            lettuceConnectionFactory.afterPropertiesSet();
             return lettuceConnectionFactory;
         }
     }
@@ -139,7 +141,7 @@ public class RedisConnectionFactoryUtil {
     /*
      LettuceClientConfiguration配置
     */
-    public RedisConnectionFactory createLettuceConnectionFactory() {
+    public LettuceConnectionFactory createLettuceConnectionFactory() {
         DefaultClientResources.Builder builder = DefaultClientResources.builder();
         DefaultClientResources clientResources = builder.build();
 

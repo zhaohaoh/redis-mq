@@ -24,7 +24,7 @@ public class RedisProperties {
     private boolean ssl;
     private Duration timeout = Duration.ofSeconds(30);
     private Duration connectTimeout;
-    private String clientName = "jedis";
+    private String clientName = "redisMQ";
     private ClientType clientType = ClientType.JEDIS;
     private Sentinel sentinel;
     private Cluster cluster;
