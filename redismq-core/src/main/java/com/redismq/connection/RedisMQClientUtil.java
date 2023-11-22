@@ -144,7 +144,7 @@ public class RedisMQClientUtil {
     /**
      * 延时队列大小
      */
-    public Long deadQueueSize(String key) {
+    public Long queueSize(String key) {
        return redisClient.zSize(key);
     }
     

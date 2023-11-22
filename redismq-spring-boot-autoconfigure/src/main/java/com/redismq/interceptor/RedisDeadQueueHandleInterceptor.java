@@ -24,7 +24,7 @@ public class RedisDeadQueueHandleInterceptor implements ConsumeInterceptor {
         String topic = message.getQueue();
         String deadQueue = RedisMQConstant.getDeadQueueNameByQueue(topic);
         redisMQClientUtil.putDeadQueue(message);
-        Long size = redisMQClientUtil.deadQueueSize(deadQueue);
+        Long size = redisMQClientUtil.queueSize(deadQueue);
         // 要加入告警自定义通知
         if (size != null && size >= 100000) {
             log.error("RedisDeadQueueHandleInterceptor is Full SIZE:{}  message:{}", size, message);

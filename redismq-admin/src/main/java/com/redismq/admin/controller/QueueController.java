@@ -2,6 +2,7 @@ package com.redismq.admin.controller;
 
 import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageDTO;
+import com.redismq.admin.pojo.VQueue;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.queue.Queue;
 import com.redismq.utils.RedisMQTemplate;
@@ -12,16 +13,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
 import static com.redismq.constant.GlobalConstant.SPLITE;
 
+
+
 @RestController
-@RequestMapping("/topic")
+@RequestMapping("/queue")
 public class QueueController {
     
     @Autowired
@@ -31,7 +32,7 @@ public class QueueController {
     private RedisMQClientUtil redisMQClientUtil;
     
     @GetMapping("page")
-    public ResponseEntity<Set<Queue>> page(){
+    public ResponseEntity<Set<Queue>> page() {
         //队列名就是topic名
         Set<Queue> allQueue = redisMQClientUtil.getQueueList();
         return ResponseEntity.ok(allQueue);
@@ -39,15 +40,19 @@ public class QueueController {
     
     //根据topic名称查询虚拟队列
     @GetMapping("queueList")
-    public ResponseEntity<List<String>> queueList(String topicName) {
+    public ResponseEntity<List<VQueue>> queueList(String queueName) {
         Set<Queue> allQueue = redisMQClientUtil.getQueueList();
-        Optional<Queue> first = allQueue.stream().filter(a -> a.getQueueName().equals(topicName)).findFirst();
+        Optional<Queue> first = allQueue.stream().filter(a -> a.getQueueName().equals(queueName)).findFirst();
         Queue queue = first.get();
         Integer virtual = queue.getVirtual();
-        List<String> virtualQueues = new ArrayList<>();
+        List<VQueue> virtualQueues = new ArrayList<>();
         for (int i = 0; i < virtual; i++) {
+            VQueue vQueue = new VQueue();
             String virtualQueue = queue.getQueueName() + SPLITE + i;
-            virtualQueues.add(virtualQueue);
+            Long size = redisMQClientUtil.queueSize(virtualQueue);
+            vQueue.setQueueName(virtualQueue);
+            vQueue.setSize(size == null ? 0 : size);
+            virtualQueues.add(vQueue);
         }
         
         return ResponseEntity.ok(virtualQueues);
