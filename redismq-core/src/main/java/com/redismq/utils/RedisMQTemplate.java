@@ -59,73 +59,73 @@ public class RedisMQTemplate {
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String topic) {
-        return redisMQProducer.sendMessage(obj, topic);
+    public boolean sendMessage(Object obj, String queue) {
+        return redisMQProducer.sendMessage(obj, queue);
     }
 
     /**
      * 带tag的队列消息
      */
-    public boolean sendMessage(Object obj, String topic, String tag) {
-        return redisMQProducer.sendMessage(obj, topic, tag);
+    public boolean sendMessage(Object obj, String queue, String tag) {
+        return redisMQProducer.sendMessage(obj, queue, tag);
     }
 
     /**
      * 批量一次性打包发送队列消息  消费仍然是一对一消费
      */
-    public boolean sendBatchMessage(List<?> messages, String topic) {
-        return redisMQProducer.sendBatchMessage(messages, topic, "");
+    public boolean sendBatchMessage(List<?> messages, String queue) {
+        return redisMQProducer.sendBatchMessage(messages, queue, "");
     }
 
     /**
      * 批量一次性打包发送队列消息  消费仍然是一对一消费
      */
-    public boolean sendBatchMessage(List<?> messages, String topic, String tag) {
-        return redisMQProducer.sendBatchMessage(messages, topic, tag);
+    public boolean sendBatchMessage(List<?> messages, String queue, String tag) {
+        return redisMQProducer.sendBatchMessage(messages, queue, tag);
     }
 
 
     /**
      * 带tag的队列延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, String tag, Long delayTime, TimeUnit timeUnit) {
+    public boolean sendDelayMessage(Object obj, String queue, String tag, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, topic, tag, millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag, millis);
     }
 
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, Long delayTime, TimeUnit timeUnit) {
+    public boolean sendDelayMessage(Object obj, String queue, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, topic, "", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "", millis);
     }
 
     /**
      * 带tag的队列延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, String tag, Duration duration) {
+    public boolean sendDelayMessage(Object obj, String queue, String tag, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, topic, tag, millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag, millis);
     }
 
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, Duration duration) {
+    public boolean sendDelayMessage(Object obj, String queue, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, topic, "", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "", millis);
     }
 
     /**
      * 定时消息
      */
-    public boolean sendTimingMessage(Object obj, String topic, String tag, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, topic, tag, executorTime);
+    public boolean sendTimingMessage(Object obj, String queue, String tag, Long executorTime) {
+        return redisMQProducer.sendTimingMessage(obj, queue, tag, executorTime);
     }
 
-    public boolean sendTimingMessage(Object obj, String topic, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, topic, "", executorTime);
+    public boolean sendTimingMessage(Object obj, String queue, Long executorTime) {
+        return redisMQProducer.sendTimingMessage(obj, queue, "", executorTime);
     }
 
     /*

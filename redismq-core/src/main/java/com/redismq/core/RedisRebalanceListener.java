@@ -1,6 +1,5 @@
 package com.redismq.core;
 
-import com.redismq.constant.PushMessage;
 import com.redismq.utils.RedisMQObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

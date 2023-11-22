@@ -17,10 +17,10 @@ public class Message implements Serializable {
     public Message() {
     }
 
-    public Message(Object body, String id, String topic, String tag, String virtualQueueName) {
+    public Message(Object body, String id, String queue, String tag, String virtualQueueName) {
         this.body = body;
         this.id = id;
-        this.topic = topic;
+        this.queue = queue;
         this.tag = tag;
         this.virtualQueueName = virtualQueueName;
     }
@@ -48,9 +48,9 @@ public class Message implements Serializable {
     private String id = NanoIdUtils.randomNanoId();
 
     /**
-     * 主题
+     * 队列
      */
-    private String topic;
+    private String queue;
 
     /**
      * 标签

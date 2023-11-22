@@ -2,7 +2,7 @@ package com.redismq.container;
 
 import com.redismq.CompositeQueue;
 import com.redismq.Message;
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.AckMode;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
@@ -12,14 +12,24 @@ import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQObjectMapper;
+import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
@@ -27,6 +37,7 @@ import static com.redismq.constant.GlobalConstant.THREAD_NUM_MAX;
 import static com.redismq.constant.GlobalConstant.WORK_THREAD_STOP_WAIT;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
+
 
 /**
  * @author hzh
@@ -64,8 +75,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
     }
 
-    public RedisMQListenerContainer(RedisClient redisClient, Queue queue, List<ConsumeInterceptor> consumeInterceptorList) {
-        super(redisClient, queue,consumeInterceptorList);
+    public RedisMQListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue, List<ConsumeInterceptor> consumeInterceptorList) {
+        super(redisMQClientUtil, queue,consumeInterceptorList);
         lifeExtension();
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(),
                 60L, TimeUnit.SECONDS,
@@ -121,13 +132,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             return true;
                         }
                     });
-                    //后面加入了等待时间后可以不用减去任务数量
                     pullSize = super.maxConcurrency;
                 }
-
-
-                Set<ZSetOperations.TypedTuple<Object>> redisMessages = redisClient.zRangeByScoreWithScores(queueName, 0, pullTime, 0, pullSize);
-                if (CollectionUtils.isEmpty(redisMessages)) {
+    
+                List<Message> messages = redisMQClientUtil.pullMessage(queueName, pullTime, pullSize);
+                if (CollectionUtils.isEmpty(messages)) {
                     //响应中断
                     if (!isRunning()) {
                         return delayTimes;
@@ -135,48 +144,40 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
-                        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, 0, GLOBAL_CONFIG.delayQueuePullSize);
-                        if (headDatas != null) {
-                            for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
-                                Double score = headData.getScore();
-                                if (score != null) {
-                                    delayTimes.add(score.longValue());
-                                }
-                            }
-                        }
+                        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessage(queueName,0, GLOBAL_CONFIG.delayQueuePullSize);
+                        pairs.forEach(pair->delayTimes.add(pair.getValue().longValue()));
                     }
                     break;
                 }
 
                 List<RedisListenerCallable> callableInvokes = new ArrayList<>();
-                for (ZSetOperations.TypedTuple<Object> tuple : redisMessages) {
+                for (Message message : messages) {
                     if (!isRunning()) {
                         break;
                     }
-                    Message message = (Message) tuple.getValue();
                     if (message == null) {
                         continue;
                     }
-
+                    String id = super.getRunableKey(message.getTag());
+                    RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
+                    if (callable == null) {
+                        // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
+                        redisMQClientUtil.removeMessage(queueName, message);
+                        log.error("RedisMqException removeMessage:{}", RedisMQObjectMapper.toJsonStr(message));
+                        throw new RedisMqException("redisMQ not found tag runnable removeMessage");
+                    }
+                    
                     try {
                         //手动ack
                         if (AckMode.MAUAL.equals(ackMode)) {
 
                         } else {
-                            Long remove = redisClient.zRemove(queueName, message);
+                            Long remove = redisMQClientUtil.removeMessage(queueName, message);
                             if (remove == null || remove <= 0) {
                                 continue;
                             }
                         }
-
-                        String id = super.getRunableKey(message.getTag());
-                        RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
-                        if (callable == null) {
-                            // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
-                            redisClient.zRemove(queueName, message);
-                            log.error("RedisMqException removeMessage:{}", RedisMQObjectMapper.toJsonStr(message));
-                            throw new RedisMqException("redisMQ not found tag runnable removeMessage");
-                        }
+                        
                         callableInvokes.add(callable);
                     } catch (Exception e) {
                         if (isRunning()) {
@@ -235,7 +236,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
 
         // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
-        Boolean success = redisClient.setIfAbsent(virtualQueueLock, "", Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+        Boolean success = redisMQClientUtil.lock(virtualQueueLock,  Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         if (GLOBAL_CONFIG.printConsumeLog) {
             log.info("current virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
         }
@@ -265,7 +266,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     return new HashSet<>(delayTimes);
                 } finally {
                     INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
-                    redisClient.delete(virtualQueueLock);
+                    redisMQClientUtil.unlock(virtualQueueLock);
                 }
             }
         });
@@ -273,7 +274,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             delayTimeoutTaskManager.schedule(timeoutTask, startTime);
         } catch (Exception e) {
             log.error("delayTimeoutTaskManager schedule ", e);
-            redisClient.delete(virtualQueueLock);
+            redisMQClientUtil.unlock(virtualQueueLock);
         }
     }
 
@@ -298,7 +299,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         try {
                             List<String> list = new ArrayList<>();
                             list.add(getVirtualQueueLock(virtualQueue));
-                            Long execute = redisClient.executeLua(lua, list);
+                            redisMQClientUtil.executeLua(lua, list);
                         } catch (Exception e) {
                             if (isRunning()) {
                                 log.error("lifeExtension  redisTemplate.expire Exception", e);

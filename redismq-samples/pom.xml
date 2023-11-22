@@ -42,11 +42,11 @@
             <artifactId>junit</artifactId>
             <version>4.12</version>
         </dependency>
-        <dependency>
-            <groupId>io.seata</groupId>
-            <artifactId>seata-all</artifactId>
-            <version>${seata.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>io.seata</groupId>-->
+<!--            <artifactId>seata-all</artifactId>-->
+<!--            <version>${seata.version}</version>-->
+<!--        </dependency>-->
         <!--        <dependency>-->
         <!--            <groupId>com.framework</groupId>-->
         <!--            <artifactId>framework-knife4j</artifactId>-->

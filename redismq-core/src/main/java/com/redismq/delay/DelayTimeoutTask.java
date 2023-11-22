@@ -10,7 +10,6 @@ import org.springframework.util.CollectionUtils;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.redismq.constant.StateConstant.RUNNING;

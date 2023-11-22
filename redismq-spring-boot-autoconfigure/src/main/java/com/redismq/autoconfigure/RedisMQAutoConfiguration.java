@@ -3,6 +3,7 @@ package com.redismq.autoconfigure;
 import com.redismq.config.GlobalConfigCache;
 import com.redismq.config.RedisProperties;
 import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.connection.RedisTemplateAdapter;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
@@ -37,8 +38,7 @@ import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLAT
 public class RedisMQAutoConfiguration implements InitializingBean {
     @Autowired
     private RedisMQProperties redisMqProperties;
-    @Autowired
-    private RedisProperties redisProperties;
+  
     @Resource(name = REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
@@ -51,14 +51,17 @@ public class RedisMQAutoConfiguration implements InitializingBean {
       * @return {@link RedisMQProducer}
     */
     @Bean
-    public RedisMqClient redisMqClient(RedisClient redisClient) {
+    public RedisMqClient redisMqClient(RedisMQClientUtil redisMQClientUtil) {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
         RebalanceImpl rebalance = new RebalanceImpl(new AllocateMessageQueueAveragely());
-        RedisMqClient redisMqClient = new RedisMqClient(redisClient, redisListenerContainerManager, rebalance);
+        RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance);
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }
-
+    @Bean
+    public RedisMQClientUtil redisMQClientUtil(RedisClient redisClient) {
+        return new RedisMQClientUtil(redisClient);
+    }
 
      /**
        * redis客户端

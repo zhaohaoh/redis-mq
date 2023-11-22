@@ -53,18 +53,31 @@ public class RedisMQConstant {
      * 虚拟队列锁
      */
     public static final String VIRTUAL_LOCK = "VIRTUAL_LOCK";
-
-
-    public static String getQueueTopicKey() {
-        return PREFIX + GROUP + SPLITE + "QUEUE";
+    
+    /**
+     * 获取队列集合
+     *
+     * @return {@link String}
+     */
+    public static String getQueueCollection() {
+        return  PREFIX + getTopic() + SPLITE + "QUEUE";
+    }
+    
+    /**
+     * 获取客户端集合
+     *
+     * @return {@link String}
+     */
+    public static String getClientCollection() {
+        return   PREFIX + GROUP + SPLITE + CLIENTS_KEY;
+    }
+    
+    public static String getQueueNameByQueue(String queue) {
+        return PREFIX + GROUP + SPLITE + queue;
     }
 
-    public static String getQueueNameByTopic(String topic) {
-        return PREFIX + GROUP + SPLITE + topic;
-    }
-
-    public static String getDeadQueueNameByTopic(String topic) {
-        return PREFIX + GROUP + DEAD_NAME + SPLITE + topic;
+    public static String getDeadQueueNameByQueue(String queue) {
+        return PREFIX + GROUP + DEAD_NAME + SPLITE + queue;
     }
 
     public static String getTopic() {
@@ -74,10 +87,7 @@ public class RedisMQConstant {
     public static String getRebalanceTopic() {
         return PREFIX + GROUP + SPLITE + REBALANCE_TOPIC;
     }
-
-    public static String getClientKey() {
-        return PREFIX + GROUP + SPLITE + CLIENTS_KEY;
-    }
+    
 
     public static String getRebalanceLock() {
         return PREFIX + GROUP + SPLITE + REDISMQ_REBALANCE_LOCK;

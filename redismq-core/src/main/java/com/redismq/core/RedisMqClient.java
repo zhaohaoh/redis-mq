@@ -2,7 +2,7 @@ package com.redismq.core;
 
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.queue.Queue;
@@ -14,120 +14,132 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
+
 import java.time.Duration;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.*;
-import static com.redismq.constant.RedisMQConstant.*;
+import static com.redismq.constant.GlobalConstant.CLIENT_EXPIRE;
+import static com.redismq.constant.GlobalConstant.CLIENT_RABALANCE_TIME;
+import static com.redismq.constant.GlobalConstant.CLIENT_REGISTER_TIME;
+import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.constant.RedisMQConstant.getRebalanceLock;
 
 
 /**
  * @Author: hzh
- * @Date: 2022/11/4 16:44
- * RedisMQ客户端  实现负载均衡
+ * @Date: 2022/11/4 16:44 RedisMQ客户端  实现负载均衡
  */
 public class RedisMqClient {
+    
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
+    
     /**
      * 注册线程客户端维持心跳线程
      */
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
+    
     /**
      * 负载均衡心跳线程
      */
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
+    
     /**
      * 容器管理者
      */
     private final RedisListenerContainerManager redisListenerContainerManager;
+    
     /**
      * redisClient客户端 可以是jedis luccute 和spring
      */
-    private final RedisClient redisClient;
+    private final RedisMQClientUtil redisMQStoreUtil;
+    
     /**
      * 客户端id
      */
     private final String clientId;
+    
     /**
      * 负载均衡机制
      */
     private final RebalanceImpl rebalance;
+    
     /**
      * 容器
      */
     private RedisMessageListenerContainer redisMessageListenerContainer;
+    
     /**
      * 是否订阅消息
      */
     private boolean isSub;
-
-    public RedisMqClient(RedisClient redisClient, RedisListenerContainerManager redisListenerContainerManager, RebalanceImpl rebalance) {
-        this.redisClient = redisClient;
+    
+    public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
+            RebalanceImpl rebalance) {
+        this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
     }
-
+    
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
         this.redisMessageListenerContainer = redisMessageListenerContainer;
     }
-
+    
     public String getClientId() {
         return clientId;
     }
-
+    
     public RedisListenerContainerManager getRedisListenerContainerManager() {
         return redisListenerContainerManager;
     }
-
-
+    
+    
     public void registerClient() {
         log.debug("registerClient :{}", clientId);
         //注册客户端
-        redisClient.zAdd(getClientKey(), clientId, System.currentTimeMillis());
+        redisMQStoreUtil.registerClient(clientId);
     }
-
+    
     public Set<String> allClient() {
-        return redisClient.zRangeByScore(getClientKey(), 1, Double.MAX_VALUE).stream().map(Object::toString).collect(Collectors.toSet());
+        return redisMQStoreUtil.getClients();
     }
-
+    
     public Long removeExpireClients() {
         // 过期的客户端
         long max = System.currentTimeMillis() - CLIENT_EXPIRE * 1000L;
-        return redisClient.zRemoveRangeByScore(getClientKey(), 0, max);
+        return redisMQStoreUtil.removeClient(0, max);
     }
-
+    
     public Long removeAllClient() {
         log.info("redismq removeAllClient");
-        return redisClient.zRemoveRangeByScore(getClientKey(), 0, Double.MAX_VALUE);
+        return redisMQStoreUtil.removeClient(0, Double.MAX_VALUE);
     }
-
+    
     public void destory() {
         //停止任务
-        redisClient.zRemove(getClientKey(), clientId);
+        redisMQStoreUtil.removeClient(clientId);
         redisListenerContainerManager.stopAll();
         publishRebalance();
         log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.getCurrentVirtualQueues());
     }
-
+    
     public void start() {
         // 清理所有客户端
         removeAllClient();
         // 当前客户端暂时监听所有队列  等待下次重平衡所有队列.防止新加入客户端时.正好有客户端退出.而出现有几个队列在1分钟内没有客户端监听的情况 doReblance已经注册
-//        registerClient();
+        //        registerClient();
         // 先订阅平衡消息,以免平衡的消息没有收到
         rebalanceSubscribe();
         // 重平衡
         rebalance();
         //订阅push消息
-//        subscribe();
+        //        subscribe();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡
@@ -137,12 +149,12 @@ public class RedisMqClient {
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
     }
-
-
+    
+    
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
-        Boolean success = redisClient.setIfAbsent(lockKey, "", Duration.ofSeconds(CLIENT_RABALANCE_TIME));
+        Boolean success = redisMQStoreUtil.lock(lockKey, Duration.ofSeconds(CLIENT_RABALANCE_TIME));
         if (success != null && success) {
             Long count = removeExpireClients();
             if (count != null && count > 0) {
@@ -150,11 +162,12 @@ public class RedisMqClient {
                 rebalance();
                 // 消费锁是30秒 这个值和消费所相关联
                 // 延时指定消费锁锁定的时间再去重新拉取一次消息,防止服务下线重启导致的消息没有被其他队列消费的问题
-                new ScheduledThreadPoolExecutor(1).schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
+                new ScheduledThreadPoolExecutor(1)
+                        .schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
             }
         }
     }
-
+    
     /**
      * 平衡
      */
@@ -164,8 +177,8 @@ public class RedisMqClient {
         // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
         doRebalance();
     }
-
-
+    
+    
     /**
      * 暂停消息分配.重新负载均衡后.重新拉取消息
      */
@@ -182,29 +195,29 @@ public class RedisMqClient {
         rebalance.rebalance(allClient(), clientId);
         repush();
     }
-
+    
     private void publishRebalance() {
-        redisClient.convertAndSend(getRebalanceTopic(), clientId);
+        redisMQStoreUtil.publishRebalance(clientId);
     }
-
-
+    
+    
     /**
      * 重平衡时对任务重新进行拉取
      */
     public void repush() {
         Map<String, List<String>> queues = QueueManager.getCurrentVirtualQueues();
         boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
-
+        
         //没有监听的队列取消订阅
         if (isEmpty) {
             unSubscribe();
             return;
         }
-
+        
         //监听队列消息的订阅
         subscribe();
-
-        //此操作 On2 如果有几千个虚拟队列的话。那么最少也要有几百个topic 这里性能不会慢。但是另一边监听到会去redis中获取。线程数不多可能会阻塞
+        
+        //此操作 On2 如果有几千个虚拟队列的话。那么最少也要有几百个Queue 这里性能不会慢。但是另一边监听到会去redis中获取。线程数不多可能会阻塞
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
             if (queue == null) {
@@ -217,67 +230,73 @@ public class RedisMqClient {
             }
             //获取虚拟队列重新推送到阻塞队列
             virtualQueues.forEach(vq -> {
-                        PushMessage pushMessage = new PushMessage();
-                        pushMessage.setQueue(vq);
-                        pushMessage.setTimestamp(System.currentTimeMillis());
-
-                        //推送到指定的队列
-                        LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager.getDelayBlockingQueue();
-                        LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager.getLinkedBlockingQueue();
-                        if (queue.isDelayState()) {
-                            delayBlockingQueue.add(pushMessage);
-                        } else {
-                            linkedBlockingQueue.add(vq);
-                        }
-                    }
-            );
+                PushMessage pushMessage = new PushMessage();
+                pushMessage.setQueue(vq);
+                pushMessage.setTimestamp(System.currentTimeMillis());
+                
+                //推送到指定的队列
+                LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager
+                        .getDelayBlockingQueue();
+                LinkedBlockingQueue<String> linkedBlockingQueue = redisListenerContainerManager
+                        .getLinkedBlockingQueue();
+                if (queue.isDelayState()) {
+                    delayBlockingQueue.add(pushMessage);
+                } else {
+                    linkedBlockingQueue.add(vq);
+                }
+            });
         });
     }
-
+    
     /**
      * 监听队列消息的订阅
      */
     public synchronized void subscribe() {
         if (!isSub) {
             RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.addMessageListener(new RedisPushListener(redisMqClient), new ChannelTopic(RedisMQConstant.getTopic()));
+            redisMessageListenerContainer.addMessageListener(new RedisPushListener(redisMqClient),
+                    new ChannelTopic(RedisMQConstant.getTopic()));
             isSub = true;
         }
     }
-
+    
     /**
      * 取消监听队列消息的订阅
      */
     public synchronized void unSubscribe() {
         if (isSub) {
             RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.removeMessageListener(new RedisPushListener(redisMqClient), new ChannelTopic(RedisMQConstant.getTopic()));
+            redisMessageListenerContainer.removeMessageListener(new RedisPushListener(redisMqClient),
+                    new ChannelTopic(RedisMQConstant.getTopic()));
             isSub = false;
         }
     }
-
+    
     /**
      * 负载均衡订阅
      */
     public void rebalanceSubscribe() {
         RedisMqClient redisMqClient = this;
-        redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient), new ChannelTopic(RedisMQConstant.getRebalanceTopic()));
+        redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient),
+                new ChannelTopic(RedisMQConstant.getRebalanceTopic()));
     }
-
+    
     /**
      * 开始注册客户任务   心跳任务
      */
     public void startRegisterClientTask() {
-        registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME, TimeUnit.SECONDS);
+        registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME,
+                TimeUnit.SECONDS);
     }
-
+    
     /**
      * 开始负载均衡任务
      */
     public void startRebalanceTask() {
-        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME, TimeUnit.SECONDS);
+        rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME,
+                TimeUnit.SECONDS);
     }
-
+    
     /**
      * 队列寄存器
      *
@@ -285,22 +304,19 @@ public class RedisMqClient {
      */
     public Queue registerQueue(Queue queue) {
         Set<Queue> allQueue = getAllQueue();
-        allQueue.stream().filter(redisQueue -> redisQueue.getQueueName().equals(queue.getQueueName())).forEach(redisQueue ->
-                redisClient.sRemove(getQueueTopicKey(), redisQueue));
-        redisClient.sAdd(getQueueTopicKey(), queue);
+        allQueue.stream().filter(redisQueue -> redisQueue.getQueueName().equals(queue.getQueueName()))
+                .forEach(redisMQStoreUtil::removeQueue);
+        redisMQStoreUtil.registerQueue(queue);
         return queue;
     }
-
+    
     /**
      * 获取所有队列
      *
      * @return {@link Set}<{@link Queue}>
      */
     public Set<Queue> getAllQueue() {
-        Set<Object> set = redisClient.sMembers(getQueueTopicKey());
-        if (CollectionUtils.isEmpty(set)) {
-            return new HashSet<>();
-        }
-        return set.stream().map(s -> (Queue) s).collect(Collectors.toSet());
+        Set<Queue> queueList = redisMQStoreUtil.getQueueList();
+        return queueList;
     }
 }

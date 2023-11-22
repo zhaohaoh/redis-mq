@@ -1,4 +1,4 @@
-package com.redismq.autoconfigure;
+package enable;
 
 
 import com.redismq.core.RedisListenerConfigurationRegister;

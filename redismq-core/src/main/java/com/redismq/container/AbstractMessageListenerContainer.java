@@ -1,6 +1,6 @@
 package com.redismq.container;
 
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.exception.RedisMqException;
@@ -12,7 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 import static com.redismq.constant.GlobalConstant.SPLITE;
-import static com.redismq.constant.StateConstant.*;
+import static com.redismq.constant.StateConstant.PAUSE;
+import static com.redismq.constant.StateConstant.RUNNING;
+import static com.redismq.constant.StateConstant.STOP;
 
 /**
  * 容器抽象类
@@ -28,7 +30,7 @@ public abstract class AbstractMessageListenerContainer {
     /**
      * redis
      */
-    protected RedisClient redisClient;
+    protected RedisMQClientUtil redisMQClientUtil;
     /**
      * 最小线程数
      */
@@ -75,9 +77,9 @@ public abstract class AbstractMessageListenerContainer {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
     }
 
-    public AbstractMessageListenerContainer(RedisClient redisClient, Queue queue,List<ConsumeInterceptor> consumeInterceptorList) {
+    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,List<ConsumeInterceptor> consumeInterceptorList) {
         this.queueName = queue.getQueueName();
-        this.redisClient = redisClient;
+        this.redisMQClientUtil = redisMQClientUtil;
         this.concurrency = queue.getConcurrency();
         this.maxConcurrency = queue.getMaxConcurrency();
         this.delay = queue.isDelayState();
@@ -128,7 +130,7 @@ public abstract class AbstractMessageListenerContainer {
         }
         RedisListenerCallable runnable = new RedisListenerCallable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
                 this.getRetryMax(),
-                this.redisClient);
+                this.redisMQClientUtil);
         runnable.setArgs(message);
         runnable.setAckMode(this.getAckMode());
         runnable.setRetryInterval(this.getRetryInterval());

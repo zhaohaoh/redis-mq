@@ -21,7 +21,7 @@ import java.time.ZoneOffset;
 public class ProducerController {
     @Autowired
     private RedisMQTemplate redisMQTemplate;
-
+  
     /**
      * 发送延迟消息
      */
@@ -31,9 +31,8 @@ public class ProducerController {
             JavaBean javaBean = new JavaBean();
             javaBean.setA("ff");
             javaBean.setB(222);
-            redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", Duration.ofSeconds(1));
+            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(11).toMillis());
         }
-
     }
 
 
@@ -71,14 +70,14 @@ public class ProducerController {
     @PostMapping("sendMultiTagMessage")
     public void sendMultiTagMessage() {
         for (int i = 0; i < 100; i++) {
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一topic消息消费2", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
         }
 
     }

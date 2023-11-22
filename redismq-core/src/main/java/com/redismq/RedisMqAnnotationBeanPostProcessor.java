@@ -2,7 +2,7 @@ package com.redismq;
 
 
 import com.redismq.config.GlobalConfigCache;
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
@@ -36,7 +36,13 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -77,7 +83,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             } else {
                 //校验重复队列名的注解
                 Collection<RedisListener> values = annotatedMethods.values();
-                Map<String, List<RedisListener>> listMap = values.stream().collect(Collectors.groupingBy(RedisListener::topic));
+                Map<String, List<RedisListener>> listMap = values.stream().collect(Collectors.groupingBy(RedisListener::queue));
                 listMap.forEach((k, v) -> {
                     if (StringUtils.isBlank(k)) {
                         throw new RedisMqException("redismq queue name not null");
@@ -111,7 +117,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             handlerPubSub(redisListener, method, bean);
             return;
         }
-        Queue queue = new Queue(redisListener.topic());
+        Queue queue = new Queue(redisListener.queue());
+        //初始化队列设置默认值
+        initQueue(queue);
 
         //注解中有配置以注解的配置优先
         if (redisListener.concurrency() > 0) {
@@ -156,6 +164,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         }
     }
 
+    
     @Override
     public int getOrder() {
         return LOWEST_PRECEDENCE;
@@ -181,8 +190,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     private boolean createContainer() {
         Map<String, Queue> queues = QueueManager.getLocalQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
-
-        RedisClient redisClient = applicationContext.getBean("redisClient", RedisClient.class);
+    
+        RedisMQClientUtil redisMQClientUtil = applicationContext.getBean("redisMQClientUtil", RedisMQClientUtil.class);
         Map<String, ConsumeInterceptor> consumeInterceptorMap = applicationContext.getBeansOfType(ConsumeInterceptor.class);
         //没有配置取全局配置
         AtomicBoolean create = new AtomicBoolean(false);
@@ -192,33 +201,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                 return;
             }
             create.set(true);
-            if (queue.getConcurrency() == null) {
-                queue.setConcurrency(GlobalConfigCache.QUEUE_CONFIG.getConcurrency());
-            }
-            if (queue.getMaxConcurrency() == null) {
-                queue.setMaxConcurrency(GlobalConfigCache.QUEUE_CONFIG.getMaxConcurrency());
-            }
-            if (queue.getAckMode() == null) {
-                queue.setAckMode(GlobalConfigCache.QUEUE_CONFIG.getAckMode());
-            }
-            if (queue.getRetryMax() == null) {
-                queue.setRetryMax(GlobalConfigCache.QUEUE_CONFIG.getConsumeRetryMax());
-            }
-            if (queue.getConcurrency() > queue.getMaxConcurrency()) {
-                throw new RedisMqException("MaxConcurrency cannot be less than Concurrency");
-            }
-            if (queue.getRetryMax() > 10) {
-                throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
-            }
-            if (queue.getRetryInterval() == null) {
-                queue.setRetryInterval(GlobalConfigCache.QUEUE_CONFIG.getRetryInterval());
-            }
-            //设置队列默认大小
-            if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
-                queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
-            }
 
-            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisClient, queue, CollectionUtils.isEmpty(consumeInterceptorMap) ?
+            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisMQClientUtil, queue, CollectionUtils.isEmpty(consumeInterceptorMap) ?
                     new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values()));
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
@@ -296,5 +280,36 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         //名称完全对应的topic
         container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));
     }
-
+    
+    private void initQueue(Queue queue) {
+        
+        if (queue.getConcurrency() == null) {
+            queue.setConcurrency(GlobalConfigCache.QUEUE_CONFIG.getConcurrency());
+        }
+        if (queue.getMaxConcurrency() == null) {
+            queue.setMaxConcurrency(GlobalConfigCache.QUEUE_CONFIG.getMaxConcurrency());
+        }
+        if (queue.getAckMode() == null) {
+            queue.setAckMode(GlobalConfigCache.QUEUE_CONFIG.getAckMode());
+        }
+        if (queue.getRetryMax() == null) {
+            queue.setRetryMax(GlobalConfigCache.QUEUE_CONFIG.getConsumeRetryMax());
+        }
+        if (queue.getConcurrency() > queue.getMaxConcurrency()) {
+            throw new RedisMqException("MaxConcurrency cannot be less than Concurrency");
+        }
+        if (queue.getRetryMax() > 10) {
+            throw new RedisMqException("ConsumeRetryMax cannot be greater than 10");
+        }
+        if (queue.getRetryInterval() == null) {
+            queue.setRetryInterval(GlobalConfigCache.QUEUE_CONFIG.getRetryInterval());
+        }
+        if (queue.getVirtual() == null) {
+            queue.setVirtual(GlobalConfigCache.QUEUE_CONFIG.getVirtual());
+        }
+        //设置队列默认大小
+        if (queue.getQueueMaxSize() == null || queue.getQueueMaxSize() <= 0) {
+            queue.setQueueMaxSize(GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize());
+        }
+    }
 }

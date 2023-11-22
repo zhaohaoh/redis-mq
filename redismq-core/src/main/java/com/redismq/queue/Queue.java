@@ -15,7 +15,7 @@ public class Queue {
     }
 
     public Queue(String queueName) {
-        this.queueName = RedisMQConstant.getQueueNameByTopic(queueName);
+        this.queueName = RedisMQConstant.getQueueNameByQueue(queueName);
         this.queueMaxSize = GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize();
     }
 

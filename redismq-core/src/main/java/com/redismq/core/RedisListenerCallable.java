@@ -1,7 +1,7 @@
 package com.redismq.core;
 
 import com.redismq.Message;
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.AckMode;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
@@ -47,7 +47,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
     /**
      *redis的客户端
      */
-    private final RedisClient redisClient;
+    private final RedisMQClientUtil redisMQClientUtil;
     /**
      * ack的模式
      */
@@ -95,8 +95,8 @@ public class RedisListenerCallable implements Callable<Boolean> {
 
 
 
-    public RedisClient getRedisClient() {
-        return redisClient;
+    public RedisMQClientUtil redisMQClientUtil() {
+        return redisMQClientUtil;
     }
 
     /**
@@ -113,11 +113,11 @@ public class RedisListenerCallable implements Callable<Boolean> {
         return this.method;
     }
 
-    public RedisListenerCallable(Object target, Method method, int retryMax, RedisClient redisClient) {
+    public RedisListenerCallable(Object target, Method method, int retryMax, RedisMQClientUtil redisMQClientUtil) {
         this.target = target;
         this.method = method;
         this.retryMax = retryMax;
-        this.redisClient = redisClient;
+        this.redisMQClientUtil = redisMQClientUtil;
     }
 
     @Override
@@ -136,7 +136,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
             Message message = (Message) args;
             //如果是手动确认的话需要手动删除
             if (AckMode.MAUAL.equals(ackMode)) {
-                Long count = redisClient.zRemove(message.getVirtualQueueName(), args);
+                redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message);
             }
         }
         return true;
@@ -163,7 +163,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
                 this.method.invoke(this.target, clone.getBody());
             }
             state.finsh();
-            log.debug("redisMQ consumeMessage success topic:{} tag:{}", message.getTopic(), message.getTag());
+            log.debug("redisMQ consumeMessage success queue:{} tag:{}", message.getQueue(), message.getTag());
             afterConsume(clone);
         } catch (Exception e) {
             if (e instanceof InvocationTargetException){

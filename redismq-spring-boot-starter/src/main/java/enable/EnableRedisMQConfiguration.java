@@ -1,4 +1,4 @@
-package com.redismq.autoconfigure;
+package enable;
 
 import org.springframework.context.annotation.Configuration;
 

@@ -1,4 +1,5 @@
 package com.redismq.config;
+
 /**
  * 配置
  */

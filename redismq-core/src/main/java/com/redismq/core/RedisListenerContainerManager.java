@@ -168,7 +168,9 @@ public class RedisListenerContainerManager {
             for (String virtualQueue : INVOKE_VIRTUAL_QUEUES) {
                 list.add(getVirtualQueueLock(virtualQueue));
             }
-            r.getRedisClient().delete(list);
+            for (String lock : list) {
+                r.getRedisMQClientUtil().unlock(lock);
+            }
         });
         boss.shutdownNow();
         log.info("redisMQ shutdown All ThreadPollExecutor");
@@ -187,7 +189,9 @@ public class RedisListenerContainerManager {
             // 删除队列锁
             List<String> list = new ArrayList<>();
             INVOKE_VIRTUAL_QUEUES.forEach(virtualQueue -> list.add(getVirtualQueueLock(virtualQueue)));
-            r.getRedisClient().delete(list);
+            for (String lock : list) {
+                r.getRedisMQClientUtil().unlock(lock);
+            }
         });
     }
 }

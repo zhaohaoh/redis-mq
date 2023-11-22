@@ -22,7 +22,11 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -59,59 +63,59 @@ public class RedisMQProducer {
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String topic) {
-        return sendMessage(obj, topic, "");
+    public boolean sendMessage(Object obj, String queue) {
+        return sendMessage(obj, queue, "");
     }
 
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String topic, String tag) {
+    public boolean sendMessage(Object obj, String queue, String tag) {
         Message message = new Message();
-        message.setTopic(topic);
+        message.setQueue(queue);
         message.setBody(obj);
         message.setTag(tag);
         return sendMessage(message);
     }
 
     public boolean sendMessage(Message message) {
-        Queue queue = hasQueue(message.getTopic());
+        Queue queue = hasQueue(message.getQueue());
         return sendSingleMessage(queue, message, null);
     }
 
     public boolean sendDelayMessage(Message message, Long delayTime) {
-        Queue queue = hasDelayQueue(message.getTopic());
+        Queue queue = hasDelayQueue(message.getQueue());
         long executorTime = System.currentTimeMillis() + (delayTime);
         return sendSingleMessage(queue, message, executorTime);
     }
 
     public boolean sendTimingMessage(Message message, Long executorTime) {
-        Queue queue = hasDelayQueue(message.getTopic());
+        Queue queue = hasDelayQueue(message.getQueue());
         return sendSingleMessage(queue, message, executorTime);
     }
 
     /**
      * 批量一次性打包发送队列消息  消费仍然是一对一消费  一次最多发送100条.超过100条会分批次发送 lua脚本语句长度限制
      */
-    public boolean sendBatchMessage(List<?> objs, String topic) {
-        return sendBatchMessage(objs, topic, "");
+    public boolean sendBatchMessage(List<?> objs, String queue) {
+        return sendBatchMessage(objs, queue, "");
     }
 
     /**
      * 批量一次性打包发送队列消息  消费仍然是一对一消费
      */
-    public boolean sendBatchMessage(List<?> objs, String topic, String tag) {
+    public boolean sendBatchMessage(List<?> objs, String queueName, String tag) {
         if (CollectionUtils.isEmpty(objs)) {
             return true;
         }
-        Queue queue = hasQueue(topic);
+        Queue queue = hasQueue(queueName);
         List<Message> messages = new ArrayList<>();
         if (objs.get(0) instanceof Message) {
             messages = (List<Message>) objs;
         } else {
             for (Object obj : objs) {
                 Message message = new Message();
-                message.setTopic(topic);
+                message.setQueue(queueName);
                 message.setBody(obj);
                 message.setTag(tag);
                 messages.add(message);
@@ -123,9 +127,9 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String topic, String tag, Long delayTime) {
+    public boolean sendDelayMessage(Object obj, String queueName, String tag, Long delayTime) {
         Message message = new Message();
-        message.setTopic(topic);
+        message.setQueue(queueName);
         message.setBody(obj);
         message.setTag(tag);
         return sendDelayMessage(message, delayTime);
@@ -134,9 +138,9 @@ public class RedisMQProducer {
     /**
      * 发送定时消息
      */
-    public boolean sendTimingMessage(Object obj, String topic, String tag, Long executorTime) {
+    public boolean sendTimingMessage(Object obj, String queueName, String tag, Long executorTime) {
         Message message = new Message();
-        message.setTopic(topic);
+        message.setQueue(queueName);
         message.setBody(obj);
         message.setTag(tag);
         return sendTimingMessage(message, executorTime);
@@ -214,7 +218,7 @@ public class RedisMQProducer {
     private boolean doSendMessage(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
         //构建redis的请求参数按顺序消息和scope对应
         if (sendMessageParams.size() > 100) {
-            //只所以要分离集合发送是因为lua脚本的参数长度优先
+            //只所以要分离集合发送是因为lua脚本的参数长度有限
             List<List<SendMessageParam>> lists = splitList(sendMessageParams, 100);
             for (List<SendMessageParam> list : lists) {
                 return doSendMessage0(pushMessage, list);
@@ -416,11 +420,11 @@ public class RedisMQProducer {
     /**
      * 校验队列是否存在
      *
-     * @param topic 主题
+     * @param simpleQueueName
      * @return {@link Queue}
      */
-    private Queue hasQueue(String topic) {
-        String queueName = RedisMQConstant.getQueueNameByTopic(topic);
+    private Queue hasQueue(String simpleQueueName) {
+        String queueName = RedisMQConstant.getQueueNameByQueue(simpleQueueName);
         Queue queue = QueueManager.getQueue(queueName);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");
@@ -434,11 +438,11 @@ public class RedisMQProducer {
     /**
      * 校验延迟队列
      *
-     * @param topic 主题
+     * @param simpleQueueName
      * @return {@link Queue}
      */
-    private Queue hasDelayQueue(String topic) {
-        String queueName = RedisMQConstant.getQueueNameByTopic(topic);
+    private Queue hasDelayQueue(String simpleQueueName) {
+        String queueName = RedisMQConstant.getQueueNameByQueue(simpleQueueName);
         Queue queue = QueueManager.getQueue(queueName);
         if (queue == null) {
             throw new RedisMqException("Redismq Can't find queue");

@@ -1,6 +1,6 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.connection.RedisClient;
+import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.interceptor.DefaultProducerInterceptor;
 import com.redismq.interceptor.ProducerInterceptor;
@@ -22,14 +22,14 @@ public class RedisMQInterceptorAutoConfiguration {
     /**
      * 默认的死信队列拦截器
      *
-     * @param redisClient 复述,客户
+     * @param redisMQClientUtil  客户端工具类
      * @return {@link RedisDeadQueueHandleInterceptor}
      */
     @Bean
     @ConditionalOnProperty(value = "spring.redismq.dead-letter-queue.enable", havingValue = "true")
     @ConditionalOnMissingBean(ConsumeInterceptor.class)
-    public ConsumeInterceptor redisDeadQueueHandleInterceptor(RedisClient redisClient) {
-        return new RedisDeadQueueHandleInterceptor(redisClient);
+    public ConsumeInterceptor redisDeadQueueHandleInterceptor(RedisMQClientUtil redisMQClientUtil) {
+        return new RedisDeadQueueHandleInterceptor(redisMQClientUtil);
     }
 
     /**
