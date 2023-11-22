@@ -174,8 +174,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (callable == null) {
                             // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
                             redisMQClientUtil.removeMessage(queueName, message);
-                            log.error("RedisMqException removeMessage:{}", RedisMQObjectMapper.toJsonStr(message));
-                            throw new RedisMqException("redisMQ not found tag runnable removeMessage");
+                            log.error("RedisMqException   not found queue or tag removeMessage:{}", RedisMQObjectMapper.toJsonStr(message));
+                            continue;
                         }
                         
                         callableInvokes.add(callable);
