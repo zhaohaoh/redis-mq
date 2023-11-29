@@ -19,7 +19,7 @@ public class MQMessageDTO {
     /**
      * 主题
      */
-    private String topic;
+    private String queue;
     
     /**
      * 标签

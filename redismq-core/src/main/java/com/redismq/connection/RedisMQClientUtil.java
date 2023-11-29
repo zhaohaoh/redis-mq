@@ -3,6 +3,7 @@ package com.redismq.connection;
 
 import com.redismq.Message;
 import com.redismq.constant.RedisMQConstant;
+import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
 import javafx.util.Pair;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -12,9 +13,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 
 import static com.redismq.constant.RedisMQConstant.getClientCollection;
 import static com.redismq.constant.RedisMQConstant.getQueueCollection;
@@ -22,7 +23,7 @@ import static com.redismq.constant.RedisMQConstant.getRebalanceTopic;
 
 public class RedisMQClientUtil {
     
-    private RedisClient redisClient;
+    private final RedisClient redisClient;
     
     public RedisMQClientUtil(RedisClient redisClient) {
         this.redisClient = redisClient;
@@ -37,6 +38,16 @@ public class RedisMQClientUtil {
                 .forEach(redisQueue -> redisClient.sRemove(getQueueCollection(), redisQueue));
         redisClient.sAdd(getQueueCollection(), queue);
         return queue;
+    }
+    
+    /**
+     * 获取队列
+     */
+    public Queue getQueue(String queueName) {
+        Set<Queue> allQueue = getQueueList();
+        Optional<Queue> first = allQueue.stream().filter(redisQueue -> redisQueue.getQueueName().equals(queueName))
+                .findFirst();
+        return first.orElse(null);
     }
     
     /**
@@ -58,8 +69,12 @@ public class RedisMQClientUtil {
         return queue;
     }
     
-    public void registerClient(String clientId) {
-        redisClient.zAdd(getClientCollection(), clientId, System.currentTimeMillis());
+    public void registerClient(String clientId, String applicationName) {
+        Client client = new Client();
+        client.setClientId(clientId);
+        client.setApplicationName(applicationName);
+        long heartbeatTime = System.currentTimeMillis();
+        redisClient.zAdd(getClientCollection(), client, heartbeatTime);
     }
     
     /**
@@ -67,24 +82,30 @@ public class RedisMQClientUtil {
      *
      * @return {@link Set}<{@link String}>
      */
-    public Set<String> getClients() {
-        return redisClient.zRangeByScore(getClientCollection(), 1, Double.MAX_VALUE).stream().map(Object::toString)
-                .collect(Collectors.toSet());
+    public List<Client> getClients() {
+        String clientCollection = getClientCollection();
+        Set<ZSetOperations.TypedTuple<Object>> typedTuples = redisClient
+                .zRangeWithScores(clientCollection, 0, Long.MAX_VALUE);
+        if (CollectionUtils.isEmpty(typedTuples)) {
+            return new ArrayList<>();
+        }
+        List<Client> clients = typedTuples.stream().map(a -> (Client) a.getValue()).collect(Collectors.toList());
+        return clients;
     }
     
     /**
      * 删除客户端
      */
-    public Long removeClient(double start,double end) {
-        return redisClient.zRemoveRangeByScore(getClientCollection(),start,end);
+    public Long removeClient(double start, double end) {
+        return redisClient.zRemoveRangeByScore(getClientCollection(), start, end);
     }
+    
     /**
      * 删除客户端
      */
     public void removeClient(String clientId) {
         redisClient.zRemove(getClientCollection(), clientId);
     }
-    
     
     
     /**
@@ -100,36 +121,35 @@ public class RedisMQClientUtil {
      * 删除消息
      */
     public Long removeMessage(String queueName, Message message) {
-      return   redisClient.zRemove(queueName, message);
+        return redisClient.zRemove(queueName, message);
     }
     
     
     /**
      * 拉取队列中的需要立即消费的消息
      */
-    public  List<Message> pullMessage(String queueName, long pullTime,int pullSize) {
+    public List<Message> pullMessage(String queueName, long pullTime,int startIndex, int pullSize) {
         Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient
-                .zRangeByScoreWithScores(queueName, 0, pullTime,0,pullSize);
-        if (CollectionUtils.isEmpty(headDatas)){
+                .zRangeByScoreWithScores(queueName, 0, pullTime, startIndex, pullSize);
+        if (CollectionUtils.isEmpty(headDatas)) {
             return new ArrayList<>();
         }
         List<Message> messages = new ArrayList<>();
-        headDatas.forEach(s->messages.add((Message) s.getValue()));
+        headDatas.forEach(s -> messages.add((Message) s.getValue()));
         return messages;
     }
     
     /**
      * 拉取队列中的消息 不管消息的scope消费时间
      */
-    public  List<Pair<Message,Double>> pullMessage(String queueName,int start,int pullSize) {
-        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient
-                .zRangeWithScores(queueName, start,pullSize);
-         if (CollectionUtils.isEmpty(headDatas)){
-           return new ArrayList<>();
-         }
-        List<Pair<Message,Double>> pairs = new ArrayList<>();
+    public List<Pair<Message, Double>> pullMessage(String queueName, int start, int pullSize) {
+        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, start, pullSize);
+        if (CollectionUtils.isEmpty(headDatas)) {
+            return new ArrayList<>();
+        }
+        List<Pair<Message, Double>> pairs = new ArrayList<>();
         for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
-            pairs.add(new Pair<>((Message) headData.getValue(),headData.getScore()));
+            pairs.add(new Pair<>((Message) headData.getValue(), headData.getScore()));
         }
         return pairs;
     }
@@ -145,13 +165,13 @@ public class RedisMQClientUtil {
      * 延时队列大小
      */
     public Long queueSize(String key) {
-       return redisClient.zSize(key);
+        return redisClient.zSize(key);
     }
     
     /**
      * 锁定指定key
      */
-    public Boolean lock(String key,  Duration duration) {
+    public Boolean lock(String key, Duration duration) {
         return redisClient.setIfAbsent(key, "", duration);
     }
     

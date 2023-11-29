@@ -5,6 +5,7 @@ import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
+import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.ClientConfig;
@@ -63,6 +64,10 @@ public class RedisMqClient {
      * 客户端id
      */
     private final String clientId;
+    /**
+     * 应用名
+     */
+    private final String applicationName;
     
     /**
      * 负载均衡机制
@@ -80,11 +85,12 @@ public class RedisMqClient {
     private boolean isSub;
     
     public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
-            RebalanceImpl rebalance) {
+            RebalanceImpl rebalance,String applicationName) {
         this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
+        this.applicationName = applicationName;
     }
     
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
@@ -101,12 +107,12 @@ public class RedisMqClient {
     
     
     public void registerClient() {
-        log.debug("registerClient :{}", clientId);
+        log.debug("registerClient :{} applicationName:{}", clientId, applicationName);
         //注册客户端
-        redisMQStoreUtil.registerClient(clientId);
+        redisMQStoreUtil.registerClient(clientId,applicationName);
     }
     
-    public Set<String> allClient() {
+    public List<Client> allClient() {
         return redisMQStoreUtil.getClients();
     }
     

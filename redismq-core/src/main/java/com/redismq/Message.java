@@ -1,6 +1,7 @@
 package com.redismq;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
@@ -13,17 +14,12 @@ import java.io.Serializable;
  */
 @Data
 @Builder
+@AllArgsConstructor
 public class Message implements Serializable {
     public Message() {
     }
 
-    public Message(Object body, String id, String queue, String tag, String virtualQueueName) {
-        this.body = body;
-        this.id = id;
-        this.queue = queue;
-        this.tag = tag;
-        this.virtualQueueName = virtualQueueName;
-    }
+    
 
     private static final long serialVersionUID = 1L;
 
@@ -36,6 +32,10 @@ public class Message implements Serializable {
         }
         return outer;
     }
+    public void build(){
+    
+    }
+    
 
     /**
      * 消息主体
@@ -45,7 +45,15 @@ public class Message implements Serializable {
     /**
      * 消息id
      */
+    @Builder.Default
     private String id = NanoIdUtils.randomNanoId();
+    
+    
+    /**
+     * 用来路由虚拟队列的key
+     */
+    @Builder.Default
+    private String key="";
 
     /**
      * 队列
@@ -55,10 +63,13 @@ public class Message implements Serializable {
     /**
      * 标签
      */
+    @Builder.Default
     private String tag = "";
 
     /**
      * 虚拟队列名称 内部生成 外部设置无效
      */
     private String virtualQueueName;
+    
+    
 }

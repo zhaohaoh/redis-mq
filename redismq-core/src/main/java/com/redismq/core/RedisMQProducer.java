@@ -59,22 +59,33 @@ public class RedisMQProducer {
             this.seataUtil = new SeataUtil();
         }
     }
-
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queue) {
-        return sendMessage(obj, queue, "");
+    public boolean sendMessage(Object obj, String queue,String key) {
+        return sendMessage(obj, queue, "",key);
     }
 
     /**
      * 队列消息
      */
-    public boolean sendMessage(Object obj, String queue, String tag) {
+    public boolean sendMessage(Object obj, String queue) {
+        return sendMessage(obj, queue, "","");
+    }
+ 
+    /**
+     * 队列消息
+     */
+    public boolean sendMessage(Object obj, String queue,String tag,String key) {
         Message message = new Message();
         message.setQueue(queue);
         message.setBody(obj);
-        message.setTag(tag);
+        if (tag!=null) {
+            message.setTag(tag);
+        }
+        if (key!=null) {
+            message.setKey(key);
+        }
         return sendMessage(message);
     }
 
@@ -127,22 +138,24 @@ public class RedisMQProducer {
     /**
      * 延迟消息
      */
-    public boolean sendDelayMessage(Object obj, String queueName, String tag, Long delayTime) {
+    public boolean sendDelayMessage(Object obj, String queueName, String tag,String key, Long delayTime) {
         Message message = new Message();
         message.setQueue(queueName);
         message.setBody(obj);
         message.setTag(tag);
+        message.setKey(key);
         return sendDelayMessage(message, delayTime);
     }
 
     /**
      * 发送定时消息
      */
-    public boolean sendTimingMessage(Object obj, String queueName, String tag, Long executorTime) {
+    public boolean sendTimingMessage(Object obj, String queueName, String tag,String key, Long executorTime) {
         Message message = new Message();
         message.setQueue(queueName);
         message.setBody(obj);
         message.setTag(tag);
+        message.setKey(key);
         return sendTimingMessage(message, executorTime);
     }
 
@@ -159,7 +172,13 @@ public class RedisMQProducer {
         if (executorTime == null) {
             executorTime = increment;
         }
-        long num = increment % QueueManager.VIRTUAL_QUEUES_NUM;
+        long num;
+        if (StringUtils.isNotBlank(message.getKey())){
+              int fnvHash = fnvHash(message.getKey());
+              num = fnvHash % queue.getVirtual();
+        }else{
+              num = increment % queue.getVirtual();
+        }
         PushMessage pushMessage = new PushMessage();
         pushMessage.setTimestamp(0L);
         String virtualQueue = queue.getQueueName() + SPLITE + num;
@@ -185,7 +204,13 @@ public class RedisMQProducer {
             //有bug要改成lua
             Long increment = increment();
             Long executorTime = increment;
-            long num = increment % QueueManager.VIRTUAL_QUEUES_NUM;
+            long num;
+            if (StringUtils.isNotBlank(message.getKey())){
+                int fnvHash = fnvHash(message.getKey());
+                num = fnvHash % queue.getVirtual();
+            }else{
+                num = increment % queue.getVirtual();
+            }
             PushMessage pushMessage = new PushMessage();
             pushMessage.setTimestamp(0L);
             String virtualQueue = queue.getQueueName() + SPLITE + num;
@@ -489,6 +514,20 @@ public class RedisMQProducer {
             result.add(newList);
         }
         return result;
+    }
+    
+    public static int fnvHash(String data) {
+        final int p = 16777619;
+        int hash = (int) 2166136261L;
+        for (int i = 0; i < data.length(); i++) {
+            hash = (hash ^ data.charAt(i)) * p;
+        }
+        hash += hash << 13;
+        hash ^= hash >> 7;
+        hash += hash << 3;
+        hash ^= hash >> 17;
+        hash += hash << 5;
+        return Math.abs(hash);
     }
 
 

@@ -161,6 +161,8 @@ public class RedisListenerCallable implements Callable<Boolean> {
                 this.method.invoke(this.target, clone);
             } else if (paramType.equals(clone.getBody().getClass())) {
                 this.method.invoke(this.target, clone.getBody());
+            }else {
+                throw new RedisMqException("ClassNotConvert paramType: "+paramType +"messageClass: "+clone.getClass());
             }
             state.finsh();
             log.debug("redisMQ consumeMessage success queue:{} tag:{}", message.getQueue(), message.getTag());

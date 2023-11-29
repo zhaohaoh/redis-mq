@@ -54,7 +54,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     public RedisMqClient redisMqClient(RedisMQClientUtil redisMQClientUtil) {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
         RebalanceImpl rebalance = new RebalanceImpl(new AllocateMessageQueueAveragely());
-        RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance);
+        RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance,redisMqProperties.getApplicationName());
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }
@@ -86,6 +86,11 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisMQProducer.setProducerInterceptors(producerInterceptors);
         return new RedisMQTemplate(redisMQProducer);
     }
+    @Bean
+    public QueueManager queueManager() {
+        return new QueueManager();
+    }
+    
 
     /**
      * 初始化执行
@@ -93,7 +98,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Override
     public void afterPropertiesSet() throws Exception {
         QueueManager.VIRTUAL_QUEUES_NUM = redisMqProperties.getQueueConfig().getVirtual();
-        RedisMQConstant.GROUP = redisMqProperties.getGroup();
+        RedisMQConstant.NAMESPACE = redisMqProperties.getNamespace();
         GlobalConfigCache.GLOBAL_CONFIG = redisMqProperties.getGlobalConfig();
         GlobalConfigCache.QUEUE_CONFIG = redisMqProperties.getQueueConfig();
     }

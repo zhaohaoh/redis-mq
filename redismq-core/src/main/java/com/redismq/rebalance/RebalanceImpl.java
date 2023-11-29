@@ -1,14 +1,13 @@
 package com.redismq.rebalance;
 
 
+import com.redismq.pojo.Client;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.redismq.queue.QueueManager.getCurrentVirtualQueues;
@@ -30,19 +29,20 @@ public class RebalanceImpl {
     /*
         返回监听的队列
      */
-    public void rebalance(Set<String> clientIds, String clientId) {
-        if (CollectionUtils.isEmpty(clientIds)) {
-            log.error("rebalance get clients is empty");
+    public void rebalance(List<Client> clients, String clientId) {
+        if (CollectionUtils.isEmpty(clients)) {
+            log.warn("rebalance get clients is empty");
             return;
         }
+        List<String> clientIds = clients.stream().map(Client::getClientId).collect(Collectors.toList());
         List<String> allQueues = QueueManager.getLocalQueues();
         for (String queue : allQueues) {
             List<String> virtualQueues = QueueManager.getLocalVirtualQueues(queue);
-            List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, new ArrayList<>(clientIds));
+            List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, clientIds);
             putCurrentVirtualQueues(queue, vQueues);
         }
         String vQueues = getCurrentVirtualQueues().entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
-        log.info("RebalanceImpl rebalance clientId:{} \n clientIds:{} \n VirtualQueueList:\n{}", clientId, clientIds,vQueues);
+        log.info("RebalanceImpl rebalance clientId:{} \n clients:{} \n VirtualQueues:\n{}", clientId, clients,vQueues);
     }
 
 }

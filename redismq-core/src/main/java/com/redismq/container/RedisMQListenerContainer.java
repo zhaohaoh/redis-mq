@@ -135,7 +135,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     pullSize = super.maxConcurrency;
                 }
     
-                List<Message> messages = redisMQClientUtil.pullMessage(queueName, pullTime, pullSize);
+                List<Message> messages = redisMQClientUtil.pullMessage(queueName, pullTime,futures.size(), pullSize);
                 if (CollectionUtils.isEmpty(messages)) {
                     //响应中断
                     if (!isRunning()) {

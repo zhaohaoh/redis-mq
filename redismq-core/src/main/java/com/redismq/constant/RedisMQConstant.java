@@ -15,7 +15,7 @@ public class RedisMQConstant {
     /**
      * 分组
      */
-    public static String GROUP;
+    public static String NAMESPACE;
     /**
      * 死信队列名字
      */
@@ -69,35 +69,35 @@ public class RedisMQConstant {
      * @return {@link String}
      */
     public static String getClientCollection() {
-        return   PREFIX + GROUP + SPLITE + CLIENTS_KEY;
+        return   PREFIX + NAMESPACE + SPLITE + CLIENTS_KEY;
     }
     
     public static String getQueueNameByQueue(String queue) {
-        return PREFIX + GROUP + SPLITE + queue;
+        return PREFIX + NAMESPACE + SPLITE + queue;
     }
 
     public static String getDeadQueueNameByQueue(String queue) {
-        return PREFIX + GROUP + DEAD_NAME + SPLITE + queue;
+        return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + queue;
     }
 
     public static String getTopic() {
-        return PREFIX + GROUP + SPLITE + TOPIC;
+        return PREFIX + NAMESPACE + SPLITE + TOPIC;
     }
 
     public static String getRebalanceTopic() {
-        return PREFIX + GROUP + SPLITE + REBALANCE_TOPIC;
+        return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC;
     }
     
 
     public static String getRebalanceLock() {
-        return PREFIX + GROUP + SPLITE + REDISMQ_REBALANCE_LOCK;
+        return PREFIX + NAMESPACE + SPLITE + REDISMQ_REBALANCE_LOCK;
     }
 
     public static String getSendIncrement() {
-        return PREFIX + GROUP + SPLITE + REDIS_MQ_SEND_MSG_INCREMENT;
+        return PREFIX + NAMESPACE + SPLITE + REDIS_MQ_SEND_MSG_INCREMENT;
     }
 
     public static String getVirtualQueueLock(String virtualQueueName) {
-        return PREFIX + GROUP + SPLITE + VIRTUAL_LOCK + SPLITE + virtualQueueName;
+        return PREFIX + NAMESPACE + SPLITE + VIRTUAL_LOCK + SPLITE + virtualQueueName;
     }
 }

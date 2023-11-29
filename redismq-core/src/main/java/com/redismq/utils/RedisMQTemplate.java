@@ -2,10 +2,10 @@ package com.redismq.utils;
 
 import com.redismq.Message;
 import com.redismq.core.RedisMQProducer;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 
 /**
  * redisMQ操作模板
@@ -67,7 +67,14 @@ public class RedisMQTemplate {
      * 带tag的队列消息
      */
     public boolean sendMessage(Object obj, String queue, String tag) {
-        return redisMQProducer.sendMessage(obj, queue, tag);
+        return redisMQProducer.sendMessage(obj, queue, tag,null);
+    }
+    
+    /**
+     * 带tag和key的队列消息
+     */
+    public boolean sendMessage(Object obj, String queue, String tag,String key) {
+        return redisMQProducer.sendMessage(obj, queue, tag,key);
     }
 
     /**
@@ -90,7 +97,7 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, String tag, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, queue, tag, millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag,null, millis);
     }
 
     /**
@@ -98,7 +105,7 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, queue, "", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "",null, millis);
     }
 
     /**
@@ -106,7 +113,7 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, String tag, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, queue, tag, millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag,null, millis);
     }
 
     /**
@@ -114,19 +121,20 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, queue, "", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "",null, millis);
     }
 
     /**
      * 定时消息
      */
     public boolean sendTimingMessage(Object obj, String queue, String tag, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, queue, tag, executorTime);
+        return redisMQProducer.sendTimingMessage(obj, queue, tag,null, executorTime);
     }
 
     public boolean sendTimingMessage(Object obj, String queue, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, queue, "", executorTime);
+        return redisMQProducer.sendTimingMessage(obj, queue, "",null, executorTime);
     }
+   
 
     /*
      * redis的发布订阅  直接传递实际数据即可

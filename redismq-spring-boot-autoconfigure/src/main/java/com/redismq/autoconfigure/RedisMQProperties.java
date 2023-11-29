@@ -14,22 +14,29 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 @Data
 @ConfigurationProperties(prefix = RedisMQProperties.PREFIX)
 public class RedisMQProperties {
+    
     public static final String PREFIX = "spring.redismq";
-
+    
     /**
      * 环境隔离统一后缀
      */
-    private String group = "";
-
+    private String namespace = "";
+    
+    
+    /**
+     * 应用名
+     */
+    private String applicationName = "redisMQ-Client";
+    
     /**
      * redis属性
      */
     private RedisProperties redisProperties;
-
-
+    
+    
     @NestedConfigurationProperty
     private GlobalConfig globalConfig = new GlobalConfig();
-
+    
     @NestedConfigurationProperty
     private QueueConfig queueConfig = new QueueConfig();
 }

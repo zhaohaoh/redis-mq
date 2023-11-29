@@ -73,4 +73,15 @@ public class SamplesConsumer {
         String name = Thread.currentThread().getName();
         System.out.println(name+message);
     }
+    
+    
+    @RedisListener(queue = "admintest")
+    public void admintest(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    
+    @RedisListener(queue = "aaa")
+    public void aaa(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
 }
