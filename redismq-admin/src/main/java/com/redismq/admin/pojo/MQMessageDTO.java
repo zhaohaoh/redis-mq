@@ -14,7 +14,7 @@ public class MQMessageDTO {
     /**
      * 消息主体
      */
-    private Object body;
+    private String body;
     
     /**
      * 主题

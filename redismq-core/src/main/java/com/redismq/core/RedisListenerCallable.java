@@ -5,6 +5,7 @@ import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.AckMode;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
+import com.redismq.utils.RedisMQStringMapper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -158,11 +159,21 @@ public class RedisListenerCallable implements Callable<Boolean> {
             clone = beforeConsume(clone);
             //参数是Message或者是实体类都可以
             if (paramType.equals(clone.getClass())) {
+                //是内部message消息
                 this.method.invoke(this.target, clone);
-            } else if (paramType.equals(clone.getBody().getClass())) {
-                this.method.invoke(this.target, clone.getBody());
-            }else {
-                throw new RedisMqException("ClassNotConvert paramType: "+paramType +"messageClass: "+clone.getClass());
+            } else {
+                //监听类的参数不是Message
+                Object body = clone.getBody();
+                if (paramType.equals(body.getClass())) {
+                    //对象相同直接处理
+                    this.method.invoke(this.target, body);
+                }else if (body.getClass().equals(String.class) ){
+                    //对象是string，但是和监听类不是相同类
+                    body= RedisMQStringMapper.toBean((String) body, paramType);
+                    this.method.invoke(this.target, body);
+                }else{
+                    throw new RedisMqException("ClassNotConvert paramType: "+paramType +"messageClass: "+clone.getClass());
+                }
             }
             state.finsh();
             log.debug("redisMQ consumeMessage success queue:{} tag:{}", message.getQueue(), message.getTag());
