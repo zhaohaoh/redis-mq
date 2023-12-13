@@ -7,6 +7,8 @@ import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
+import java.util.Map;
+
 /**
  * @Author: hzh
  * @Date: 2022/9/6 10:50
@@ -75,6 +77,11 @@ public class Message implements Serializable {
      * 虚拟队列名称 内部生成 外部设置无效
      */
     private String virtualQueueName;
+    
+    /**
+     * 消息头部
+     */
+    private Map<String,Object> header;
     
     public static Builder builder(){
         return new Builder();

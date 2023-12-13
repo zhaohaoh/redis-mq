@@ -7,6 +7,7 @@ import com.redismq.Message;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author hzh
@@ -45,6 +46,10 @@ public class MessageSerializer extends StdSerializer<Message> {
         jsonGenerator.writeStringField("queue", message.getQueue());
         jsonGenerator.writeStringField("tag", message.getTag());
         jsonGenerator.writeStringField("virtualQueueName", message.getVirtualQueueName());
+        Map<String, Object> header = message.getHeader();
+        if (header!=null){
+            jsonGenerator.writeObjectField("header", header);
+        }
         jsonGenerator.writeEndObject();
     }
     

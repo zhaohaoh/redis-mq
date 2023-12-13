@@ -87,7 +87,6 @@ public class ProducerController {
             redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
             redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
         }
-
     }
  
 }

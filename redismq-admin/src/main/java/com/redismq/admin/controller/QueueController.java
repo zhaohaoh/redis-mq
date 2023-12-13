@@ -8,6 +8,7 @@ import com.redismq.queue.Queue;
 import com.redismq.utils.RedisMQTemplate;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,13 +45,9 @@ public class QueueController {
         return ResponseEntity.ok(allQueue);
     }
     
-    //根据topic名称查询虚拟队列
+    //根据队列名称查询虚拟队列
     @GetMapping("vQueueList")
     public ResponseEntity<List<VQueue>> vQueueList(String queueName,Integer virtual) {
-//        Set<Queue> allQueue = redisMQClientUtil.getQueueList();
-//        Optional<Queue> first = allQueue.stream().filter(a -> a.getQueueName().equals(queueName)).findFirst();
-//        Queue queue = first.get();
-//        Integer virtual = queue.getVirtual();
         List<VQueue> virtualQueues = new ArrayList<>();
         for (int i = 0; i < virtual; i++) {
             VQueue vQueue = new VQueue();
@@ -60,24 +57,34 @@ public class QueueController {
             vQueue.setSize(size == null ? 0 : size);
             virtualQueues.add(vQueue);
         }
-        
         return ResponseEntity.ok(virtualQueues);
     }
     
+    /**
+     * 指定队列重新拉取消息 TODO前端未接入
+     *
+     * @return {@link ResponseEntity}<{@link String}>
+     */
+    @PostMapping("publishPullMessage")
+    public ResponseEntity<Void> publishPullMessage(String vQueue) {
+        redisMQClientUtil.publishPullMessage(vQueue);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
     @PostMapping("sendMessage")
-    public ResponseEntity<String> sendMessage(@RequestBody MQMessageDTO message) {
+    public ResponseEntity<Void> sendMessage(@RequestBody MQMessageDTO message) {
         Message build = Message.builder().body(message.getBody())
                 .queue(message.getQueue()).tag(message.getTag()).build();
         redisMQTemplate.sendMessage(build);
-        return ResponseEntity.ok(null);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     
     @PostMapping("sendTimingMessage")
-    public ResponseEntity<String> sendTimingMessage(@RequestBody MQMessageDTO message) {
+    public ResponseEntity<Void> sendTimingMessage(@RequestBody MQMessageDTO message) {
         Message build = Message.builder().body(message.getBody())
                 .queue(message.getQueue()).tag(message.getTag()).build();
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
-        return ResponseEntity.ok(null);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     
 }

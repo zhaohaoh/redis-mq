@@ -36,7 +36,7 @@ public class MessageController {
     }
     
     /**
-     * 分页查询消息
+     * 删除消息
      *
      * @return {@link ResponseEntity}<{@link String}>
      */

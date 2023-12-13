@@ -2,6 +2,7 @@ package com.redismq.connection;
 
 
 import com.redismq.Message;
+import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import static com.redismq.constant.RedisMQConstant.getClientCollection;
 import static com.redismq.constant.RedisMQConstant.getQueueCollection;
 import static com.redismq.constant.RedisMQConstant.getRebalanceTopic;
+import static com.redismq.constant.RedisMQConstant.getTopic;
 
 public class RedisMQClientUtil {
     
@@ -194,6 +196,16 @@ public class RedisMQClientUtil {
      */
     public void publishRebalance(String clientId) {
         redisClient.convertAndSend(getRebalanceTopic(), clientId);
+    }
+    
+    /**
+     * 发布拉取消息的topic
+     */
+    public void publishPullMessage(String vQueueName) {
+        PushMessage pushMessage = new PushMessage();
+        pushMessage.setQueue(vQueueName);
+        pushMessage.setTimestamp(System.currentTimeMillis());
+        redisClient.convertAndSend(getTopic(),pushMessage);
     }
     
     public Long executeLua(String lua, List<String> keys, Object... args) {

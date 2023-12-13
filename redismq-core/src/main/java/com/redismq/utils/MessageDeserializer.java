@@ -7,20 +7,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.redismq.Message;
+
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * @author hzh
- * @date 2020/11/18 18:21
- * 自定义刷新令牌json解析器
+ * @date 2020/11/18 18:21 自定义刷新令牌json解析器
  */
 public class MessageDeserializer extends StdDeserializer<Message> {
+    
     protected MessageDeserializer(Class<?> vc) {
         super(vc);
     }
-
+    
     @Override
-    public Message deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public Message deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+            throws IOException {
         //获取ObjectMapper
         ObjectMapper mapper = (ObjectMapper) jsonParser.getCodec();
         //读取节点
@@ -32,7 +35,8 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         JsonNode queue = jsonNode.has("queue") ? jsonNode.get("queue") : MissingNode.getInstance();
         JsonNode tag = jsonNode.has("tag") ? jsonNode.get("tag") : MissingNode.getInstance();
         JsonNode virtualQueueName = jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
-
+        JsonNode header = jsonNode.has("header") ? jsonNode.get("header") : MissingNode.getInstance();
+        
         Message message = new Message();
         //如果是普通字符串转为字符串 。否则是json转换为json字符串
         String str = body.isTextual() ? body.asText() : body.toString();
@@ -42,7 +46,11 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         message.setQueue(queue.asText());
         message.setTag(tag.asText());
         message.setVirtualQueueName(virtualQueueName.asText());
-
+        if (!header.isMissingNode()) {
+            Map<String, Object> map = mapper.readValue(header.traverse(), Map.class);
+            message.setHeader(map);
+        }
+        
         return message;
     }
 }

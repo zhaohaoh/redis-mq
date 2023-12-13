@@ -260,7 +260,7 @@ public class RedisMqClient {
     public synchronized void subscribe() {
         if (!isSub) {
             RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.addMessageListener(new RedisPushListener(redisMqClient),
+            redisMessageListenerContainer.addMessageListener(new RedisPullListener(redisMqClient),
                     new ChannelTopic(RedisMQConstant.getTopic()));
             isSub = true;
         }
@@ -272,7 +272,7 @@ public class RedisMqClient {
     public synchronized void unSubscribe() {
         if (isSub) {
             RedisMqClient redisMqClient = this;
-            redisMessageListenerContainer.removeMessageListener(new RedisPushListener(redisMqClient),
+            redisMessageListenerContainer.removeMessageListener(new RedisPullListener(redisMqClient),
                     new ChannelTopic(RedisMQConstant.getTopic()));
             isSub = false;
         }

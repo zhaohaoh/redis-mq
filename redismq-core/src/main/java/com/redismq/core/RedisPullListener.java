@@ -20,10 +20,10 @@ import static com.redismq.constant.GlobalConstant.SPLITE;
  * @Date: 2022/5/7 14:16
  * 接受消息订阅
  */
-public class RedisPushListener extends AbstractRedisPushListener {
-    protected static final Logger log = LoggerFactory.getLogger(RedisPushListener.class);
+public class RedisPullListener extends AbstractRedisPushListener {
+    protected static final Logger log = LoggerFactory.getLogger(RedisPullListener.class);
 
-    public RedisPushListener(RedisMqClient redisMqClient) {
+    public RedisPullListener(RedisMqClient redisMqClient) {
         super(redisMqClient);
     }
 
