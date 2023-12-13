@@ -3,7 +3,7 @@ package com.redismq.core;
 import com.redismq.constant.PushMessage;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +32,7 @@ public class RedisPushListener extends AbstractRedisPushListener {
         try {
             semaphore.acquire();
             byte[] body = message.getBody();
-            PushMessage pushMessage = RedisMQObjectMapper.toBean(body, PushMessage.class);
+            PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
             String realNameQueue = StringUtils.substringBeforeLast(queueName, SPLITE);
             //当前服务订阅的队列列表

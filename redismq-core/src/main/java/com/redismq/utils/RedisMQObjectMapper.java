@@ -39,7 +39,7 @@ public class RedisMQObjectMapper {
         //只序列化字段，
         MAPPER.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
 
-        MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
+//        MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         // 指定序列化输入的类型，类必须是非final修饰的，final修饰的类，比如String,Integer等会跑出异常  指定了类型会写入序列化类的类型，这样不能通用的反序列化
         MAPPER.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
         SimpleModule simpleModule = new SimpleModule();

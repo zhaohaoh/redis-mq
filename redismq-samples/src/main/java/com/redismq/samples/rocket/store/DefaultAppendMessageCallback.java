@@ -4,7 +4,7 @@ import com.redismq.samples.rocket.AppendMessageResult;
 import com.redismq.samples.rocket.AppendMessageStatus;
 import com.redismq.samples.rocket.CrcUtil;
 import com.redismq.samples.rocket.Message;
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -40,7 +40,7 @@ public class DefaultAppendMessageCallback {
         // PHY OFFSET
         long wroteOffset = fileFromOffset + byteBuffer.position();
 
-        String s = RedisMQObjectMapper.toJsonStr(msgInner.getBody());
+        String s = RedisMQStringMapper.toJsonStr(msgInner.getBody());
         byte[] body = s.getBytes(StandardCharsets.UTF_8);
 
         byte[] queue = msgInner.getVirtualQueueName().getBytes();

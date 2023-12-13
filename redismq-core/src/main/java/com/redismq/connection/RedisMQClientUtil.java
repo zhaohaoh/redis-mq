@@ -6,13 +6,13 @@ import com.redismq.constant.RedisMQConstant;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
 import javafx.util.Pair;
-import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,7 +54,7 @@ public class RedisMQClientUtil {
      * 获取所有队列
      */
     public Set<Queue> getQueueList() {
-        Set<Object> set = redisClient.sMembers(getQueueCollection());
+        Set<Queue> set = redisClient.sMembers(getQueueCollection(),Queue.class);
         if (CollectionUtils.isEmpty(set)) {
             return new HashSet<>();
         }
@@ -84,13 +84,12 @@ public class RedisMQClientUtil {
      */
     public List<Client> getClients() {
         String clientCollection = getClientCollection();
-        Set<ZSetOperations.TypedTuple<Object>> typedTuples = redisClient
-                .zRangeWithScores(clientCollection, 0, Long.MAX_VALUE);
-        if (CollectionUtils.isEmpty(typedTuples)) {
+        Map<Client, Double> clientDoubleMap = redisClient
+                .zRangeWithScores(clientCollection, 0, Long.MAX_VALUE, Client.class);
+        if (CollectionUtils.isEmpty(clientDoubleMap)) {
             return new ArrayList<>();
         }
-        List<Client> clients = typedTuples.stream().map(a -> (Client) a.getValue()).collect(Collectors.toList());
-        return clients;
+        return clientDoubleMap.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList());
     }
     
     /**
@@ -126,33 +125,46 @@ public class RedisMQClientUtil {
     
     
     /**
-     * 拉取队列中的需要立即消费的消息
+     * 根据时间拉取队列中的消息
      */
-    public List<Message> pullMessage(String queueName, long pullTime,int startIndex, int pullSize) {
-        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient
-                .zRangeByScoreWithScores(queueName, 0, pullTime, startIndex, pullSize);
-        if (CollectionUtils.isEmpty(headDatas)) {
+    public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex, int pullSize) {
+        Map<Message, Double> messageScopeMap = redisClient
+                .zRangeByScoreWithScores(queueName, pullTime, Double.MAX_VALUE, startIndex, pullSize, Message.class);
+        List<Pair<Message, Double>> pairs = new ArrayList<>();
+        messageScopeMap.forEach((k, v) -> {
+            pairs.add(new Pair<>(k, v));
+        });
+        return pairs;
+    }
+    
+    /**
+     * 拉取队列中的消息 拉取可以消费的消息
+     */
+    public List<Message> pullMessage(String queueName, long time,int start, int pullSize) {
+        Set<Message> messages = redisClient
+                .zRangeByScore(queueName, 0, time, start, pullSize, Message.class);
+        if (CollectionUtils.isEmpty(messages)) {
             return new ArrayList<>();
         }
-        List<Message> messages = new ArrayList<>();
-        headDatas.forEach(s -> messages.add((Message) s.getValue()));
-        return messages;
+        
+        return new ArrayList<>(messages);
     }
     
     /**
      * 拉取队列中的消息 不管消息的scope消费时间
      */
-    public List<Pair<Message, Double>> pullMessage(String queueName, int start, int pullSize) {
-        Set<ZSetOperations.TypedTuple<Object>> headDatas = redisClient.zRangeWithScores(queueName, start, pullSize);
-        if (CollectionUtils.isEmpty(headDatas)) {
+    public List<Pair<Message, Double>> pullMessageWithScope(String queueName, int start, int pullSize) {
+        Map<Message, Double> messageScopeMap = redisClient.zRangeWithScores(queueName, start, pullSize, Message.class);
+        if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
         List<Pair<Message, Double>> pairs = new ArrayList<>();
-        for (ZSetOperations.TypedTuple<Object> headData : headDatas) {
-            pairs.add(new Pair<>((Message) headData.getValue(), headData.getScore()));
-        }
+        messageScopeMap.forEach((k, v) -> {
+            pairs.add(new Pair<>(k, v));
+        });
         return pairs;
     }
+   
     
     /**
      * 删除指定key

@@ -1,21 +1,20 @@
 package com.redismq.autoconfigure;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.redismq.config.RedisConnectionFactoryUtil;
 import com.redismq.config.RedisProperties;
-import com.redismq.utils.RedisMQObjectMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.ThreadPoolExecutor;
 
-import static com.redismq.constant.RedisMQBeanNameConstant.*;
+import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
+import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_MESSAGE_LISTENERCONTAINER;
+import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
 
 /**
  * 配置springredis  避免循环依赖
@@ -53,25 +52,13 @@ public class SpringRedisConfiguration {
         redisMessageListenerContainer.setTaskExecutor(executor);
         return redisMessageListenerContainer;
     }
-
+    
     @Bean(name = REDISMQ_REDIS_TEMPLATE)
-    public RedisTemplate<String, Object> redisMQRedisTemplate(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
+    public StringRedisTemplate redisMQRedisTemplate(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
+        StringRedisTemplate  template = new StringRedisTemplate();
         // 配置连接工厂
         RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
         template.setConnectionFactory(connectionFactory);
-
-        //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
-        Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);
-        ObjectMapper mapper = RedisMQObjectMapper.MAPPER;
-        jacksonSeial.setObjectMapper(mapper);
-
-        template.setKeySerializer(new StringRedisSerializer());
-        // 值采用json序列化
-        template.setValueSerializer(jacksonSeial);
-        // 设置hash key 和value序列化模式
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(jacksonSeial);
         template.afterPropertiesSet();
         return template;
     }

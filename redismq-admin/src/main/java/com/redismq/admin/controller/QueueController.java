@@ -74,7 +74,8 @@ public class QueueController {
     
     @PostMapping("sendTimingMessage")
     public ResponseEntity<String> sendTimingMessage(@RequestBody MQMessageDTO message) {
-        Message build = Message.builder().body(message.getBody()).tag(message.getTag()).build();
+        Message build = Message.builder().body(message.getBody())
+                .queue(message.getQueue()).tag(message.getTag()).build();
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
         return ResponseEntity.ok(null);
     }

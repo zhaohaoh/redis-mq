@@ -12,7 +12,7 @@ import com.redismq.pojo.SendMessageParam;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQDataHelper;
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 import com.redismq.utils.SeataUtil;
 import io.seata.core.context.RootContext;
 import org.apache.commons.lang3.StringUtils;
@@ -269,6 +269,8 @@ public class RedisMQProducer {
                 params.add(message.getMessage());
                 params.add(message.getExecutorTime());
             }
+         
+    
             Boolean success = null;
             Boolean sendAfterCommit = RedisMQDataHelper.get();
             if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
@@ -290,7 +292,7 @@ public class RedisMQProducer {
                     afterSend(messageList, success);
                 }
             } else {
-                success = this.sendRedisMessage(pushMessage, params);
+                success = this.sendRedisMessage(pushMessage, sendMessageParams);
                 afterSend(messageList, success);
             }
             return success != null && success;
@@ -313,7 +315,8 @@ public class RedisMQProducer {
             }
         }
     }
-
+    
+    //底层发送redis消息
     private boolean sendRedisMessage(PushMessage pushMessage, List<?> params) {
         Queue queue = QueueManager.getQueueByVirtual(pushMessage.getQueue());
         StringBuilder sb = new StringBuilder();
@@ -360,7 +363,7 @@ public class RedisMQProducer {
                 log.warn("RedisMQ sendMessage retry");
             } else {
                 if (GLOBAL_CONFIG.printProducerLog) {
-                    log.info("RedisMQ sendMessage success  message:{}", RedisMQObjectMapper.toJsonStr(array));
+                    log.info("RedisMQ sendMessage success  message:{}", RedisMQStringMapper.toJsonStr(array));
                 }
                 return true;
             }

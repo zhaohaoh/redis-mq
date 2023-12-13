@@ -12,7 +12,7 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -274,7 +274,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         MessageListenerAdapter listener = new MessageListenerAdapter(bean, method.getName());
         //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
         Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);
-        jacksonSeial.setObjectMapper(RedisMQObjectMapper.MAPPER);
+        jacksonSeial.setObjectMapper(RedisMQStringMapper.STRING_MAPPER);
         listener.setSerializer(jacksonSeial);
         listener.afterPropertiesSet();
         //名称完全对应的topic

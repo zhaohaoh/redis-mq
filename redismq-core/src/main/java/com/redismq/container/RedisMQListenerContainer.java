@@ -11,7 +11,7 @@ import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 import javafx.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -135,7 +135,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     pullSize = super.maxConcurrency;
                 }
     
-                List<Message> messages = redisMQClientUtil.pullMessage(queueName, pullTime,futures.size(), pullSize);
+                List<Message> messages = redisMQClientUtil.pullMessage(queueName,pullTime ,futures.size(), pullSize);
+           
                 if (CollectionUtils.isEmpty(messages)) {
                     //响应中断
                     if (!isRunning()) {
@@ -144,8 +145,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
 
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
-                        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessage(queueName,0, GLOBAL_CONFIG.delayQueuePullSize);
-                        pairs.forEach(pair->delayTimes.add(pair.getValue().longValue()));
+                        List<Pair<Message, Double>> pairs = redisMQClientUtil
+                                .pullMessageByTimeWithScope(queueName, pullTime, 0,
+                                        GLOBAL_CONFIG.delayQueuePullSize);
+                        pairs.forEach((pair->delayTimes.add(pair.getValue().longValue())));
                     }
                     break;
                 }
@@ -174,7 +177,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (callable == null) {
                             // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
                             redisMQClientUtil.removeMessage(queueName, message);
-                            log.error("RedisMqException   not found queue or tag removeMessage:{}", RedisMQObjectMapper.toJsonStr(message));
+                            log.error("RedisMqException   not found queue or tag removeMessage:{}", RedisMQStringMapper.toJsonStr(message));
                             continue;
                         }
                         

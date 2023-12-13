@@ -66,8 +66,10 @@ public class RedisListenerCallable implements Callable<Boolean> {
      *最大重试次数
      */
     private int retryCount;
-
-
+    /**
+     *消息体类型
+     */
+    private  Class<?> messageType ;
     public String getQueueName() {
         return queueName;
     }
@@ -93,9 +95,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
     public void setArgs(Object args) {
         this.args = args;
     }
-
-
-
+    
     public RedisMQClientUtil redisMQClientUtil() {
         return redisMQClientUtil;
     }
@@ -119,6 +119,11 @@ public class RedisListenerCallable implements Callable<Boolean> {
         this.method = method;
         this.retryMax = retryMax;
         this.redisMQClientUtil = redisMQClientUtil;
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        if (ArrayUtils.isEmpty(parameterTypes)) {
+            throw new RedisMqException("redismq consume no has message");
+        }
+        messageType = parameterTypes[0];
     }
 
     @Override
@@ -146,33 +151,29 @@ public class RedisListenerCallable implements Callable<Boolean> {
     private void run0() {
         retryCount++;
         try {
-            Class<?>[] parameterTypes = method.getParameterTypes();
-            if (ArrayUtils.isEmpty(parameterTypes)) {
-                throw new RedisMqException("redismq consume no has message");
-            }
-            Class<?> paramType = parameterTypes[0];
             state.running();
             ReflectionUtils.makeAccessible(this.method);
             Message message = (Message) args;
+           
             // 拷贝对象.原对象不会发生改变.否则对象改变了无法删除redis中的数据
             Message clone = message.deepClone();
             clone = beforeConsume(clone);
+            Object body = clone.getBody();
             //参数是Message或者是实体类都可以
-            if (paramType.equals(clone.getClass())) {
+            if (messageType.equals(clone.getClass())) {
                 //是内部message消息
                 this.method.invoke(this.target, clone);
-            } else {
+            }else if(messageType.equals(String.class)){
+                this.method.invoke(this.target, body);
+            }
+            else {
                 //监听类的参数不是Message
-                Object body = clone.getBody();
-                if (paramType.equals(body.getClass())) {
+                body = RedisMQStringMapper.toBean((String) body, messageType);
+                if (messageType.equals(body.getClass())) {
                     //对象相同直接处理
                     this.method.invoke(this.target, body);
-                }else if (body.getClass().equals(String.class) ){
-                    //对象是string，但是和监听类不是相同类
-                    body= RedisMQStringMapper.toBean((String) body, paramType);
-                    this.method.invoke(this.target, body);
-                }else{
-                    throw new RedisMqException("ClassNotConvert paramType: "+paramType +"messageClass: "+clone.getClass());
+                } else{
+                    throw new RedisMqException("ClassNotConvert paramType: "+messageType +" messageClass: "+clone.getClass());
                 }
             }
             state.finsh();

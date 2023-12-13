@@ -13,7 +13,7 @@ public class MQMessageQueryDTO {
     /**
      * 虚拟队列名
      */
-    private String vQueue;
+    private String virtualQueueName;
    
     /**
      * 消费开始时间
@@ -30,7 +30,7 @@ public class MQMessageQueryDTO {
     private Integer size = 10;
     
     public Integer getStartOffset() {
-        return (page-1)* size;
+        return (page -1)* size;
     }
    
 }

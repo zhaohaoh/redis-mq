@@ -1,10 +1,9 @@
 package com.redismq.connection;
 
-import org.springframework.data.redis.core.ZSetOperations;
-
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -41,7 +40,7 @@ public interface RedisClient {
     /**
      * 阻塞redis获取set集合中所有的元素
      */
-    Set<Object> sMembers(String key) ;
+    <T> Set<T> sMembers(String key,Class<T> tClass) ;
     /**
      * 批量删除key
      */
@@ -105,8 +104,8 @@ public interface RedisClient {
      * @param end
      * @return
      */
-    Set<ZSetOperations.TypedTuple<Object>> zRangeWithScores(String key, long start,
-                                                            long end);
+    <T> Map<T,Double> zRangeWithScores(String key, long start,
+                                                            long end,Class<T> tClass);
 
     /**
      * 根据Score值查询集合元素
@@ -116,7 +115,7 @@ public interface RedisClient {
      * @param max 最大值
      * @return
      */
-    Set<Object> zRangeByScore(String key, double min, double max);
+    <T>   Set<T> zRangeByScore(String key, double min, double max,Class<T> tClass);
     
     /**
      * 根据Score值查询集合元素
@@ -126,8 +125,8 @@ public interface RedisClient {
      * @param max 最大值
      * @return
      */
-    Set<Object> zRangeByScore(String key, double min, double max, long start,
-            long end);
+  <T>   Set<T> zRangeByScore(String key, double min, double max, long start,
+            long end,Class<T> tClass);
 
     
     /**
@@ -138,8 +137,8 @@ public interface RedisClient {
      * @param end
      * @return
      */
-    Set<ZSetOperations.TypedTuple<Object>> zRangeByScoreWithScores(String key,
-                                                                   double min, double max, long start, long end);
+    <T> Map<T,Double> zRangeByScoreWithScores(String key,
+                                                                   double min, double max, long start, long end,Class<T> tClass);
 
    
     /**

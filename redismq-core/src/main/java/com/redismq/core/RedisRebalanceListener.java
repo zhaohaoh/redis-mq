@@ -1,6 +1,6 @@
 package com.redismq.core;
 
-import com.redismq.utils.RedisMQObjectMapper;
+import com.redismq.utils.RedisMQStringMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.Message;
@@ -24,7 +24,7 @@ public class RedisRebalanceListener implements MessageListener {
     public void onMessage(Message message, byte[] pattern) {
         log.info("RedisRebalanceListener clientId:{}", redisMqClient.getClientId());
         String msg = message.toString();
-        String clientId = RedisMQObjectMapper.toBean(msg, String.class);
+        String clientId = RedisMQStringMapper.toBean(msg, String.class);
         if (!clientId.equals(redisMqClient.getClientId())) {
             redisMqClient.doRebalance();
         }

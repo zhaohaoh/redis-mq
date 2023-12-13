@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  * 消费者简单案例
  */
 @Component
-public class SamplesConsumer {
+public class SamplesConsumer  {
 
 
     /**
@@ -40,6 +40,8 @@ public class SamplesConsumer {
 
     @RedisListener(queue = "time",tag = "bussiness1",delay = true)
     public void time(Message message) {
+        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
+        System.out.println(javaBean);
         System.out.println(message);
     }
 

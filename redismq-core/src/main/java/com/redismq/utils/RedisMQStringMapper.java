@@ -8,19 +8,21 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import com.google.common.collect.Maps;
+import com.redismq.Message;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 
 
 /**
@@ -43,13 +45,27 @@ public class RedisMQStringMapper {
         STRING_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
         SimpleModule simpleModule = new SimpleModule();
+        simpleModule.addSerializer(Message.class,new MessageSerializer(Message.class));
+        simpleModule.addDeserializer(Message.class,new MessageDeserializer(Message.class));
         simpleModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         simpleModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         simpleModule.addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         simpleModule.addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+  
         STRING_MAPPER.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        STRING_MAPPER.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
         STRING_MAPPER.registerModule(simpleModule);
+    }
+    
+    public static void main(String[] args) {
+        ConcurrentMap<Object, Object> objectObjectConcurrentMap = Maps.newConcurrentMap();
+        objectObjectConcurrentMap.put("a","b");
+        Message message = new Message();
+        message.setBody(objectObjectConcurrentMap);
+        message.setVirtualQueueName("dadsads");
+        String s = RedisMQStringMapper.toJsonStr(message);
+        System.out.println(s);
+        Message message1 = RedisMQStringMapper.toBean("{\"body\":{\"a\":\"b\"},\"virtualQueueName\":\"dadsads\"}", Message.class);
+        System.out.println(message1);
     }
 
 

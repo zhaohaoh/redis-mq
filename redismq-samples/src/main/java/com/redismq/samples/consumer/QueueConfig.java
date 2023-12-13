@@ -1,4 +1,4 @@
-//package com.redismq.samples.consumer;
+//package com.redismq.samples.com.redismq.samples.consumer;
 //
 //import com.redismq.queue.Queue;
 //import org.springframework.context.annotation.Bean;

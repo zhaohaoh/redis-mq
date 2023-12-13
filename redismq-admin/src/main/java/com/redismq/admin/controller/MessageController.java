@@ -3,6 +3,7 @@ package com.redismq.admin.controller;
 import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageQueryDTO;
 import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.constant.RedisMQConstant;
 import javafx.util.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -27,10 +28,23 @@ public class MessageController {
      */
     @PostMapping("page")
     public ResponseEntity<List<Message>> page(@RequestBody MQMessageQueryDTO mqMessageDTO){
-        String vQueue = mqMessageDTO.getVQueue();
-        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessage(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getSize());
+        String vQueue = mqMessageDTO.getVirtualQueueName();
+        vQueue= RedisMQConstant.getQueueNameByQueue(vQueue);
+        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getSize());
         List<Message> messages = pairs.stream().map(Pair::getKey).collect(Collectors.toList());
         return ResponseEntity.ok(messages);
+    }
+    
+    /**
+     * 分页查询消息
+     *
+     * @return {@link ResponseEntity}<{@link String}>
+     */
+    @PostMapping("deleteMessage")
+    public ResponseEntity deleteMessage(@RequestBody Message message){
+        message.setVirtualQueueName(RedisMQConstant.getQueueNameByQueue(message.getQueue()));
+        Long aLong = redisMQClientUtil.removeMessage(message.getQueue(), message);
+        return ResponseEntity.ok(aLong);
     }
     
 }

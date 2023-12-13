@@ -4,7 +4,7 @@ import com.redismq.config.GlobalConfigCache;
 import com.redismq.config.RedisProperties;
 import com.redismq.connection.RedisClient;
 import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.connection.RedisTemplateAdapter;
+import com.redismq.connection.StringRedisTemplateAdapter;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 import javax.annotation.Resource;
@@ -69,8 +69,8 @@ public class RedisMQAutoConfiguration implements InitializingBean {
        * @return {@link RedisMQProducer}
      */
     @Bean
-    public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) RedisTemplate<String, Object> redisMQRedisTemplate) {
-        RedisClient redisClient = new RedisTemplateAdapter(redisMQRedisTemplate);
+    public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) StringRedisTemplate stringRedisTemplate) {
+        RedisClient redisClient = new StringRedisTemplateAdapter(stringRedisTemplate);
         return redisClient;
     }
 

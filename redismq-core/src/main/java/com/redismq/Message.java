@@ -1,8 +1,8 @@
 package com.redismq;
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import com.redismq.utils.RedisMQStringMapper;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
@@ -13,14 +13,20 @@ import java.io.Serializable;
  * 消息体
  */
 @Data
-@Builder
 @AllArgsConstructor
 public class Message implements Serializable {
     public Message() {
     }
-
+    // Person 的构造函数私有化
+    private Message(Builder builder) {
+        this.body = builder.body;
+        this.id = builder.id;
+        this.key = builder.key;
+        this.queue = builder.queue;
+        this.tag = builder.tag;
+        this.virtualQueueName = builder.virtualQueueName;
+    }
     
-
     private static final long serialVersionUID = 1L;
 
     public Message deepClone() {
@@ -32,27 +38,27 @@ public class Message implements Serializable {
         }
         return outer;
     }
-    public void build(){
-    
+    public <T> T parseJavaBean(Class<T> tClass){
+        if (body.getClass().equals(tClass)){
+            return (T) body;
+        }
+        return RedisMQStringMapper.toBean((String)body,tClass);
     }
-    
 
     /**
-     * 消息主体
+     * 消息主体  消息都会转为字符串存储
      */
     private Object body;
 
     /**
      * 消息id
      */
-    @Builder.Default
     private String id = NanoIdUtils.randomNanoId();
     
     
     /**
      * 用来路由虚拟队列的key
      */
-    @Builder.Default
     private String key="";
 
     /**
@@ -63,7 +69,6 @@ public class Message implements Serializable {
     /**
      * 标签
      */
-    @Builder.Default
     private String tag = "";
 
     /**
@@ -71,5 +76,72 @@ public class Message implements Serializable {
      */
     private String virtualQueueName;
     
+    public static Builder builder(){
+        return new Builder();
+    }
+    // 建造器类
+    public static class Builder {
+        private Object body;
     
+        /**
+         * 消息id
+         */
+        private String id = NanoIdUtils.randomNanoId();
+    
+    
+        /**
+         * 用来路由虚拟队列的key
+         */
+        private String key="";
+    
+        /**
+         * 队列
+         */
+        private String queue;
+    
+        /**
+         * 标签
+         */
+        private String tag = "";
+    
+        /**
+         * 虚拟队列名称 内部生成 外部设置无效
+         */
+        private String virtualQueueName;
+    
+    
+        public Builder() {
+        }
+        
+        public Builder body(Object body) {
+            this.body = body;
+            return this;
+        }
+    
+        public Builder id(String id) {
+            this.id = id;
+            return this;
+        }
+        public Builder key(String key) {
+            this.key = key;
+            return this;
+        }
+        public Builder queue(String queue) {
+            this.queue = queue;
+            return this;
+        }
+        public Builder tag(String tag) {
+            this.tag = tag;
+            return this;
+        }
+        public Builder virtualQueueName(String virtualQueueName) {
+            this.virtualQueueName = virtualQueueName;
+            return this;
+        }
+        
+        // 构造 Person 对象并返回
+        public Message build() {
+            return new Message(this);
+        }
+    }
 }

@@ -27,12 +27,17 @@ public class ProducerController {
      */
     @PostMapping("sendDelayMessage")
     public void sendDelayMessage() {
-        for (int i = 0; i < 100; i++) {
-            JavaBean javaBean = new JavaBean();
-            javaBean.setA("ff");
-            javaBean.setB(222);
-            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(11).toMillis());
-        }
+//        for (int i = 0; i < 100; i++) {
+//            JavaBean javaBean = new JavaBean();
+//            javaBean.setA("ff");
+//            javaBean.setB(222);
+//            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
+//        }
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(1).toMillis());
+
     }
 
 
@@ -58,9 +63,12 @@ public class ProducerController {
      */
     @PostMapping("sendTimingMessage")
     public void sendTimingMessage() {
-        LocalDateTime time = LocalDateTime.of(2022, 12, 26, 14, 20, 30);
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        LocalDateTime time = LocalDateTime.of(2023, 12, 12, 14, 20, 30);
         long l = time.toInstant(ZoneOffset.ofHours(8)).toEpochMilli();
-        redisMQTemplate.sendTimingMessage("定时消息消费", "time", "bussiness1", l);
+        redisMQTemplate.sendTimingMessage(javaBean, "time", "bussiness1", l);
     }
 
 
