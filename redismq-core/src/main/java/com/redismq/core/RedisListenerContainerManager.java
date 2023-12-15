@@ -1,21 +1,29 @@
 package com.redismq.core;
 
 import com.redismq.constant.PushMessage;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.exception.RedisMqException;
-import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.*;
+import static com.redismq.constant.GlobalConstant.BLOCKING_QUEUE_SIZE;
+import static com.redismq.constant.GlobalConstant.BOSS_NUM;
+import static com.redismq.constant.GlobalConstant.DELAY_BLOCKING_QUEUE_SIZE;
+import static com.redismq.constant.GlobalConstant.THREAD_NUM_MAX;
 import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
@@ -116,7 +124,7 @@ public class RedisListenerContainerManager {
             while (isRunning()) {
                 try {
                     String virtualName = linkedBlockingQueue.take();
-                    RedisMQListenerContainer container = getRedisistenerContainer(QueueManager.getQueueNameByVirtual(virtualName));
+                    RedisMQListenerContainer container = getRedisistenerContainer(RedisMQConstant.getQueueNameByVirtual(virtualName));
                     container.start(virtualName, System.currentTimeMillis());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -137,7 +145,7 @@ public class RedisListenerContainerManager {
             while (isRunning()) {
                 try {
                     PushMessage pushMessage = delayBlockingQueue.take();
-                    RedisMQListenerContainer container = getRedisistenerContainer(QueueManager.getQueueNameByVirtual(pushMessage.getQueue()));
+                    RedisMQListenerContainer container = getRedisistenerContainer(RedisMQConstant.getQueueNameByVirtual(pushMessage.getQueue()));
                     container.start(pushMessage.getQueue(), pushMessage.getTimestamp());
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

@@ -3,7 +3,6 @@ package com.redismq.container;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.core.RedisListenerEndpoint;
-import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import lombok.Data;
@@ -126,7 +125,7 @@ public abstract class AbstractMessageListenerContainer {
     protected RedisListenerCallable getRedisListenerCallable(String id, Object message) {
         RedisListenerEndpoint redisListenerEndpoint = redisListenerEndpointMap.get(id);
         if (redisListenerEndpoint == null) {
-            throw new RedisMqException("not found RedisListenerEndpoint check your queue or tag");
+           return null;
         }
         RedisListenerCallable runnable = new RedisListenerCallable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
                 this.getRetryMax(),

@@ -145,16 +145,6 @@ public class QueueManager {
     }
     
     /**
-     * 获取队列名字根据虚拟
-     *
-     * @param virtual 虚拟
-     * @return {@link String}
-     */
-    public static String getQueueNameByVirtual(String virtual) {
-        return StringUtils.substringBeforeLast(virtual, SPLITE);
-    }
-    
-    /**
      * 获取队列根据虚拟
      *
      * @param virtual 虚拟

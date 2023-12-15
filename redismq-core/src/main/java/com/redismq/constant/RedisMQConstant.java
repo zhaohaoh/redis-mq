@@ -97,6 +97,15 @@ public class RedisMQConstant {
         return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC;
     }
     
+    /**
+     * 获取队列名字根据虚拟
+     *
+     * @param virtual 虚拟
+     * @return {@link String}
+     */
+    public static String getQueueNameByVirtual(String virtual) {
+        return StringUtils.substringBeforeLast(virtual, SPLITE);
+    }
     
     public static String getRebalanceLock() {
         return PREFIX + NAMESPACE + SPLITE + REDISMQ_REBALANCE_LOCK;

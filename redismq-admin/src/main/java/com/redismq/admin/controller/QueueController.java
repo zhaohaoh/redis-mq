@@ -4,6 +4,7 @@ import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageDTO;
 import com.redismq.admin.pojo.VQueue;
 import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.queue.Queue;
 import com.redismq.utils.RedisMQTemplate;
 import org.apache.commons.lang3.StringUtils;
@@ -73,18 +74,23 @@ public class QueueController {
     
     @PostMapping("sendMessage")
     public ResponseEntity<Void> sendMessage(@RequestBody MQMessageDTO message) {
+        String queue = RedisMQConstant.getQueueNameByQueue(message.getQueue());
         Message build = Message.builder().body(message.getBody())
-                .queue(message.getQueue()).tag(message.getTag()).build();
+                .queue(RedisMQConstant.getQueueNameByVirtual(queue)).tag(message.getTag())
+                .virtualQueueName(queue).build();
         redisMQTemplate.sendMessage(build);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     
     @PostMapping("sendTimingMessage")
     public ResponseEntity<Void> sendTimingMessage(@RequestBody MQMessageDTO message) {
+        String queue = RedisMQConstant.getQueueNameByQueue(message.getQueue());
         Message build = Message.builder().body(message.getBody())
-                .queue(message.getQueue()).tag(message.getTag()).build();
+                .queue(RedisMQConstant.getQueueNameByVirtual(queue)).tag(message.getTag())
+                .virtualQueueName(queue).build();
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+    
     
 }

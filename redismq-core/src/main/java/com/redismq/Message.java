@@ -74,7 +74,7 @@ public class Message implements Serializable {
     private String tag = "";
 
     /**
-     * 虚拟队列名称 内部生成 外部设置无效
+     * 虚拟队列名称
      */
     private String virtualQueueName;
     

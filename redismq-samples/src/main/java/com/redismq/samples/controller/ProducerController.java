@@ -66,7 +66,7 @@ public class ProducerController {
         JavaBean javaBean = new JavaBean();
         javaBean.setA("ff");
         javaBean.setB(222);
-        LocalDateTime time = LocalDateTime.of(2023, 12, 12, 14, 20, 30);
+        LocalDateTime time = LocalDateTime.of(2023, 12, 14, 14, 20, 30);
         long l = time.toInstant(ZoneOffset.ofHours(8)).toEpochMilli();
         redisMQTemplate.sendTimingMessage(javaBean, "time", "bussiness1", l);
     }

@@ -164,7 +164,7 @@ public class RedisMQProducer {
      *
      * @param queue        队列
      * @param message      消息
-     * @param executorTime 执行人时间
+     * @param executorTime 执行时间
      * @return boolean
      */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
@@ -172,18 +172,23 @@ public class RedisMQProducer {
         if (executorTime == null) {
             executorTime = increment;
         }
-        long num;
-        if (StringUtils.isNotBlank(message.getKey())){
-              int fnvHash = fnvHash(message.getKey());
-              num = fnvHash % queue.getVirtual();
-        }else{
-              num = increment % queue.getVirtual();
+       
+        if (StringUtils.isBlank(message.getVirtualQueueName())){
+            long num;
+            if (StringUtils.isNotBlank(message.getKey())){
+                int fnvHash = fnvHash(message.getKey());
+                num = fnvHash % queue.getVirtual();
+            }else{
+                num = increment % queue.getVirtual();
+            }
+            String virtualQueue = queue.getQueueName() + SPLITE + num;
+            message.setVirtualQueueName(virtualQueue);
         }
+        
         PushMessage pushMessage = new PushMessage();
         pushMessage.setTimestamp(0L);
-        String virtualQueue = queue.getQueueName() + SPLITE + num;
-        pushMessage.setQueue(virtualQueue);
-        message.setVirtualQueueName(virtualQueue);
+        pushMessage.setQueue(message.getVirtualQueueName());
+        
         SendMessageParam sendMessageParam = new SendMessageParam();
         sendMessageParam.setMessage(message);
         sendMessageParam.setExecutorTime(executorTime);
@@ -204,18 +209,20 @@ public class RedisMQProducer {
             //有bug要改成lua
             Long increment = increment();
             Long executorTime = increment;
-            long num;
-            if (StringUtils.isNotBlank(message.getKey())){
-                int fnvHash = fnvHash(message.getKey());
-                num = fnvHash % queue.getVirtual();
-            }else{
-                num = increment % queue.getVirtual();
+            if (StringUtils.isBlank(message.getVirtualQueueName())){
+                long num;
+                if (StringUtils.isNotBlank(message.getKey())){
+                    int fnvHash = fnvHash(message.getKey());
+                    num = fnvHash % queue.getVirtual();
+                }else{
+                    num = increment % queue.getVirtual();
+                }
+                String virtualQueue = queue.getQueueName() + SPLITE + num;
+                message.setVirtualQueueName(virtualQueue);
             }
             PushMessage pushMessage = new PushMessage();
             pushMessage.setTimestamp(0L);
-            String virtualQueue = queue.getQueueName() + SPLITE + num;
-            pushMessage.setQueue(virtualQueue);
-            message.setVirtualQueueName(virtualQueue);
+            pushMessage.setQueue(message.getVirtualQueueName());
             SendMessageParam sendMessageParam = new SendMessageParam();
             sendMessageParam.setMessage(message);
             sendMessageParam.setExecutorTime(executorTime);

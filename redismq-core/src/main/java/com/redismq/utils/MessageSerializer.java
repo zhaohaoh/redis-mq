@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.redismq.Message;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.Map;
@@ -47,13 +48,16 @@ public class MessageSerializer extends StdSerializer<Message> {
         jsonGenerator.writeStringField("tag", message.getTag());
         jsonGenerator.writeStringField("virtualQueueName", message.getVirtualQueueName());
         Map<String, Object> header = message.getHeader();
-        if (header!=null){
+        if (header != null) {
             jsonGenerator.writeObjectField("header", header);
         }
         jsonGenerator.writeEndObject();
     }
     
     private boolean isJson(String bodyStr) {
+        if (StringUtils.isBlank(bodyStr)) {
+            return false;
+        }
         return isWrap(bodyStr.trim(), '{', '}') || isWrap(bodyStr.trim(), '[', ']');
     }
     
