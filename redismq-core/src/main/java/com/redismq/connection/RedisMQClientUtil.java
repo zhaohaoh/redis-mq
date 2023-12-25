@@ -129,9 +129,9 @@ public class RedisMQClientUtil {
     /**
      * 根据时间拉取队列中的消息
      */
-    public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex, int pullSize) {
+    public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex, int end) {
         Map<Message, Double> messageScopeMap = redisClient
-                .zRangeByScoreWithScores(queueName, pullTime, Double.MAX_VALUE, startIndex, pullSize, Message.class);
+                .zRangeByScoreWithScores(queueName, pullTime, Double.MAX_VALUE, startIndex, end, Message.class);
         List<Pair<Message, Double>> pairs = new ArrayList<>();
         messageScopeMap.forEach((k, v) -> {
             pairs.add(new Pair<>(k, v));
@@ -156,7 +156,7 @@ public class RedisMQClientUtil {
      * 拉取队列中的消息 不管消息的scope消费时间
      */
     public List<Pair<Message, Double>> pullMessageWithScope(String queueName, int start, int pullSize) {
-        Map<Message, Double> messageScopeMap = redisClient.zRangeWithScores(queueName, start, pullSize, Message.class);
+        Map<Message, Double> messageScopeMap = redisClient.zRangeByScoreWithScores(queueName,0,Double.MAX_VALUE ,start, pullSize, Message.class);
         if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
@@ -176,10 +176,10 @@ public class RedisMQClientUtil {
     }
     
     /**
-     * 延时队列大小
+     * 队列大小
      */
-    public Long queueSize(String key) {
-        return redisClient.zSize(key);
+    public Long queueSize(String vQueue) {
+        return redisClient.zSize(vQueue);
     }
     
     /**

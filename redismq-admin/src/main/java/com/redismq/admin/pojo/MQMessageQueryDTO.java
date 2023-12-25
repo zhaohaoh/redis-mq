@@ -32,5 +32,7 @@ public class MQMessageQueryDTO {
     public Integer getStartOffset() {
         return (page -1)* size;
     }
-   
+    public Integer getEndOffset() {
+        return (page )* size ;
+    }
 }

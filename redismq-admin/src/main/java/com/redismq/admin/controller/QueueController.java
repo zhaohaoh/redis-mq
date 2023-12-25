@@ -74,7 +74,7 @@ public class QueueController {
     
     @PostMapping("sendMessage")
     public ResponseEntity<Void> sendMessage(@RequestBody MQMessageDTO message) {
-        String queue = RedisMQConstant.getQueueNameByQueue(message.getQueue());
+           String queue = RedisMQConstant.getQueueNameByQueue(message.getQueue());
         Message build = Message.builder().body(message.getBody())
                 .queue(RedisMQConstant.getQueueNameByVirtual(queue)).tag(message.getTag())
                 .virtualQueueName(queue).build();
@@ -89,6 +89,18 @@ public class QueueController {
                 .queue(RedisMQConstant.getQueueNameByVirtual(queue)).tag(message.getTag())
                 .virtualQueueName(queue).build();
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+    
+    /**
+     * 新增队列 暂时先不接前端
+     */
+    @GetMapping("addQueue")
+    public ResponseEntity<Void> addQueue(Queue queue) {
+        //队列名就是topic名
+        Queue queue1 = redisMQClientUtil.registerQueue(queue);
+    
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     

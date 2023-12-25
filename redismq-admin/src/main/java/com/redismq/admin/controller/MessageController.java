@@ -3,6 +3,7 @@ package com.redismq.admin.controller;
 import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageQueryDTO;
 import com.redismq.admin.pojo.MessageVO;
+import com.redismq.admin.pojo.PageResult;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.RedisMQConstant;
 import javafx.util.Pair;
@@ -31,10 +32,11 @@ public class MessageController {
      * @return {@link ResponseEntity}<{@link String}>
      */
     @PostMapping("page")
-    public ResponseEntity<List<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO){
+    public ResponseEntity<PageResult<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO){
         String vQueue = mqMessageDTO.getVirtualQueueName();
         vQueue= RedisMQConstant.getQueueNameByQueue(vQueue);
-        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getSize());
+        Long total = redisMQClientUtil.queueSize(vQueue);
+        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getEndOffset());
         List<MessageVO> messages = pairs.stream().map(m->{
             MessageVO messageVO = new MessageVO();
             BeanUtils.copyProperties(m.getKey(),messageVO);
@@ -43,7 +45,8 @@ public class MessageController {
             messageVO.setConsumeTime(format);
             return messageVO;
         }).collect(Collectors.toList());
-        return ResponseEntity.ok(messages);
+      
+        return ResponseEntity.ok(PageResult.success(total,messages));
     }
     
     /**
@@ -53,8 +56,7 @@ public class MessageController {
      */
     @PostMapping("deleteMessage")
     public ResponseEntity deleteMessage(@RequestBody Message message){
-        message.setVirtualQueueName(RedisMQConstant.getQueueNameByQueue(message.getQueue()));
-        Long aLong = redisMQClientUtil.removeMessage(message.getQueue(), message);
+        Long aLong = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message);
         return ResponseEntity.ok(aLong);
     }
     

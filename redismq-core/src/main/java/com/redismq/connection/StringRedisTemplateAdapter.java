@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -218,7 +219,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
         if (CollectionUtils.isEmpty(typedTuples)) {
             return new HashMap<>();
         }
-        Map<T, Double> newMap = new HashMap<>();
+        Map<T, Double> newMap = new LinkedHashMap<>();
         for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
