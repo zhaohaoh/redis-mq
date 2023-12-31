@@ -68,6 +68,9 @@ public class QueueController {
      */
     @PostMapping("publishPullMessage")
     public ResponseEntity<Void> publishPullMessage(String vQueue) {
+        if (vQueue==null){
+            throw new RuntimeException();
+        }
         redisMQClientUtil.publishPullMessage(vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -101,6 +104,16 @@ public class QueueController {
         //队列名就是topic名
         Queue queue1 = redisMQClientUtil.registerQueue(queue);
     
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    
+    /**
+     * 删除队列 暂时先不接前端
+     */
+    @PostMapping ("deleteQueue")
+    public ResponseEntity<Void> deleteQueue(Queue queue) {
+        //队列名就是topic名
+         redisMQClientUtil.removeQueue(queue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
     
