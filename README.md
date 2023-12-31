@@ -66,6 +66,7 @@ spring.web.resources.static-locations=classpath:/static/
 本地启动项目或者部署到服务器均可
 # 运行管理界面
 nohup java -jar redismq-console-0.2.0.jar --server.port=8088 --spring.redismq.client.host=你的redis地址 --spring.redismq.namespace=你的分组
+
 随后访问http://localhost:8088
 
 #### 效果展示
