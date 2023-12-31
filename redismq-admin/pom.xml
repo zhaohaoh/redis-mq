@@ -32,4 +32,23 @@
             <version>${project.version}</version>
         </dependency>
     </dependencies>
+    <build>
+    <!-- 指定生成jar包的名字 -->
+    <finalName>${project.artifactId}-${project.version}</finalName>
+    <plugins>
+        <!--    jar包发布到服务器的必备插件  有application main进程的都需要-->
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>${spring-boot.version}</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+    </build>
 </project>
