@@ -94,7 +94,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                         nameList.addAll(Arrays.stream(tags).collect(Collectors.toList()));
                     }
                     if (nameList.stream().distinct().count() != nameList.size()) {
-                        throw new RedisMqException("redismq  duplicate routingkey");
+                        throw new RedisMqException("redismq  duplicate queueName");
                     }
                 });
 

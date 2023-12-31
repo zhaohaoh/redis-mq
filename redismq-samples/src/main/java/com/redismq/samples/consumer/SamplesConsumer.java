@@ -82,8 +82,30 @@ public class SamplesConsumer  {
         System.out.println(javaBean);
     }
     
-    @RedisListener(queue = "aaa")
-    public void aaa(JavaBean javaBean) {
+    @RedisListener(queue = "fsd")
+    public void fgdsf(String javaBean) {
         System.out.println(javaBean);
     }
+    
+    @RedisListener(queue = "fsdfsd")
+    public void sdfdaas(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    @RedisListener(queue = "fsdrrr")
+    public void sdfds(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    @RedisListener(queue = "ggggg")
+    public void sdf(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    @RedisListener(queue = "gggdsf")
+    public void aa(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    @RedisListener(queue = "gdfhfdhdf")
+    public void gdfgfdgdf(JavaBean javaBean) {
+        System.out.println(javaBean);
+    }
+    
 }
