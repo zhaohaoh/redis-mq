@@ -20,8 +20,8 @@ Redis-MQ 是利用redis实现mq的功能的中间件
             <version>0.2.0</version>
         </dependency>
 ```
-## 注意事务
-队列名称存储在redis中。如果一个队列无用了。需要去redis中手动删除。前缀REDISMQ+你的命名空间
+## 注意事项
+队列名称存储在redis中。如果一个队列无用了。需要去redis控制台中手动删除，否则也没影响，就是占用redis空间。
 
 ## 快速开始
 
@@ -29,7 +29,7 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 
 ```properties
 #指定环境隔离的分组
-spring.redismq.group=samples
+spring.redismq.group=default
 spring.redismq.client.host=localhost
 #默认的database
 spring.redismq.client.database=6
@@ -43,8 +43,30 @@ spring.redismq.global-config.send-after-commit=true
 #如果有seata事务需要开启 默认值false
 spring.redismq.global-config.seata-state=true
 #默认单个队列消息堆积上限值
-spring.redismq.global-config.queueMaxSize=600000
+spring.redismq.global-config.queueMaxSize=100000
 ```
+
+### 部署redismqAdmin控制台
+application.properties  
+```properties
+server.servlet.context-path=/
+#配置当前服务器的名称DynamicRoutingDataSource
+spring.application.name=redismq-admin
+#解决springboot2.6.3 接口不显示的问题。路径匹配变更了方式
+spring.mvc.pathmatch.matching-strategy=ant_path_matcher
+spring.jackson.date-format=yyyy-MM-dd HH:mm:ss
+spring.jackson.time-zone=GMT+8
+//你的端口
+server.port=8088
+#指定环境隔离的分组
+spring.redismq.namespace=你的分组
+spring.redismq.client.host=你的redis地址
+spring.web.resources.static-locations=classpath:/static/
+```
+本地启动项目或者部署到服务器均可
+随后访问http://localhost:8088
+
+
 ### 案例代码
 
 ```java
