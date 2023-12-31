@@ -65,7 +65,8 @@ spring.web.resources.static-locations=classpath:/static/
 ```
 本地启动项目或者部署到服务器均可
 随后访问http://localhost:8088
-
+#### 效果展示
+![img_1.png](img_1.png)
 
 ### 案例代码
 
