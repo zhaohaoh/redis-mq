@@ -1,11 +1,13 @@
 //package com.redismq.connection;
 //
-//import org.springframework.data.redis.core.RedisTemplate;
-//import org.springframework.data.redis.core.ZSetOperations;
-//import org.springframework.data.redis.core.script.DefaultRedisScript;
+//import org.redisson.api.RScoredSortedSet;
+//import org.redisson.api.RScript;
+//import org.redisson.api.RedissonClient;
+//import org.redisson.client.protocol.ScoredEntry;
 //import org.springframework.util.CollectionUtils;
 //
 //import java.time.Duration;
+//import java.util.Arrays;
 //import java.util.Collection;
 //import java.util.HashMap;
 //import java.util.HashSet;
@@ -13,13 +15,16 @@
 //import java.util.List;
 //import java.util.Map;
 //import java.util.Set;
+//import java.util.stream.Collectors;
 //
-//public class RedisTemplateAdapter implements RedisClient {
-//    private final RedisTemplate  redisTemplate;
+//public class RedissonAdapter implements RedisClient {
 //
-//    public RedisTemplateAdapter(RedisTemplate<String,Object>  redisTemplate) {
-//        this.redisTemplate = redisTemplate;
+//    private final RedissonClient redissonClient;
+//
+//    public RedissonAdapter(RedissonClient redissonClient) {
+//        this.redissonClient = redissonClient;
 //    }
+//
 //    /**
 //     * 执行lua
 //     *
@@ -29,17 +34,20 @@
 //     */
 //    @Override
 //    public Long executeLua(String lua, List<String> keys, Object... args) {
-//        DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
-//        Object execute = redisTemplate.execute(redisScript, keys, args);
-//        return Long.parseLong(execute.toString());
+//        Object eval = redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.INTEGER,
+//                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), args);
+//        return Long.parseLong(eval.toString());
 //    }
 //
 //    /**
 //     * 阻塞redis获取set集合中所有的元素
 //     */
 //    @Override
-//    public <T> Set<T> sMembers(String key,Class<T> tClass) {
-//        Set members = redisTemplate.opsForSet().members(key);
+//    public <T> Set<T> sMembers(String key, Class<T> tClass) {
+//        Set<T> members = redissonClient.getSet(key);
+//        if (CollectionUtils.isEmpty(members)) {
+//            return new HashSet<>();
+//        }
 //        return members;
 //    }
 //
@@ -51,7 +59,7 @@
 //     */
 //    @Override
 //    public void convertAndSend(String topic, Object obj) {
-//        redisTemplate.convertAndSend(topic, obj);
+//        redissonClient.getTopic(topic).publish(obj);
 //    }
 //
 //    /**
@@ -61,8 +69,8 @@
 //     */
 //    @Override
 //    public Boolean delete(String key) {
-//        Boolean delete = redisTemplate.delete(key);
-//        return delete;
+//        redissonClient.getBucket(key).delete();
+//        return true;
 //    }
 //
 //
@@ -71,14 +79,14 @@
 //     */
 //    @Override
 //    public Long delete(Collection<String> keys) {
-//        Long count = redisTemplate.delete(keys);
-//        return count;
+//        long delete = redissonClient.getKeys().delete(keys.toArray(new String[0]));
+//        return delete;
 //    }
 //
 //
 //    @Override
 //    public Boolean setIfAbsent(String key, Object value, Duration duration) {
-//        return redisTemplate.opsForValue().setIfAbsent(key, value, duration);
+//        return redissonClient.getBucket(key).setIfAbsent(value, duration);
 //    }
 //
 //
@@ -91,7 +99,8 @@
 //     */
 //    @Override
 //    public Long sAdd(String key, Object... values) {
-//        return redisTemplate.opsForSet().add(key, values);
+//        boolean b = redissonClient.getSet(key).addAll(Arrays.stream(values).collect(Collectors.toList()));
+//        return 1L;
 //    }
 //
 //
@@ -104,13 +113,15 @@
 //     */
 //    @Override
 //    public Long sRemove(String key, Object... values) {
-//        return redisTemplate.opsForSet().remove(key, values);
+//        redissonClient.getSet(key).removeAll(Arrays.stream(values).collect(Collectors.toList()));
+//        return 1L;
 //    }
 //
 //    @Override
 //    public Long hashRemove(String key, String hashKey) {
-//        return redisTemplate.opsForSet().remove(key, hashKey);
+//        return redissonClient.getMap(key).fastRemove(hashKey);
 //    }
+//
 //
 //    /**------------------zSet相关操作--------------------------------*/
 //
@@ -124,7 +135,7 @@
 //     */
 //    @Override
 //    public Boolean zAdd(String key, Object value, double score) {
-//        return redisTemplate.opsForZSet().add(key, value, score);
+//        return redissonClient.getScoredSortedSet(key).add(score, value);
 //    }
 //
 //    /**
@@ -134,7 +145,9 @@
 //     */
 //    @Override
 //    public Long zRemove(String key, Object... values) {
-//        return redisTemplate.opsForZSet().remove(key, values);
+//        List<Object> collect = Arrays.stream(values).collect(Collectors.toList());
+//        redissonClient.getScoredSortedSet(key).removeAll(collect);
+//        return 1L;
 //    }
 //
 //
@@ -148,13 +161,13 @@
 //     */
 //    @Override
 //    public <T> Map<T, Double> zRangeWithScores(String key, long start, long end, Class<T> tClass) {
-//        Set<ZSetOperations.TypedTuple<T>> typedTuples = redisTemplate.opsForZSet()
-//                .rangeWithScores(key, start, end);
-//        if (CollectionUtils.isEmpty(typedTuples)) {
+//        RScoredSortedSet<T> scoredSortedSet = redissonClient.getScoredSortedSet(key);
+//        Collection<ScoredEntry<T>> scoredEntries = scoredSortedSet.entryRange(start, true, end, true);
+//        if (CollectionUtils.isEmpty(scoredEntries)) {
 //            return new HashMap<>();
 //        }
 //        Map<T, Double> newMap = new HashMap<>();
-//        for (ZSetOperations.TypedTuple<T> typedTuple : typedTuples) {
+//        for (ScoredEntry<T> typedTuple : scoredEntries) {
 //            newMap.put(typedTuple.getValue(), typedTuple.getScore());
 //        }
 //        return newMap;
@@ -170,20 +183,19 @@
 //     */
 //    @Override
 //    public <T> Set<T> zRangeByScore(String key, double min, double max, Class<T> tClass) {
-//        Set<T> sets = redisTemplate.opsForZSet().rangeByScore(key, min, max);
-//        if (CollectionUtils.isEmpty(sets)) {
-//            return new HashSet<>();
-//        }
-//        return sets;
+//        RScoredSortedSet<T> scoredSortedSet = redissonClient.getScoredSortedSet(key);
+//        Collection<ScoredEntry<T>> scoredEntries = scoredSortedSet.entryRange(min, true, max, true);
+//        return scoredEntries.stream().map(ScoredEntry::getValue).collect(Collectors.toSet());
 //    }
 //
 //    @Override
 //    public <T> Set<T> zRangeByScore(String key, double min, double max, long start, long end, Class<T> tClass) {
-//        Set<T> sets = redisTemplate.opsForZSet().rangeByScore(key, min, max, start, end);
-//        if (CollectionUtils.isEmpty(sets)) {
+//        RScoredSortedSet<T> scoredSortedSet = redissonClient.getScoredSortedSet(key);
+//        Collection<ScoredEntry<T>> scoredEntries = scoredSortedSet.entryRange(min, true, max, true,(int)start,(int)end);
+//        if (CollectionUtils.isEmpty(scoredEntries)) {
 //            return new HashSet<>();
 //        }
-//        return sets;
+//        return scoredEntries.stream().map(ScoredEntry::getValue).collect(Collectors.toSet());
 //    }
 //
 //
@@ -198,13 +210,13 @@
 //    @Override
 //    public <T> Map<T, Double> zRangeByScoreWithScores(String key, double min, double max, long start, long end,
 //            Class<T> tClass) {
-//        Set<ZSetOperations.TypedTuple<T>> typedTuples = redisTemplate.opsForZSet()
-//                .rangeByScoreWithScores(key, min, max, start, end);
-//        if (CollectionUtils.isEmpty(typedTuples)) {
+//        RScoredSortedSet<T> scoredSortedSet = redissonClient.getScoredSortedSet(key);
+//        Collection<ScoredEntry<T>> scoredEntries = scoredSortedSet.entryRange(min, true, max, true,(int)start,(int)end);
+//        if (CollectionUtils.isEmpty(scoredEntries)) {
 //            return new HashMap<>();
 //        }
 //        Map<T, Double> newMap = new LinkedHashMap<>();
-//        for (ZSetOperations.TypedTuple<T> typedTuple : typedTuples) {
+//        for (ScoredEntry<T> typedTuple : scoredEntries) {
 //            newMap.put(typedTuple.getValue(), typedTuple.getScore());
 //        }
 //        return newMap;
@@ -219,7 +231,8 @@
 //     */
 //    @Override
 //    public Long zSize(String key) {
-//        return redisTemplate.opsForZSet().size(key);
+//        int size = redissonClient.getScoredSortedSet(key).size();
+//        return (long) size;
 //    }
 //
 //
@@ -233,6 +246,7 @@
 //     */
 //    @Override
 //    public Long zRemoveRangeByScore(String key, double min, double max) {
-//        return redisTemplate.opsForZSet().removeRangeByScore(key, min, max);
+//        int size = redissonClient.getScoredSortedSet(key).removeRangeByScore(min,true ,max,true);
+//        return (long) size;
 //    }
 //}

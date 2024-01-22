@@ -5,10 +5,10 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-   <version>0.2.0</version>
+   <version>0.2.1</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-   <version>0.2.0</version>
+   <version>0.2.1</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-core</artifactId>
@@ -26,6 +26,11 @@
         <dependency>
             <groupId>com.aventrix.jnanoid</groupId>
             <artifactId>jnanoid</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <version>3.22.1</version>
         </dependency>
         <!--        工具包-->
         <dependency>
@@ -61,6 +66,12 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>6.2.6.RELEASE</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

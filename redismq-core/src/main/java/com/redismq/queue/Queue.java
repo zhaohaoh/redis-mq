@@ -1,7 +1,6 @@
 package com.redismq.queue;
 
 import com.redismq.config.GlobalConfigCache;
-import com.redismq.constant.RedisMQConstant;
 import lombok.Data;
 
 /**
@@ -15,7 +14,7 @@ public class Queue {
     }
 
     public Queue(String queueName) {
-        this.queueName = RedisMQConstant.getQueueNameByQueue(queueName);
+        this.queueName=queueName;
         this.queueMaxSize = GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize();
     }
 

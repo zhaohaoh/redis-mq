@@ -12,8 +12,6 @@ import org.springframework.data.redis.connection.Message;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.redismq.constant.GlobalConstant.SPLITE;
-
 
 /**
  * @Author: hzh
@@ -34,10 +32,12 @@ public class RedisPullListener extends AbstractRedisPushListener {
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
-            String realNameQueue = StringUtils.substringBeforeLast(queueName, SPLITE);
+            String vQueueName = StringUtils.substringBetween(queueName, "{", "}");
+            String realNameQueue = StringUtils.substringBefore(vQueueName,":");
+            pushMessage.setQueue(vQueueName);
             //当前服务订阅的队列列表
             List<String> list = QueueManager.getCurrentVirtualQueues().get(realNameQueue);
-            if (list == null || !list.contains(queueName)) {
+            if (list == null || !list.contains(vQueueName)) {
                 return;
             }
             Queue queue = QueueManager.getQueue(realNameQueue);

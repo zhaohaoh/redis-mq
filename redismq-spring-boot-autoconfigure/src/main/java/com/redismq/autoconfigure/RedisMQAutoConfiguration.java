@@ -69,10 +69,11 @@ public class RedisMQAutoConfiguration implements InitializingBean {
        * @return {@link RedisMQProducer}
      */
     @Bean
-    public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) StringRedisTemplate stringRedisTemplate) {
-        RedisClient redisClient = new StringRedisTemplateAdapter(stringRedisTemplate);
+    public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) StringRedisTemplate redisTemplate) {
+        RedisClient redisClient = new StringRedisTemplateAdapter(redisTemplate);
         return redisClient;
     }
+    
 
 
     /**
@@ -81,8 +82,8 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      * @return {@link RedisMQTemplate}
      */
     @Bean
-    public RedisMQTemplate redisMQTemplate(RedisClient redisClient) {
-        RedisMQProducer redisMQProducer = new RedisMQProducer(redisClient);
+    public RedisMQTemplate redisMQTemplate(RedisMQClientUtil redisMQClientUtil) {
+        RedisMQProducer redisMQProducer = new RedisMQProducer(redisMQClientUtil);
         redisMQProducer.setProducerInterceptors(producerInterceptors);
         return new RedisMQTemplate(redisMQProducer);
     }

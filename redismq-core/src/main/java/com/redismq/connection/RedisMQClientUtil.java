@@ -56,7 +56,7 @@ public class RedisMQClientUtil {
      * 获取所有队列
      */
     public Set<Queue> getQueueList() {
-        Set<Queue> set = redisClient.sMembers(getQueueCollection(),Queue.class);
+        Set<Queue> set = redisClient.sMembers(getQueueCollection(), Queue.class);
         if (CollectionUtils.isEmpty(set)) {
             return new HashSet<>();
         }
@@ -121,17 +121,22 @@ public class RedisMQClientUtil {
     /**
      * 删除消息
      */
-    public Long removeMessage(String queueName, Message message) {
-        return redisClient.zRemove(queueName, message);
+    public Long removeMessage(String queueName, String msgId) {
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
+        Long zSize = redisClient.zRemove(queueName, msgId);
+        Long size = redisClient.hashRemove(queueName + ":body", msgId);
+        return (zSize > 0 || size > 0) ? 1L : 0;
     }
     
     
     /**
      * 根据时间拉取队列中的消息
      */
-    public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex, int end) {
+    public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex,
+            int end) {
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
         Map<Message, Double> messageScopeMap = redisClient
-                .zRangeByScoreWithScores(queueName, pullTime, Double.MAX_VALUE, startIndex, end, Message.class);
+                .zrangeMessage(queueName, pullTime, Double.MAX_VALUE, startIndex, end);
         List<Pair<Message, Double>> pairs = new ArrayList<>();
         messageScopeMap.forEach((k, v) -> {
             pairs.add(new Pair<>(k, v));
@@ -142,21 +147,22 @@ public class RedisMQClientUtil {
     /**
      * 拉取队列中的消息 拉取可以消费的消息
      */
-    public List<Message> pullMessage(String queueName, long time,int start, int pullSize) {
-        Set<Message> messages = redisClient
-                .zRangeByScore(queueName, 0, time, start, pullSize, Message.class);
-        if (CollectionUtils.isEmpty(messages)) {
+    public List<Message> pullMessage(String queueName, long time, int start, int pullSize) {
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
+        Map<Message, Double> messageScopeMap = redisClient.zrangeMessage(queueName, 0, time, start, pullSize);
+        if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
-        
-        return new ArrayList<>(messages);
+        return new ArrayList<>(messageScopeMap.keySet());
     }
     
     /**
      * 拉取队列中的消息 不管消息的scope消费时间
      */
     public List<Pair<Message, Double>> pullMessageWithScope(String queueName, int start, int pullSize) {
-        Map<Message, Double> messageScopeMap = redisClient.zRangeByScoreWithScores(queueName,0,Double.MAX_VALUE ,start, pullSize, Message.class);
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
+        Map<Message, Double> messageScopeMap = redisClient
+                .zrangeMessage(queueName, 0, Double.MAX_VALUE, start, pullSize);
         if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
@@ -166,7 +172,7 @@ public class RedisMQClientUtil {
         });
         return pairs;
     }
-   
+    
     
     /**
      * 删除指定key
@@ -179,7 +185,8 @@ public class RedisMQClientUtil {
      * 队列大小
      */
     public Long queueSize(String vQueue) {
-        return redisClient.zSize(vQueue);
+        String queueName = RedisMQConstant.getVQueueNameByVQueue(vQueue);
+        return redisClient.zSize(queueName);
     }
     
     /**
@@ -205,7 +212,14 @@ public class RedisMQClientUtil {
         PushMessage pushMessage = new PushMessage();
         pushMessage.setQueue(vQueueName);
         pushMessage.setTimestamp(System.currentTimeMillis());
-        redisClient.convertAndSend(getTopic(),pushMessage);
+        redisClient.convertAndSend(getTopic(), pushMessage);
+    }
+    
+    /**
+     * 发布topic
+     */
+    public void publish(String topic, Object obj) {
+        redisClient.convertAndSend(topic, obj);
     }
     
     public Long executeLua(String lua, List<String> keys, Object... args) {

@@ -63,7 +63,7 @@ public class RedisMQConstant {
      * @return {@link String}
      */
     public static String getQueueCollection() {
-        return PREFIX + getTopic() + SPLITE + "QUEUE";
+        return getTopic() + SPLITE + "QUEUE";
     }
     
     /**
@@ -75,18 +75,18 @@ public class RedisMQConstant {
         return PREFIX + NAMESPACE + SPLITE + CLIENTS_KEY;
     }
     
-    public static String getQueueNameByQueue(String queue) {
+    public static String getVQueueNameByVQueue(String queue) {
         if (!StringUtils.startsWith(queue, PREFIX + NAMESPACE + SPLITE)) {
-            return PREFIX + NAMESPACE + SPLITE + queue;
+            return PREFIX + NAMESPACE + SPLITE + "{" + queue + "}";
         }
         return queue;
     }
     
     public static String getDeadQueueNameByQueue(String queue) {
         if (!StringUtils.startsWith(queue, PREFIX + NAMESPACE + DEAD_NAME + SPLITE)) {
-            return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + queue;
+            return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + "{" + queue + "}";
         }
-        return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + queue;
+        return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + "{" + queue + "}";
     }
     
     public static String getTopic() {
@@ -118,4 +118,5 @@ public class RedisMQConstant {
     public static String getVirtualQueueLock(String virtualQueueName) {
         return PREFIX + NAMESPACE + SPLITE + VIRTUAL_LOCK + SPLITE + virtualQueueName;
     }
+    
 }

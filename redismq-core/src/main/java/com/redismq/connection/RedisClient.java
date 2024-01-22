@@ -1,5 +1,7 @@
 package com.redismq.connection;
 
+import com.redismq.Message;
+
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
@@ -45,7 +47,6 @@ public interface RedisClient {
      * 批量删除key
      */
     Long delete(Collection<String> keys);
- 
     
     /**
      * 只有在 key 不存在时设置 key 的值
@@ -71,8 +72,10 @@ public interface RedisClient {
      * @return
      */
     Long sRemove(String key, Object... values);
- 
-
+    
+    Long hashRemove(String key, String hashKey);
+    
+    
     /**------------------zSet相关操作--------------------------------*/
 
     /**
@@ -106,39 +109,10 @@ public interface RedisClient {
      */
     <T> Map<T,Double> zRangeWithScores(String key, long start,
                                                             long end,Class<T> tClass);
-
-    /**
-     * 根据Score值查询集合元素
-     *
-     * @param key
-     * @param min 最小值
-     * @param max 最大值
-     * @return
-     */
-    <T>   Set<T> zRangeByScore(String key, double min, double max,Class<T> tClass);
+ 
     
-    /**
-     * 根据Score值查询集合元素
-     *
-     * @param key
-     * @param min 最小值
-     * @param max 最大值
-     * @return
-     */
-  <T>   Set<T> zRangeByScore(String key, double min, double max, long start,
-            long end,Class<T> tClass);
-
-    
-    /**
-     * @param key
-     * @param min
-     * @param max
-     * @param start
-     * @param end
-     * @return
-     */
-    <T> Map<T,Double> zRangeByScoreWithScores(String key,
-                                                                   double min, double max, long start, long end,Class<T> tClass);
+ 
+ 
 
    
     /**
@@ -160,6 +134,25 @@ public interface RedisClient {
      * @return
      */
     Long zRemoveRangeByScore(String key, double min, double max);
-
-
+    
+    /**
+     * 拉取消息
+     *
+     * @param key   钥匙
+     * @param min   最小
+     * @param max   最大值
+     * @param start 开始
+     * @param end   终止
+     * @return {@link Map}<{@link Message}, {@link Double}>
+     */
+    Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end);
+    
+    
+    /**
+     * lua列表
+     *
+     * 返回list的lua
+     */
+    List luaList(String lua, List<String> keys, Object[] args);
+    
 }

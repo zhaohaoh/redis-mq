@@ -142,7 +142,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
             Message message = (Message) args;
             //如果是手动确认的话需要手动删除
             if (AckMode.MAUAL.equals(ackMode)) {
-                redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message);
+                redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
             }
         }
         return true;

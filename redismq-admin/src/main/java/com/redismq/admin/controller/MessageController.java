@@ -34,7 +34,7 @@ public class MessageController {
     @PostMapping("page")
     public ResponseEntity<PageResult<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO){
         String vQueue = mqMessageDTO.getVirtualQueueName();
-        vQueue= RedisMQConstant.getQueueNameByQueue(vQueue);
+        vQueue= RedisMQConstant.getVQueueNameByVQueue(vQueue);
         Long total = redisMQClientUtil.queueSize(vQueue);
         List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getEndOffset());
         List<MessageVO> messages = pairs.stream().map(m->{
@@ -56,7 +56,7 @@ public class MessageController {
      */
     @PostMapping("deleteMessage")
     public ResponseEntity deleteMessage(@RequestBody Message message){
-        Long aLong = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message);
+        Long aLong = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
         return ResponseEntity.ok(aLong);
     }
     

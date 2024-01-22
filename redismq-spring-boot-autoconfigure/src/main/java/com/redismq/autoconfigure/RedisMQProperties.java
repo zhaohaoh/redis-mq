@@ -31,6 +31,7 @@ public class RedisMQProperties {
     /**
      * redis属性
      */
+    @NestedConfigurationProperty
     private RedisProperties redisProperties;
     
     

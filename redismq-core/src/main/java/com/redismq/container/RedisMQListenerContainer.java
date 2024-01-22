@@ -19,7 +19,7 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -112,7 +112,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @return {@link Set}<{@link Long}>
      */
     public Set<Long> pull(String queueName) {
-        Set<Long> delayTimes = new HashSet<>();
+        Set<Long> delayTimes = new LinkedHashSet<>();
         List<Future<Boolean>> futures = new ArrayList<>();
         while (isRunning()) {
             try {
@@ -167,7 +167,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (AckMode.MAUAL.equals(ackMode)) {
 
                         } else {
-                            Long remove = redisMQClientUtil.removeMessage(queueName, message);
+                            Long remove = redisMQClientUtil.removeMessage(queueName, message.getId());
                             if (remove == null || remove <= 0) {
                                 continue;
                             }
@@ -176,7 +176,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
                         if (callable == null) {
                             // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
-                            redisMQClientUtil.removeMessage(queueName, message);
+                            redisMQClientUtil.removeMessage(queueName, message.getId());
                             log.error("RedisMqException   not found queue or tag removeMessage:{}", RedisMQStringMapper.toJsonStr(message));
                             continue;
                         }
@@ -266,7 +266,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
                     Set<Long> delayTimes = pull(virtualQueue);
                     //为空说明当前能获取到数据
-                    return new HashSet<>(delayTimes);
+                    return new LinkedHashSet<>(delayTimes);
                 } finally {
                     INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
                     redisMQClientUtil.unlock(virtualQueueLock);

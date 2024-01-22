@@ -1,5 +1,6 @@
 package com.redismq.connection;
 
+import com.redismq.Message;
 import com.redismq.utils.RedisMQStringMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
@@ -9,6 +10,7 @@ import org.springframework.util.CollectionUtils;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -38,7 +40,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long executeLua(String lua, List<String> keys, Object... args) {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
-    
+        
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
         Long execute = stringRedisTemplate.execute(redisScript, keys, array);
         return execute;
@@ -48,7 +50,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
      * 阻塞redis获取set集合中所有的元素
      */
     @Override
-    public <T> Set<T> sMembers(String key,Class<T> tClass) {
+    public <T> Set<T> sMembers(String key, Class<T> tClass) {
         Set<String> members = stringRedisTemplate.opsForSet().members(key);
         if (CollectionUtils.isEmpty(members)) {
             return new HashSet<>();
@@ -153,6 +155,12 @@ public class StringRedisTemplateAdapter implements RedisClient {
     }
     
     
+    @Override
+    public Long hashRemove(String key, String hashKey) {
+        return stringRedisTemplate.opsForHash().delete(key, hashKey);
+    }
+    
+    
     /**
      * 获取集合元素, 并且把score值也获取
      *
@@ -169,57 +177,6 @@ public class StringRedisTemplateAdapter implements RedisClient {
             return new HashMap<>();
         }
         Map<T, Double> newMap = new HashMap<>();
-        for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
-            T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
-            newMap.put(t, typedTuple.getScore());
-        }
-        return newMap;
-    }
-    
-    /**
-     * 根据Score值查询集合元素
-     *
-     * @param key
-     * @param min 最小值
-     * @param max 最大值
-     * @return
-     */
-    @Override
-    public <T> Set<T> zRangeByScore(String key, double min, double max, Class<T> tClass) {
-        Set<String> sets = stringRedisTemplate.opsForZSet().rangeByScore(key, min, max);
-        if (CollectionUtils.isEmpty(sets)) {
-            return new HashSet<>();
-        }
-        return sets.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
-    }
-    
-    @Override
-    public <T> Set<T> zRangeByScore(String key, double min, double max, long start, long end, Class<T> tClass) {
-        Set<String> sets = stringRedisTemplate.opsForZSet().rangeByScore(key, min, max, start, end);
-        if (CollectionUtils.isEmpty(sets)) {
-            return new HashSet<>();
-        }
-        return sets.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
-    }
-    
-    
-    /**
-     * @param key
-     * @param min
-     * @param max
-     * @param start
-     * @param end
-     * @return
-     */
-    @Override
-    public <T> Map<T, Double> zRangeByScoreWithScores(String key, double min, double max, long start, long end,
-            Class<T> tClass) {
-        Set<ZSetOperations.TypedTuple<String>> typedTuples = stringRedisTemplate.opsForZSet()
-                .rangeByScoreWithScores(key, min, max, start, end);
-        if (CollectionUtils.isEmpty(typedTuples)) {
-            return new HashMap<>();
-        }
-        Map<T, Double> newMap = new LinkedHashMap<>();
         for (ZSetOperations.TypedTuple<String> typedTuple : typedTuples) {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
@@ -252,4 +209,43 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long zRemoveRangeByScore(String key, double min, double max) {
         return stringRedisTemplate.opsForZSet().removeRangeByScore(key, min, max);
     }
+    
+    /**
+     * 范围查找消息
+     */
+    @Override
+    public Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end) {
+        String lua =
+                "local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
+                        + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
+                        + "    local message = redis.call('hget', KEYS[1] .. ':body',data[i]);\n"
+                        + "    if (message) then\n" + "        table.insert(result,message);\n"
+                        + "        table.insert(result,data[i+1]);\n" + "    else\n"
+                        + "        redis.call('zrem', KEYS[1],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
+        Object[] array = new Object[4];
+        array[0] = min;
+        array[1] = max == 0D ? Double.MAX_VALUE : max;
+        array[2] = start;
+        array[3] = end == 0L ? Long.MAX_VALUE : end;
+        List list = luaList(lua, Collections.singletonList(key), array);
+        Map<Message, Double> newMap = new LinkedHashMap<>();
+        for (int i = 0; i < list.size(); i += 2) {
+            Object msgObj = list.get(i);
+            Message message = RedisMQStringMapper.toBean(msgObj.toString(), Message.class);
+            Object scope = list.get(i + 1);
+            newMap.put(message, Double.valueOf(scope.toString()));
+        }
+        return newMap;
+    }
+    
+    @Override
+    public List luaList(String lua, List<String> keys, Object[] args) {
+        String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
+                .toArray(a -> new String[args.length]);
+        
+        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>(lua, List.class);
+        List execute = stringRedisTemplate.execute(redisScript, keys, array);
+        return execute;
+    }
+    
 }

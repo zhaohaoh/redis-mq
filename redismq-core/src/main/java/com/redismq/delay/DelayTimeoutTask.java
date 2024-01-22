@@ -9,7 +9,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.redismq.constant.StateConstant.RUNNING;
@@ -19,7 +20,7 @@ import static com.redismq.delay.DelayTimeoutTaskManager.EXECUTOR;
 /**
  * @Author: hzh
  * @Date: 2022/4/25 12:05
- * 延时任务
+ * 延时任务  一个虚拟队列一个任务实例DelayTimeoutTask
  */
 public abstract class DelayTimeoutTask {
     protected static final Logger log = LoggerFactory.getLogger(DelayTimeoutTask.class);
@@ -64,15 +65,16 @@ public abstract class DelayTimeoutTask {
             //结束本次循环调用
             return;
         }
-        TimeoutTask oldTimeout = lastTimeoutTask.get();
-
-        if (oldTimeout != null) {
-            oldTimeout.getTask().cancel();
+        //已经存在相同时间的任务
+        TimeoutTask timeoutTask = timeoutTaskMap.get(startTime);
+        if (timeoutTask!=null){
+            return;
         }
-
         long delay = startTime - System.currentTimeMillis();
+      
         if (delay > 10) {
             // 加入时间轮执行
+            long l = timer.pendingTimeouts();
             Timeout timeout = timer.newTimeout(t -> {
                 try {
                     invokeTask();
@@ -80,17 +82,9 @@ public abstract class DelayTimeoutTask {
                     //任务执行完清理缓存
                     timeoutTaskMap.remove(startTime);
                 }
-                TimeoutTask currentTimeout = lastTimeoutTask.get();
-                //任务执行完设置执行器为空
-                if (currentTimeout.getTask() == t) {
-                    lastTimeoutTask.compareAndSet(currentTimeout, null);
-                }
             }, delay, TimeUnit.MILLISECONDS);
-            TimeoutTask task = timeoutTaskMap.computeIfAbsent(startTime, timeoutTask -> new TimeoutTask(startTime, timeout));
-            //替换旧任务为新任务失败的话.取消上面的延时任务
-            if (!lastTimeoutTask.compareAndSet(oldTimeout, task)) {
-                timeout.cancel();
-            }
+            TimeoutTask newTimeTask = new TimeoutTask(startTime, timeout);
+            timeoutTaskMap.put(startTime,newTimeTask);
         } else {
             //立即执行
             invokeTask();
@@ -105,6 +99,7 @@ public abstract class DelayTimeoutTask {
 
     private void invokeTask() {
         Runnable runnable = () -> {
+           
             if (isRunning()) {
                 //执行真正任务
                 Set<Long> nextTimes = pullTask();
@@ -120,3 +115,4 @@ public abstract class DelayTimeoutTask {
     }
 
 }
+

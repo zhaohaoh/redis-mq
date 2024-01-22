@@ -146,7 +146,7 @@ public class RedisMQTemplate {
     /*
      * 尝试取消删除消息-注意消息有可能已经被消费
      */
-    public void tryCancel(Message message) {
-        redisMQProducer.tryCancel(message);
+    public void tryCancel(String queueName,String msgId) {
+        redisMQProducer.tryCancel(queueName,msgId);
     }
 }
