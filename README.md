@@ -16,7 +16,7 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ##公告
 0.2.0有严重bug。不能使用
 
-## 引入 目前可用的版本是0.2.1
+## 引入 目前可用的版本是0.2.2
 ``` xml
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
