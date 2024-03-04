@@ -1,0 +1,3 @@
+com.redismq.autoconfigure.RedisMQAutoConfiguration
+com.redismq.autoconfigure.SpringRedisConfiguration
+com.redismq.autoconfigure.RedisMQInterceptorAutoConfiguration

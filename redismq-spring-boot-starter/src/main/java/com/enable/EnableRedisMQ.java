@@ -1,4 +1,4 @@
-package enable;
+package com.enable;
 
 
 import com.redismq.core.RedisListenerConfigurationRegister;
