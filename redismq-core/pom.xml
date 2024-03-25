@@ -5,10 +5,10 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-   <version>0.2.2</version>
+   <version>0.2.3</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-   <version>0.2.2</version>
+   <version>0.2.3</version>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-core</artifactId>
@@ -19,6 +19,17 @@
     </properties>
     <dependencies>
         <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.42.Final</version>
+        </dependency>
+        <!--        redis-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
             <version>1.2.83</version>
@@ -27,21 +38,23 @@
             <groupId>com.aventrix.jnanoid</groupId>
             <artifactId>jnanoid</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.22.1</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.redisson</groupId>-->
+<!--            <artifactId>redisson-spring-boot-starter</artifactId>-->
+<!--            <version>3.22.1</version>-->
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>org.springframework.data</groupId>-->
+<!--                    <artifactId>spring-data-redis</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+<!--        </dependency>-->
         <!--        工具包-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
-        <!--        redis-->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
+    
         <dependency>
             <groupId>io.seata</groupId>
             <artifactId>seata-all</artifactId>
@@ -71,7 +84,6 @@
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
             <version>6.2.6.RELEASE</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 

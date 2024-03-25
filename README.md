@@ -16,12 +16,17 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ##公告
 0.2.0有严重bug。不能使用
 
-## 引入 目前可用的版本是0.2.2
+## 引入 目前可用的版本是0.2.3
 ``` xml
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>0.2.2</version>
+            <version>0.2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.zhaohaoh</groupId>
+            <artifactId>redismq-spring-boot3-starter</artifactId>
+            <version>0.2.3</version>
         </dependency>
 ```
 ## 注意事项

@@ -22,12 +22,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-
 import javax.annotation.Resource;
 import java.util.List;
-
 import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
 import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
+
 
 /**
  * @author hzh

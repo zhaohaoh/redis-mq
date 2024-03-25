@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.zhaohaoh</groupId>
     <artifactId>redismq</artifactId>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
 
     <packaging>pom</packaging>
 
@@ -14,6 +14,7 @@
         <module>redismq-core</module>
         <module>redismq-spring-boot-autoconfigure</module>
         <module>redismq-spring-boot-starter</module>
+        <module>redismq-spring-boot3-starter</module>
         <module>redismq-samples</module>
         <module>redismq-admin</module>
     </modules>
@@ -72,6 +73,11 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.1.42.Final</version>
+            </dependency>
+            <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-test</artifactId>
                 <version>${spring-boot.version}</version>
@@ -116,6 +122,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-starter-data-redis</artifactId>
                 <version>${spring-boot.version}</version>
+                <optional>true</optional>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -161,7 +168,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.12</version>
+            <version>1.18.22</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

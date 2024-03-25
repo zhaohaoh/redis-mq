@@ -60,7 +60,7 @@ public class RedisPullListener extends AbstractRedisPushListener {
             } else {
                 LinkedBlockingQueue<String> linkedBlockingQueue = redisMqClient.getRedisListenerContainerManager().getLinkedBlockingQueue();
                 if (!linkedBlockingQueue.contains(queueName)) {
-                    linkedBlockingQueue.add(queueName);
+                    linkedBlockingQueue.add(vQueueName);
                 }
             }
         } catch (InterruptedException e) {

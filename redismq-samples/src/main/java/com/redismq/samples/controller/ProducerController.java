@@ -52,7 +52,7 @@ public class ProducerController {
     @PostMapping("sendMessage")
     @Transactional
     public void sendMessage() {
-        redisMQTemplate.sendMessage( "普通消息", "test1");
+        redisMQTemplate.sendMessage( "普通消息", "earthquakeTrigger");
     }
     /**
      * 发送顺序消息
