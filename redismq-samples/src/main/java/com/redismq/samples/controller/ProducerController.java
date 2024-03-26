@@ -59,7 +59,7 @@ public class ProducerController {
         javaBean.setB(222);
         List<JavaBean> s=new ArrayList<>();
         s.add(javaBean);
-        redisMQTemplate.sendMessage( javaBean, "earthquakeTrigger");
+        redisMQTemplate.sendMessage( 123L, "earthquakeTrigger");
     }
     /**
      * 发送顺序消息

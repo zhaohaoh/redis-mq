@@ -164,7 +164,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
                 //是内部message消息
                 this.method.invoke(this.target, clone);
             }else if(messageType.equals(String.class)){
-                this.method.invoke(this.target, body);
+                this.method.invoke(this.target, body.toString());
             }
             //已经是相同的类型 直接可以调用
             else if (messageType.isAssignableFrom(body.getClass())){
