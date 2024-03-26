@@ -5,10 +5,10 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-       <version>0.2.3</version>
+       <version>0.2.4</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-    <version>0.2.3</version>
+    <version>0.2.4</version>
     <modelVersion>4.0.0</modelVersion>
  
     <artifactId>redismq-spring-boot3-starter</artifactId>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
-           <version>0.2.3</version>
+           <version>0.2.4</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
