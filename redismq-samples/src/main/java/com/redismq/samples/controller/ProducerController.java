@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @Author: hzh
@@ -52,7 +54,12 @@ public class ProducerController {
     @PostMapping("sendMessage")
     @Transactional
     public void sendMessage() {
-        redisMQTemplate.sendMessage( "普通消息", "earthquakeTrigger");
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        List<JavaBean> s=new ArrayList<>();
+        s.add(javaBean);
+        redisMQTemplate.sendMessage( javaBean, "earthquakeTrigger");
     }
     /**
      * 发送顺序消息

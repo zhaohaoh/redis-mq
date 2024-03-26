@@ -34,13 +34,60 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         JsonNode key = jsonNode.has("key") ? jsonNode.get("key") : MissingNode.getInstance();
         JsonNode queue = jsonNode.has("queue") ? jsonNode.get("queue") : MissingNode.getInstance();
         JsonNode tag = jsonNode.has("tag") ? jsonNode.get("tag") : MissingNode.getInstance();
-        JsonNode virtualQueueName = jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
+        JsonNode virtualQueueName =
+                jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
         JsonNode header = jsonNode.has("header") ? jsonNode.get("header") : MissingNode.getInstance();
         
         Message message = new Message();
-        //如果是普通字符串转为字符串 。否则是json转换为json字符串
-        String str = body.isTextual() ? body.asText() : body.toString();
-        message.setBody(str);
+        // 现在你可以使用JsonNode的方法来确定它的具体类型
+        if (!body.isMissingNode()) {
+            //默认转字符串
+            Object obj = body.toString();
+            if (body.isObject()) {
+                obj = body.toString();
+            }
+            else if (body.isArray()) {
+                obj = body.toString();
+            }
+            else if (body.isPojo()) {
+                obj = body.toString();
+            }
+            else if (body.isDouble()) {
+                obj = body.asDouble();
+                // 处理数组节点
+            } else if (body.isFloat()) {
+                obj = body.floatValue();
+            } else if (body.isBinary()) {
+                obj = body.binaryValue();
+            } else if (body.isBigDecimal()) {
+                obj = body.isBigDecimal();
+            } else if (body.isBigInteger()) {
+                obj = body.bigIntegerValue();
+            } else if (body.isTextual()) {
+                obj = body.asText();
+                // 处理文本值
+            }
+            else if (body.isLong()) {
+                obj = body.asLong();
+                // 处理布尔值
+            }
+            else if (body.isInt()) {
+                obj = body.asInt();
+                // 处理数值
+            } else if (body.isBoolean()) {
+                obj = body.asBoolean();
+                // 处理布尔值
+            }  else if (body.isShort()) {
+                obj = body.shortValue();
+                // 处理布尔值
+            }
+            else if (body.isNull()) {
+                obj = null;
+                // 处理null值
+            }
+            message.setBody(obj);
+            
+        }
         message.setId(id.asText());
         message.setKey(key.asText());
         message.setQueue(queue.asText());

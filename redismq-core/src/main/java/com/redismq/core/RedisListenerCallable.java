@@ -166,10 +166,14 @@ public class RedisListenerCallable implements Callable<Boolean> {
             }else if(messageType.equals(String.class)){
                 this.method.invoke(this.target, body);
             }
+            //已经是相同的类型 直接可以调用
+            else if (messageType.isAssignableFrom(body.getClass())){
+                this.method.invoke(this.target, body);
+            }
             else {
                 //监听类的参数不是Message
-                body = RedisMQStringMapper.toBean((String) body, messageType);
-                if (messageType.equals(body.getClass())) {
+                body = RedisMQStringMapper.toBean(body.toString(), messageType);
+                if (messageType.isAssignableFrom(body.getClass())) {
                     //对象相同直接处理
                     this.method.invoke(this.target, body);
                 } else{

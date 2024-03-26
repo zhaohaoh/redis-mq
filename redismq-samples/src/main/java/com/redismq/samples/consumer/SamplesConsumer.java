@@ -2,6 +2,7 @@ package com.redismq.samples.consumer;
 
 import com.redismq.RedisListener;
 import org.springframework.stereotype.Component;
+
 /**
  * @Author: hzh
  * @Date: 2022/12/26 17:54
@@ -24,8 +25,9 @@ public class SamplesConsumer  {
      * 普通消息消费
      */
     @RedisListener(queue = "earthquakeTrigger", concurrency = 5, maxConcurrency = 5)
-    public void test1(String test) {
-        System.out.println(test);
+    public void test1(String data) {
+      
+        System.out.println(data);
     }
 
 //    /**
