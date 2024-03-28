@@ -41,7 +41,7 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 
 ```properties
 #指定环境隔离的分组
-spring.redismq.group=default
+spring.redismq.namespace=default
 spring.redismq.client.host=localhost
 #默认的database
 spring.redismq.client.database=6
