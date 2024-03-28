@@ -40,12 +40,12 @@ public class SamplesConsumer  {
 //        throw new RuntimeException();
 //    }
 //
-//    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
-//    public void time(Message message) {
-//        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
-//        System.out.println(javaBean);
-//        System.out.println(message);
-//    }
+    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
+    public void time(Message message) {
+        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
+        System.out.println(javaBean);
+        System.out.println(message);
+    }
 //
 //
 //    /**

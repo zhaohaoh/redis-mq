@@ -96,9 +96,9 @@ public class QueueController {
                 }
             }
         }
-        String queue = RedisMQConstant.getVQueueNameByVQueue(message.getQueue());
-        Message build = Message.builder().body(message.getBody()).queue(RedisMQConstant.getQueueNameByVirtual(queue))
-                .tag(message.getTag()).virtualQueueName(queue).build();
+        
+        Message build = Message.builder().body(message.getBody()).queue(RedisMQConstant.getQueueNameByVirtual(message.getQueue()))
+                .tag(message.getTag()).virtualQueueName(message.getQueue()).build();
         redisMQTemplate.sendMessage(build);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -115,7 +115,7 @@ public class QueueController {
                 }
             }
         }
-        String queue = RedisMQConstant.getVQueueNameByVQueue(message.getQueue());
+        String queue = message.getQueue();
         Message build = Message.builder().body(message.getBody()).queue(RedisMQConstant.getQueueNameByVirtual(queue))
                 .tag(message.getTag()).virtualQueueName(queue).build();
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
