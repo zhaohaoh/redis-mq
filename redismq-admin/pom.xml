@@ -5,7 +5,7 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>0.2.4</version>
+        <version>0.2.5</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     
@@ -30,6 +30,16 @@
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>3.7.1</version>
         </dependency>
     </dependencies>
     <build>

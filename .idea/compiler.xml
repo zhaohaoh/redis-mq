@@ -11,11 +11,9 @@
         <module name="redismq-spring-boot-starter" />
         <module name="redismq-admin" />
         <module name="redismq-spring-boot-autoconfigure" />
+        <module name="redismq-spring-boot3-starter" />
         <module name="redismq-core" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8">
-      <module name="redismq-spring-boot3-starter" target="16" />
-    </bytecodeTargetLevel>
   </component>
 </project>

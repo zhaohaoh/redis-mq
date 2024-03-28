@@ -22,8 +22,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
-import javax.annotation.Resource;
+
 import java.util.List;
+
 import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
 import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
 
@@ -37,8 +38,9 @@ import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLAT
 public class RedisMQAutoConfiguration implements InitializingBean {
     @Autowired
     private RedisMQProperties redisMqProperties;
-  
-    @Resource(name = REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
+    
+    @Autowired
+    @Qualifier(REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;

@@ -5,18 +5,21 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-       <version>0.2.4</version>
+       <version>0.2.5</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-    <version>0.2.4</version>
+    <version>0.2.5</version>
     <modelVersion>4.0.0</modelVersion>
- 
+    <!-- 有很多兼容性问题。暂无法支持-->
     <artifactId>redismq-spring-boot3-starter</artifactId>
    
     <properties>
         <spring-boot3.version>3.1.2</spring-boot3.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>16</maven.compiler.source>
+        <maven.compiler.target>16</maven.compiler.target>
     </properties>
-    
+ 
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,7 +46,7 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
-           <version>0.2.4</version>
+           <version>0.2.5</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
