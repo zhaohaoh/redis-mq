@@ -1,6 +1,7 @@
 package com.redismq.core;
 
 import com.redismq.constant.PushMessage;
+import com.redismq.constant.RedisMQConstant;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQStringMapper;
@@ -33,7 +34,7 @@ public class RedisPullListener extends AbstractRedisPushListener {
             PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
             String vQueueName = StringUtils.substringBetween(queueName, "{", "}");
-            String realNameQueue = StringUtils.substringBefore(vQueueName,":");
+            String realNameQueue = RedisMQConstant.getQueueNameByVirtual(vQueueName);
             pushMessage.setQueue(vQueueName);
             //当前服务订阅的队列列表
             List<String> list = QueueManager.getCurrentVirtualQueues().get(realNameQueue);

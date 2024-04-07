@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
 
 /**
  * @Author: hzh
@@ -67,7 +67,7 @@ public class QueueManager {
         }
         List<String> arrayList = new ArrayList<>();
         for (int i = 0; i < returnQueue.getVirtual(); i++) {
-            arrayList.add(returnQueue.getQueueName() + SPLITE + i);
+            arrayList.add(returnQueue.getQueueName() + V_QUEUE_SPLITE + i);
         }
         LOCAL_VIRTUAL_QUEUES.put(returnQueue.getQueueName(), arrayList);
         return returnQueue;
@@ -151,7 +151,7 @@ public class QueueManager {
      * @return {@link Queue}
      */
     public static Queue getQueueByVirtual(String virtual) {
-        return getQueue(StringUtils.substringBeforeLast(virtual, SPLITE));
+        return getQueue(StringUtils.substringBeforeLast(virtual, V_QUEUE_SPLITE));
     }
     
     /**
@@ -168,7 +168,7 @@ public class QueueManager {
         }
         List<String> arrayList = new ArrayList<>();
         for (int i = 0; i < returnQueue.getVirtual(); i++) {
-            arrayList.add(returnQueue.getQueueName() + SPLITE + i);
+            arrayList.add(returnQueue.getQueueName() + V_QUEUE_SPLITE + i);
         }
         REDIS_VIRTUAL_QUEUES.put(returnQueue.getQueueName(), arrayList);
         return returnQueue;

@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
 
 /**
  * @Author: hzh
@@ -190,7 +190,7 @@ public class RedisMQProducer {
             } else {
                 num = increment % queue.getVirtual();
             }
-            String virtualQueue = queue.getQueueName() + SPLITE + num;
+            String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
             message.setVirtualQueueName(virtualQueue);
         }
         
@@ -226,7 +226,7 @@ public class RedisMQProducer {
                 } else {
                     num = increment % queue.getVirtual();
                 }
-                String virtualQueue = queue.getQueueName() + SPLITE + num;
+                String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
                 message.setVirtualQueueName(virtualQueue);
             }
             PushMessage pushMessage = new PushMessage();

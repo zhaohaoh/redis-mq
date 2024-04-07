@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
 
 
 @RestController
@@ -60,7 +60,7 @@ public class QueueController {
         List<VQueue> virtualQueues = new ArrayList<>();
         for (int i = 0; i < virtual; i++) {
             VQueue vQueue = new VQueue();
-            String virtualQueue = queueName + SPLITE + i;
+            String virtualQueue = queueName + V_QUEUE_SPLITE + i;
             Long size = redisMQClientUtil.queueSize(virtualQueue);
             vQueue.setQueueName(virtualQueue);
             vQueue.setSize(size == null ? 0 : size);

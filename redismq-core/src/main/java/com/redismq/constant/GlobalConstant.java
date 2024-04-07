@@ -6,7 +6,10 @@ public class GlobalConstant {
      * 分隔符
      */
     public static String SPLITE = ":";
-
+    /**
+     * 分隔符
+     */
+    public static String V_QUEUE_SPLITE = "$";
     /**
      * 线程数量最大上线
      */

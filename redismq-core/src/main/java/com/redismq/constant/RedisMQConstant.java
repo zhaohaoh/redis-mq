@@ -8,6 +8,7 @@ package com.redismq.constant;
 import org.apache.commons.lang3.StringUtils;
 
 import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
 
 public class RedisMQConstant {
     
@@ -104,7 +105,7 @@ public class RedisMQConstant {
      * @return {@link String}
      */
     public static String getQueueNameByVirtual(String virtual) {
-        return StringUtils.substringBeforeLast(virtual, SPLITE);
+        return StringUtils.substringBeforeLast(virtual, V_QUEUE_SPLITE);
     }
     
     public static String getRebalanceLock() {
