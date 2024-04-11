@@ -306,27 +306,22 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     private void unLockQueue(String virtualQueueLock) {
-        Boolean lock = redisMQClientUtil.lock("LOCK:" + virtualQueueLock, Duration.ofSeconds(5));
-        while (!lock) {
-            lock = redisMQClientUtil.lock("LOCK:" + virtualQueueLock, Duration.ofSeconds(5));
-        }
-        try {
-            redisMQClientUtil.unlock(virtualQueueLock);
-        }finally {
-            redisMQClientUtil.unlock("LOCK:" + virtualQueueLock);
-        }
-        
+        redisMQClientUtil.unlock(virtualQueueLock);
     }
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     private Boolean lockQueue(String virtualQueueLock) {
-        Boolean lock = redisMQClientUtil.lock("LOCK:" + virtualQueueLock, Duration.ofSeconds(5));
-        while (!lock) {
-            lock = redisMQClientUtil.lock("LOCK:" + virtualQueueLock, Duration.ofSeconds(5));
-        } try {
-            return redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
-        }finally {
-            redisMQClientUtil.unlock("LOCK:" + virtualQueueLock);
+        int i=0;
+        Boolean lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+        while (!lock && i<2){
+            i++;
+            try {
+                Thread.sleep(200L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         }
+        return lock;
     }
     
     /**
