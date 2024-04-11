@@ -55,6 +55,14 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected Integer retryInterval;
     /**
+     * 任务执行超时时间
+     */
+    protected long taskTimeout;
+    /**
+     * 任务阻塞等待轮询时间
+     */
+    protected long taskWaitTime;
+    /**
      * 端点map
      */
     protected Map<String, RedisListenerEndpoint> redisListenerEndpointMap;

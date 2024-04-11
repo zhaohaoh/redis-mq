@@ -49,4 +49,12 @@ public class GlobalConfig {
      * 打印核心生产日志
      */
     public boolean printProducerLog = true;
+    /**
+     * 任务执行超时时间 ms
+     */
+    protected Long taskTimeout = 120 * 1000L;
+    /**
+     * 任务阻塞等待轮询时间 ms
+     */
+    protected Long taskWaitTime = 1000L;
 }
