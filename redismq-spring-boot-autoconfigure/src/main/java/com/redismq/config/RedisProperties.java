@@ -25,7 +25,7 @@ public class RedisProperties {
     private Duration timeout = Duration.ofSeconds(30);
     private Duration connectTimeout;
     private String clientName = "redisMQ";
-    private ClientType clientType = ClientType.JEDIS;
+    private ClientType clientType = ClientType.LETTUCE;
     private Sentinel sentinel;
     private Cluster cluster;
     private final Jedis jedis = new Jedis();

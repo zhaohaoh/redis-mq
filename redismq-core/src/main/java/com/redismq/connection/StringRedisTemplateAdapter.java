@@ -5,6 +5,7 @@ import com.redismq.utils.RedisMQStringMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
@@ -67,7 +68,14 @@ public class StringRedisTemplateAdapter implements RedisClient {
      */
     @Override
     public void convertAndSend(String topic, Object obj) {
-        stringRedisTemplate.convertAndSend(topic, RedisMQStringMapper.toJsonStr(obj));
+        byte[] rawChannel = stringRedisTemplate.getStringSerializer().serialize(topic);
+        RedisSerializer<Object> valueSerializer = (RedisSerializer<Object>) stringRedisTemplate.getValueSerializer();
+        byte[] rawMessage = valueSerializer.serialize(RedisMQStringMapper.toJsonStr(obj));
+    
+        stringRedisTemplate.execute(connection -> {
+            connection.publish(rawChannel, rawMessage);
+            return null;
+        }, true);
     }
     
     /**
