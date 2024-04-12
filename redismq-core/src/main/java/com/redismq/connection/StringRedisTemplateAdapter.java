@@ -102,7 +102,10 @@ public class StringRedisTemplateAdapter implements RedisClient {
     
     @Override
     public Boolean setIfAbsent(String key, Object value, Duration duration) {
-        return stringRedisTemplate.opsForValue().setIfAbsent(key, RedisMQStringMapper.toJsonStr(value), duration);
+  
+        Boolean aBoolean = stringRedisTemplate.opsForValue()
+                .setIfAbsent(key, RedisMQStringMapper.toJsonStr(value), duration);
+        return aBoolean;
     }
     
     

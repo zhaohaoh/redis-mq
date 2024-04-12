@@ -22,14 +22,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
@@ -133,6 +131,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 //说明消费队列已经满了 等待所有任务消费完成，然后再继续拉取消息.后面优化加个最长等待时间。是针对每个任务的。可以动态控制。如果超时的话任务就取消丢弃。
                 if (pullSize <= 0) {
                     pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                   
                 }
                 //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
                 if (delay || ackMode.equals(AckMode.MAUAL)){
@@ -241,14 +240,17 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @return int
      */
     private int waitConsume(List<Future<Boolean>> futures, long milliseconds, boolean timeoutDrop) {
-        int pullSize;
-        futures.removeIf(f -> {
+        for (Future<Boolean> future : futures) {
             try {
-                return f.get(milliseconds, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                return timeoutDrop;
+                Boolean aBoolean = future.get(milliseconds, TimeUnit.MILLISECONDS);
+            } catch (Exception e) {
+                log.error("redisMQ waitConsume error", e);
             }
-        });
+        }
+        if (timeoutDrop) {
+            futures.removeIf(Future::isDone);
+        }
+        int pullSize;
         pullSize = super.maxConcurrency;
         return pullSize;
     }
@@ -282,7 +284,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         if (success == null || !success) {
             return;
         }
-        
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager
                 .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
@@ -296,7 +297,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             if (!virtualQueues.contains(virtualQueue)) {
                                 return null;
                             }
-                            
                             //添加到当前执行队列。看门狗用
                             INVOKE_VIRTUAL_QUEUES.add(virtualQueue);
                             Set<Long> delayTimes = pull(virtualQueue);
@@ -331,7 +331,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+            lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         }
         return lock;
     }

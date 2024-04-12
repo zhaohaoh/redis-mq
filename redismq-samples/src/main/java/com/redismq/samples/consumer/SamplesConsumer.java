@@ -31,6 +31,16 @@ public class SamplesConsumer  {
         Thread.sleep(3000L);
         System.out.println(javaBean);
     }
+    
+    /**
+     * 普通消息消费
+     */
+    @RedisListener(queue = "makeMappingQueue")
+    public void makeMappingQueue(JavaBean javaBean) throws InterruptedException {
+        
+        Thread.sleep(3000L);
+        System.out.println(javaBean);
+    }
 
 //    /**
 //     * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序

@@ -193,7 +193,8 @@ public class RedisMQClientUtil {
      * 锁定指定key
      */
     public Boolean lock(String key, Duration duration) {
-        return redisClient.setIfAbsent(key, "", duration);
+        Boolean aBoolean = redisClient.setIfAbsent(key, "", duration);
+        return aBoolean;
     }
     
     /**

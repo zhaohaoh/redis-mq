@@ -2,6 +2,7 @@ package com.redismq.samples.controller;
 
 import com.redismq.connection.RedisClient;
 import com.redismq.samples.consumer.JavaBean;
+import com.redismq.samples.consumer.MakeMappingFile;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,8 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Date;
 
 /**
  * @Author: hzh
@@ -54,14 +54,19 @@ public class ProducerController {
     @PostMapping("sendMessage")
     @Transactional
     public void sendMessage() {
-        for (int i = 0; i < 7; i++) {
-            JavaBean javaBean = new JavaBean();
-            javaBean.setA("ff");
-            javaBean.setB(222);
-            List<JavaBean> s=new ArrayList<>();
-            s.add(javaBean);
-            redisMQTemplate.sendMessage( javaBean, "earthquakeTrigger");
-  
+        String[] names = {"地震震中位置及30日内地震分布图", "地震震区构造背景图", "地震震区历史地震与断层分布图", "地震震中距分布图", "地震震区台站分布图", "地震震区工业平台分布图", "GNSS站点分布图"};
+        for (int i = 0; i < names.length; i++) {
+            Date date = new Date();
+            MakeMappingFile makeMappingFile = new MakeMappingFile();
+            makeMappingFile.setName(names[i]);
+            makeMappingFile.setCode("0"+i);
+            makeMappingFile.setFileType("img");
+            makeMappingFile.setCreateTime(date);
+            makeMappingFile.setUpdateTime(date);
+            makeMappingFile.setModule("earthquake");
+            makeMappingFile.setDataId(1L);
+            makeMappingFile.setConfig("");
+            redisMQTemplate.sendMessage(makeMappingFile, "makeMappingQueue");
         }
         
     }
