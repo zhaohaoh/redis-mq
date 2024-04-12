@@ -54,12 +54,15 @@ public class ProducerController {
     @PostMapping("sendMessage")
     @Transactional
     public void sendMessage() {
-        JavaBean javaBean = new JavaBean();
-        javaBean.setA("ff");
-        javaBean.setB(222);
-        List<JavaBean> s=new ArrayList<>();
-        s.add(javaBean);
-        redisMQTemplate.sendMessage( 123L, "earthquakeTrigger");
+        for (int i = 0; i < 7; i++) {
+            JavaBean javaBean = new JavaBean();
+            javaBean.setA("ff");
+            javaBean.setB(222);
+            List<JavaBean> s=new ArrayList<>();
+            s.add(javaBean);
+            redisMQTemplate.sendMessage( 123L, "earthquakeTrigger");
+        }
+        
     }
     /**
      * 发送顺序消息

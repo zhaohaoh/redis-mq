@@ -147,9 +147,9 @@ public class RedisMQClientUtil {
     /**
      * 拉取队列中的消息 拉取可以消费的消息
      */
-    public List<Message> pullMessage(String queueName, long time, int start, int pullSize) {
+    public List<Message> pullMessage(String queueName,long  minScopre,long time, int start, int pullSize) {
         queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
-        Map<Message, Double> messageScopeMap = redisClient.zrangeMessage(queueName, 0, time, start, pullSize);
+        Map<Message, Double> messageScopeMap = redisClient.zrangeMessage(queueName, minScopre, time, start, pullSize);
         if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }

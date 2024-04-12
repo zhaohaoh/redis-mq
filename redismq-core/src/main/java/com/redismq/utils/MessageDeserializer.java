@@ -34,6 +34,7 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         JsonNode key = jsonNode.has("key") ? jsonNode.get("key") : MissingNode.getInstance();
         JsonNode queue = jsonNode.has("queue") ? jsonNode.get("queue") : MissingNode.getInstance();
         JsonNode tag = jsonNode.has("tag") ? jsonNode.get("tag") : MissingNode.getInstance();
+        JsonNode offset = jsonNode.has("offset") ? jsonNode.get("offset") : MissingNode.getInstance();
         JsonNode virtualQueueName =
                 jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
         JsonNode header = jsonNode.has("header") ? jsonNode.get("header") : MissingNode.getInstance();
@@ -92,6 +93,7 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         message.setKey(key.asText());
         message.setQueue(queue.asText());
         message.setTag(tag.asText());
+        message.setOffset(offset.asLong());
         message.setVirtualQueueName(virtualQueueName.asText());
         if (!header.isMissingNode()) {
             Map<String, Object> map = mapper.readValue(header.traverse(), Map.class);

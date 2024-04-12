@@ -36,7 +36,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.constant.GlobalConstant.SPLITE;
 import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
+import static com.redismq.constant.RedisMQConstant.NAMESPACE;
+import static com.redismq.constant.RedisMQConstant.PREFIX;
 
 /**
  * @Author: hzh
@@ -177,7 +180,7 @@ public class RedisMQProducer {
      * @return boolean
      */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
-        Long increment = increment();
+        Long increment = increment(queue);
         if (executorTime == null) {
             executorTime = increment;
         }
@@ -193,6 +196,7 @@ public class RedisMQProducer {
             String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
             message.setVirtualQueueName(virtualQueue);
         }
+        message.setOffset(increment);
         
         PushMessage pushMessage = new PushMessage();
         pushMessage.setTimestamp(0L);
@@ -216,7 +220,7 @@ public class RedisMQProducer {
         Map<PushMessage, List<SendMessageParam>> messageMap = new HashMap<>();
         for (Message message : messages) {
             //有bug要改成lua
-            Long increment = increment();
+            Long increment = increment(queue);
             Long executorTime = increment;
             if (StringUtils.isBlank(message.getVirtualQueueName())) {
                 long num;
@@ -229,6 +233,7 @@ public class RedisMQProducer {
                 String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
                 message.setVirtualQueueName(virtualQueue);
             }
+            message.setOffset(increment);
             PushMessage pushMessage = new PushMessage();
             pushMessage.setTimestamp(0L);
             pushMessage.setQueue(message.getVirtualQueueName());
@@ -393,11 +398,12 @@ public class RedisMQProducer {
         }
         return null;
     }
-    private Long increment() {
+    private Long increment(Queue queue) {
+        String queueOffset = PREFIX + NAMESPACE + SPLITE +"offset" + SPLITE + queue.getQueueName() ;
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
                 + "redis.call('set',KEYS[1],0) " + "count = redis.call('incrBy',KEYS[1],1)" + "end " + "return count;";
         return redisMQClientUtil
-                .executeLua(lua, Lists.newArrayList(RedisMQConstant.getSendIncrement()), System.currentTimeMillis());
+                .executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
     }
     
     /**

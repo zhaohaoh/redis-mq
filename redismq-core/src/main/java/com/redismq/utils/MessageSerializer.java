@@ -40,7 +40,7 @@ public class MessageSerializer extends StdSerializer<Message> {
         } else {
             jsonGenerator.writeObjectField("body", message.getBody());
         }
-        
+        jsonGenerator.writeObjectField("offset", message.getOffset());
         jsonGenerator.writeStringField("id", message.getId());
         jsonGenerator.writeStringField("key", message.getKey());
         jsonGenerator.writeStringField("queue", message.getQueue());

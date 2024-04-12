@@ -43,7 +43,7 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected int retryMax;
     /**
-     * 死信队列
+     * 延迟队列
      */
     protected Boolean delay;
     /**

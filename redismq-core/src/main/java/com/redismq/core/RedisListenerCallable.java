@@ -188,7 +188,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
             state.finsh();
             log.debug("redisMQ consumeMessage success queue:{} tag:{}", message.getQueue(), message.getTag());
             afterConsume(clone);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             if (e instanceof InvocationTargetException){
                 e = (Exception) e.getCause();
             }

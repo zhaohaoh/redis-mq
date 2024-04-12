@@ -25,11 +25,11 @@ public class SamplesConsumer  {
     /**
      * 普通消息消费
      */
-    @RedisListener(queue = "earthquakeTrigger", concurrency = 5, maxConcurrency = 5,virtual = 1)
+    @RedisListener(queue = "earthquakeTrigger", concurrency = 1, maxConcurrency = 6,virtual = 1)
     public void test1(Message data) throws InterruptedException {
         Object body = data.getBody();
-        Thread.sleep(1000L);
-        System.out.println(body);
+        Thread.sleep(1500L);
+        System.out.println(data.getOffset());
     }
 
 //    /**

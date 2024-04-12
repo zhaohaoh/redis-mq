@@ -60,7 +60,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private volatile ScheduledFuture<?> scheduledFuture;
     
     private final ThreadPoolExecutor work;
-    
+    private long lastOffset = 0;
     /**
      * 停止
      */
@@ -134,10 +134,14 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 if (pullSize <= 0) {
                     pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                 }
-   
-                List<Message> messages = redisMQClientUtil.pullMessage(queueName, pullTime, futures.size(), pullSize);
+                //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
+                if (delay && futures.size()>0){
+                    pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                }
                 
+                List<Message> messages = redisMQClientUtil.pullMessage(queueName, lastOffset,pullTime, 0, pullSize);
                 if (CollectionUtils.isEmpty(messages)) {
+                
                     //响应中断
                     if (!isRunning()) {
                         return delayTimes;
@@ -187,7 +191,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         }
                         
                         callableInvokes.add(callable);
-                    } catch (Exception e) {
+                        //不是延时队列的话记录偏移量
+                        if (!delay){
+                            Message lastMsg = messages.get(messages.size() - 1);
+                            // 获取最后一个消息的偏移量的下一个值
+                            lastOffset = lastMsg.getOffset() +1 ;
+                        }
+                    } catch (Throwable e) {
                         if (isRunning()) {
                             log.error("redisMQ listener container error ", e);
                         }
@@ -204,7 +214,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     Future<Boolean> submit = work.submit(callableInvoke);
                     futures.add(submit);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 if (isRunning()) {
                     //报错需要  semaphore.release();
                     log.error("redisMQ pop error", e);
