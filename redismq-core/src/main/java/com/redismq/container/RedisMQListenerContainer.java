@@ -241,7 +241,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @return int
      */
     private int waitConsume(List<Future<Boolean>> futures, long milliseconds, boolean timeoutDrop) {
-        long l = System.currentTimeMillis();
         for (Future<Boolean> future : futures) {
             try {
                 Boolean aBoolean = future.get(milliseconds, TimeUnit.MILLISECONDS);
@@ -249,10 +248,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 log.error("redisMQ waitConsume error", e);
             }
         }
-        long l1 = System.currentTimeMillis();
-        if (l1-l>10000){
-            System.out.println("超长时间等待,"+futures.size());
-        }
+      
         if (timeoutDrop) {
             futures.removeIf(Future::isDone);
         }
