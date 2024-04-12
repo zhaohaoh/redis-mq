@@ -215,7 +215,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     Future<Boolean> submit = work.submit(callableInvoke);
                     futures.add(submit);
                 }
-                log.info("work :{}  fff:{} ",work.toString(),futures.size());
             } catch (Throwable e) {
                 if (isRunning()) {
                     //报错需要  semaphore.release();
