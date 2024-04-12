@@ -135,11 +135,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                 }
                 //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
-                if (delay && futures.size()>0){
-                    pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                if (delay || ackMode.equals(AckMode.MAUAL)){
+                    if (futures.size() >0 ){
+                        pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                    }
                 }
                 
-                List<Message> messages = redisMQClientUtil.pullMessage(queueName, lastOffset,pullTime, 0, pullSize);
+                List<Message> messages = redisMQClientUtil.pullMessage(queueName, 0,pullTime, 0, pullSize);
                 if (CollectionUtils.isEmpty(messages)) {
                 
                     //响应中断

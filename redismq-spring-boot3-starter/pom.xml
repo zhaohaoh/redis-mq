@@ -8,7 +8,6 @@
        <version>0.2.8</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-    <version>0.2.8</version>
     <modelVersion>4.0.0</modelVersion>
     <!-- 有很多兼容性问题。暂无法支持-->
     <artifactId>redismq-spring-boot3-starter</artifactId>
