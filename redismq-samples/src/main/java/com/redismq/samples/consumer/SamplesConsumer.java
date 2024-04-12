@@ -26,20 +26,10 @@ public class SamplesConsumer  {
      * 普通消息消费
      */
     @RedisListener(queue = "earthquakeTrigger")
-    public void test1(JavaBean javaBean) throws InterruptedException {
-       
-        Thread.sleep(3000L);
-        System.out.println(javaBean);
-    }
-    
-    /**
-     * 普通消息消费
-     */
-    @RedisListener(queue = "makeMappingQueue")
-    public void makeMappingQueue(JavaBean javaBean) throws InterruptedException {
-        
-        Thread.sleep(3000L);
-        System.out.println(javaBean);
+    public void test1(Message data) throws InterruptedException {
+        Object body = data.getBody();
+        Thread.sleep(1500L);
+        System.out.println(data.getOffset());
     }
 
 //    /**

@@ -1,6 +1,5 @@
 package com.redismq.container;
 
-import com.redismq.CompositeQueue;
 import com.redismq.Message;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.AckMode;
@@ -23,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -83,7 +83,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         lifeExtension();
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(), 60L, TimeUnit.SECONDS,
                 // 这个范围内的视为核心线程可以处理 队列的数量
-                new CompositeQueue<>(getConcurrency() << 3), new ThreadFactory() {
+                new LinkedBlockingQueue<>(getConcurrency() << 3), new ThreadFactory() {
             private final ThreadGroup group;
             
             private final AtomicInteger threadNumber = new AtomicInteger(1);
@@ -215,6 +215,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     Future<Boolean> submit = work.submit(callableInvoke);
                     futures.add(submit);
                 }
+                log.info("work :{}  fff:{} ",work.toString(),futures.size());
             } catch (Throwable e) {
                 if (isRunning()) {
                     //报错需要  semaphore.release();
@@ -240,12 +241,17 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @return int
      */
     private int waitConsume(List<Future<Boolean>> futures, long milliseconds, boolean timeoutDrop) {
+        long l = System.currentTimeMillis();
         for (Future<Boolean> future : futures) {
             try {
                 Boolean aBoolean = future.get(milliseconds, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 log.error("redisMQ waitConsume error", e);
             }
+        }
+        long l1 = System.currentTimeMillis();
+        if (l1-l>10000){
+            System.out.println("超长时间等待,"+futures.size());
         }
         if (timeoutDrop) {
             futures.removeIf(Future::isDone);
