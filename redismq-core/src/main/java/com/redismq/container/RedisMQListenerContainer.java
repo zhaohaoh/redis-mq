@@ -11,12 +11,11 @@ import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.utils.RedisMQStringMapper;
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -285,6 +284,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         if (success == null || !success) {
             return;
         }
+
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager
                 .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
@@ -317,25 +317,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
     }
     
-    //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
-    private void unLockQueue(String virtualQueueLock) {
-        redisMQClientUtil.unlock(virtualQueueLock);
-    }
-    //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
-    private Boolean lockQueue(String virtualQueueLock) {
-        int i=0;
-        Boolean lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
-        while (!lock && i<2){
-            i++;
-            try {
-                Thread.sleep(200L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
-        }
-        return lock;
-    }
+
+
     
     /**
      * 消费锁续期 看门狗
@@ -355,7 +338,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         try {
                             List<String> list = new ArrayList<>();
                             list.add(getVirtualQueueLock(virtualQueue));
-                            redisMQClientUtil.executeLua(lua, list);
+                            Long success = redisMQClientUtil.executeLua(lua, list);
                         } catch (Exception e) {
                             if (isRunning()) {
                                 log.error("lifeExtension  redisTemplate.expire Exception", e);

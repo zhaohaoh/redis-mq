@@ -16,16 +16,16 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * @Author: hzh
- * @Date: 2022/5/7 14:16
- * 接受消息订阅
+ * @Date: 2022/5/7 14:16 接受消息订阅
  */
 public class RedisPullListener extends AbstractRedisPushListener {
+    
     protected static final Logger log = LoggerFactory.getLogger(RedisPullListener.class);
-
+    
     public RedisPullListener(RedisMqClient redisMqClient) {
         super(redisMqClient);
     }
-
+    
     @Override
     public void onMessage(Message message, byte[] pattern) {
         try {
@@ -46,21 +46,18 @@ public class RedisPullListener extends AbstractRedisPushListener {
                 return;
             }
             boolean delayState = queue.isDelayState();
-
+            
             //延时队列和普通队列分开处理
             if (delayState) {
-                LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisMqClient.getRedisListenerContainerManager().getDelayBlockingQueue();
+                LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisMqClient.getRedisListenerContainerManager()
+                        .getDelayBlockingQueue();
                 if (!delayBlockingQueue.contains(pushMessage)) {
-                    try {
-                        delayBlockingQueue.add(pushMessage);
-                    } catch (Exception e) {
-                        log.error("queue full");
-                        throw e;
-                    }
+                    delayBlockingQueue.add(pushMessage);
                 }
             } else {
-                LinkedBlockingQueue<String> linkedBlockingQueue = redisMqClient.getRedisListenerContainerManager().getLinkedBlockingQueue();
-                if (!linkedBlockingQueue.contains(queueName)) {
+                LinkedBlockingQueue<String> linkedBlockingQueue = redisMqClient.getRedisListenerContainerManager()
+                        .getLinkedBlockingQueue();
+                if (!linkedBlockingQueue.contains(vQueueName)) {
                     linkedBlockingQueue.add(vQueueName);
                 }
             }
@@ -70,5 +67,5 @@ public class RedisPullListener extends AbstractRedisPushListener {
             semaphore.release();
         }
     }
-
+    
 }

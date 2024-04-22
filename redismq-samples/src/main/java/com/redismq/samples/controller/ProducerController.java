@@ -45,7 +45,7 @@ public class ProducerController {
         JavaBean javaBean = new JavaBean();
         javaBean.setA("ff");
         javaBean.setB(222);
-        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(11).toMillis());
+        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(60).toMillis());
     }
     
     /**
@@ -54,17 +54,17 @@ public class ProducerController {
     @PostMapping("sendMessage")
     @Transactional
     public void sendMessage() {
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < 115; i++) {
             JavaBean javaBean = new JavaBean();
             javaBean.setA("ff");
             javaBean.setB(222);
             List<JavaBean> s=new ArrayList<>();
             s.add(javaBean);
-            try {
-                Thread.sleep(500L);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(500L);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
             redisMQTemplate.sendMessage( javaBean, "earthquakeTrigger");
   
         }

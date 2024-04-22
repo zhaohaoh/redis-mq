@@ -25,7 +25,7 @@ public class SamplesConsumer  {
     /**
      * 普通消息消费
      */
-    @RedisListener(queue = "earthquakeTrigger")
+    @RedisListener(queue = "earthquakeTrigger",virtual = 3)
     public void test1(Message data) throws InterruptedException {
         Object body = data.getBody();
         Thread.sleep(1500L);

@@ -5,6 +5,7 @@ import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
+import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
@@ -17,6 +18,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +32,7 @@ import static com.redismq.constant.GlobalConstant.CLIENT_RABALANCE_TIME;
 import static com.redismq.constant.GlobalConstant.CLIENT_REGISTER_TIME;
 import static com.redismq.constant.GlobalConstant.SPLITE;
 import static com.redismq.constant.RedisMQConstant.getRebalanceLock;
+import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
 
 
 /**
@@ -234,6 +237,17 @@ public class RedisMqClient {
             if (CollectionUtils.isEmpty(virtualQueues)) {
                 return;
             }
+            // 先获取队列锁删除
+            List<String> list = new ArrayList<>();
+            virtualQueues.forEach(virtualQueue -> list.add(getVirtualQueueLock(virtualQueue)));
+            RedisMQListenerContainer redisistenerContainer = redisListenerContainerManager
+                    .getRedisistenerContainer(k);
+            redisistenerContainer.pause();
+            for (String lock : list) {
+                log.info("pause queue :{} key:{}",k,lock);
+                redisistenerContainer.unLockQueue(lock);
+            }
+        
             //获取虚拟队列重新推送到阻塞队列
             virtualQueues.forEach(vq -> {
                 PushMessage pushMessage = new PushMessage();

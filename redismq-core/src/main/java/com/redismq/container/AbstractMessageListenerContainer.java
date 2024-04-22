@@ -7,9 +7,11 @@ import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.Queue;
 import lombok.Data;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.SPLITE;
 import static com.redismq.constant.StateConstant.PAUSE;
 import static com.redismq.constant.StateConstant.RUNNING;
@@ -100,7 +102,10 @@ public abstract class AbstractMessageListenerContainer {
      * 当前容器暂停拉取消息
      */
     public int pause() {
-        return state = PAUSE;
+        if (state!=PAUSE){
+            return state = PAUSE;
+        }
+        return PAUSE;
     }
     /**
      * 当前容器是否暂停了
@@ -148,6 +153,27 @@ public abstract class AbstractMessageListenerContainer {
 
     protected String getRunableKey(String tag) {
         return queueName + SPLITE + tag;
+    }
+    
+    //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
+    public void unLockQueue(String virtualQueueLock) {
+        redisMQClientUtil.unlock(virtualQueueLock);
+    }
+    
+    //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
+    public Boolean lockQueue(String virtualQueueLock) {
+        int i=0;
+        Boolean lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+        while (!lock && i<2){
+            i++;
+            try {
+                Thread.sleep(200L);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+        }
+        return lock;
     }
 
 }

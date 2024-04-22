@@ -6,7 +6,7 @@ import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
-import javafx.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
@@ -139,7 +139,7 @@ public class RedisMQClientUtil {
                 .zrangeMessage(queueName, pullTime, Double.MAX_VALUE, startIndex, end);
         List<Pair<Message, Double>> pairs = new ArrayList<>();
         messageScopeMap.forEach((k, v) -> {
-            pairs.add(new Pair<>(k, v));
+            pairs.add( Pair.of(k, v));
         });
         return pairs;
     }
@@ -168,7 +168,7 @@ public class RedisMQClientUtil {
         }
         List<Pair<Message, Double>> pairs = new ArrayList<>();
         messageScopeMap.forEach((k, v) -> {
-            pairs.add(new Pair<>(k, v));
+            pairs.add(Pair.of(k, v));
         });
         return pairs;
     }
