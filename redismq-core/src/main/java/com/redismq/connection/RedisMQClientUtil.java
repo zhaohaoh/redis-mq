@@ -211,7 +211,7 @@ public class RedisMQClientUtil {
      */
     public void publishPullMessage(String vQueueName) {
         PushMessage pushMessage = new PushMessage();
-        pushMessage.setQueue(vQueueName);
+        pushMessage.setQueue(RedisMQConstant.getVQueueNameByVQueue(vQueueName));
         pushMessage.setTimestamp(System.currentTimeMillis());
         redisClient.convertAndSend(getTopic(), pushMessage);
     }
