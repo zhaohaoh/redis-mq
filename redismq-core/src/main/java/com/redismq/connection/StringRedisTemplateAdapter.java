@@ -71,7 +71,6 @@ public class StringRedisTemplateAdapter implements RedisClient {
         byte[] rawChannel = stringRedisTemplate.getStringSerializer().serialize(topic);
         RedisSerializer<Object> valueSerializer = (RedisSerializer<Object>) stringRedisTemplate.getValueSerializer();
         byte[] rawMessage = valueSerializer.serialize(RedisMQStringMapper.toJsonStr(obj));
-    
         stringRedisTemplate.execute(connection -> {
             connection.publish(rawChannel, rawMessage);
             return null;

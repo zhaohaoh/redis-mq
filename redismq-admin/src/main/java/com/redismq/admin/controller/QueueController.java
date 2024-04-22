@@ -79,7 +79,8 @@ public class QueueController {
         if (vQueue == null) {
             throw new RuntimeException();
         }
-        redisMQClientUtil.publishPullMessage(vQueue);
+        String vQueueNameByVQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
+        redisMQClientUtil.publishPullMessage(vQueueNameByVQueue);
         log.info("publishPullMessage :{}",vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
