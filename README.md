@@ -245,6 +245,9 @@ public class RedisMQInterceptorConfiguration {
 }
 ```
 
+### 待办事项
+1.单队列生产者自增id达到万亿的消费情况需要重启解决-还没处理
+2.
 
 ### 后续规划
 解决redis内存消息堆积的问题，加入生产者临时持久化消息机制
