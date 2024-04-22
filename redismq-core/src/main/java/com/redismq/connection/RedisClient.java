@@ -155,4 +155,5 @@ public interface RedisClient {
      */
     List luaList(String lua, List<String> keys, Object[] args);
     
+    Boolean exists(String key);
 }

@@ -258,4 +258,9 @@ public class StringRedisTemplateAdapter implements RedisClient {
         return execute;
     }
     
+    @Override
+    public Boolean exists(String key) {
+       return stringRedisTemplate.hasKey(key);
+    }
+    
 }

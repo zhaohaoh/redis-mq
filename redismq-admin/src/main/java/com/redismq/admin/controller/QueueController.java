@@ -80,6 +80,10 @@ public class QueueController {
             throw new RuntimeException();
         }
         String vQueueNameByVQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
+        Boolean lock = redisMQClientUtil.isLock(RedisMQConstant.getVirtualQueueLock(vQueue));
+        if (lock){
+            throw  new RuntimeException("队列正在被锁定");
+        }
         redisMQClientUtil.publishPullMessage(vQueueNameByVQueue);
         log.info("publishPullMessage :{}",vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);

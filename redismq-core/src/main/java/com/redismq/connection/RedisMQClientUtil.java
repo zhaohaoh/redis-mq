@@ -226,4 +226,8 @@ public class RedisMQClientUtil {
     public Long executeLua(String lua, List<String> keys, Object... args) {
         return redisClient.executeLua(lua, keys, args);
     }
+    
+    public Boolean isLock(String key) {
+        return redisClient.exists(key);
+    }
 }
