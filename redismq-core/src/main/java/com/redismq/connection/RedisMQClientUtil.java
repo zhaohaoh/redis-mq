@@ -6,6 +6,7 @@ import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
 
@@ -23,6 +24,7 @@ import static com.redismq.constant.RedisMQConstant.getQueueCollection;
 import static com.redismq.constant.RedisMQConstant.getRebalanceTopic;
 import static com.redismq.constant.RedisMQConstant.getTopic;
 
+@Slf4j
 public class RedisMQClientUtil {
     
     private final RedisClient redisClient;
@@ -71,10 +73,11 @@ public class RedisMQClientUtil {
         return queue;
     }
     
-    public void registerClient(String clientId, String applicationName) {
+    public void registerClient(String clientId, String applicationName,Integer workId) {
         Client client = new Client();
         client.setClientId(clientId);
         client.setApplicationName(applicationName);
+        client.setWorkId(workId);
         long heartbeatTime = System.currentTimeMillis();
         redisClient.zAdd(getClientCollection(), client, heartbeatTime);
     }
@@ -121,11 +124,27 @@ public class RedisMQClientUtil {
     /**
      * 删除消息
      */
-    public Long removeMessage(String queueName, String msgId) {
+    public Boolean removeMessage(String queueName, String msgId) {
+        boolean success =false;
+        String lua = "local result={};"
+                + "local r1 = redis.call('zrem', KEYS[1], ARGV[1]); "
+                + "local r2  = redis.call('hdel', KEYS[2],  ARGV[1]); "
+                + "table.insert(result,r1);table.insert(result,r2);"
+                + "return result;";
+        List<String> params=new ArrayList<>();
         queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
-        Long zSize = redisClient.zRemove(queueName, msgId);
-        Long size = redisClient.hashRemove(queueName + ":body", msgId);
-        return (zSize > 0 || size > 0) ? 1L : 0;
+        params.add(queueName);
+        params.add(queueName + ":body");
+        Object[] objects = {msgId};
+        List list = redisClient.luaList(lua, params, objects);
+        if (!CollectionUtils.isEmpty(list)){
+            int sum = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).sum();
+            success = sum >= 2;
+        }
+        if (!success){
+            log.error("remove message failed, queueName:{} messageId:{}",queueName,msgId);
+        }
+        return success;
     }
     
     

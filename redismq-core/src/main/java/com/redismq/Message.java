@@ -1,6 +1,6 @@
 package com.redismq;
 
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
+import com.redismq.id.MsgIDGenerator;
 import com.redismq.utils.RedisMQStringMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -55,7 +55,7 @@ public class Message implements Serializable {
     /**
      * 消息id
      */
-    private String id = NanoIdUtils.randomNanoId();
+    private String id = MsgIDGenerator.generateIdStr();
     
     
     /**
@@ -98,7 +98,7 @@ public class Message implements Serializable {
         /**
          * 消息id
          */
-        private String id = NanoIdUtils.randomNanoId();
+        private String id = MsgIDGenerator.generateIdStr();
     
     
         /**

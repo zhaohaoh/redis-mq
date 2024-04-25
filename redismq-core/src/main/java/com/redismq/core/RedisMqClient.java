@@ -6,6 +6,8 @@ import com.redismq.connection.RedisMQClientUtil;
 import com.redismq.constant.PushMessage;
 import com.redismq.constant.RedisMQConstant;
 import com.redismq.container.RedisMQListenerContainer;
+import com.redismq.id.MsgIDGenerator;
+import com.redismq.id.WorkIdGenerator;
 import com.redismq.pojo.Client;
 import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
@@ -25,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.constant.GlobalConstant.CLIENT_EXPIRE;
@@ -71,11 +74,19 @@ public class RedisMqClient {
      * 应用名
      */
     private final String applicationName;
+    /**
+     * 机器id
+     */
+    private Integer workId;
     
     /**
      * 负载均衡机制
      */
     private final RebalanceImpl rebalance;
+    /**
+     * 工作id生成器
+     */
+    private final WorkIdGenerator workIdGenerator;
     
     /**
      * 容器
@@ -88,12 +99,13 @@ public class RedisMqClient {
     private boolean isSub;
     
     public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
-            RebalanceImpl rebalance,String applicationName) {
+            RebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator) {
         this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
         this.applicationName = applicationName;
+        this.workIdGenerator = workIdGenerator;
     }
     
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
@@ -110,9 +122,25 @@ public class RedisMqClient {
     
     
     public void registerClient() {
-        log.debug("registerClient :{} applicationName:{}", clientId, applicationName);
+        if (workId == null){
+            workId = workIdGenerator.getSnowId();
+            List<Client> clients = redisMQStoreUtil.getClients();
+            List<Integer> workIds = clients.stream().map(Client::getWorkId).collect(Collectors.toList());
+            while (workIds.contains(workId)){
+                log.error("redis-mq registerClient workId duplicate");
+                try {
+                    Thread.sleep(1000L);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                workId = workIdGenerator.getSnowId();
+            }
+            MsgIDGenerator.init(workId);
+        }
+       
+        log.debug("registerClient :{} applicationName:{} workId:{}", clientId, applicationName,workId);
         //注册客户端
-        redisMQStoreUtil.registerClient(clientId,applicationName);
+        redisMQStoreUtil.registerClient(clientId,applicationName,workId);
     }
     
     public List<Client> allClient() {
@@ -147,8 +175,6 @@ public class RedisMqClient {
         rebalanceSubscribe();
         // 重平衡
         rebalance();
-        //订阅push消息
-        //        subscribe();
         // 30秒自动注册
         startRegisterClientTask();
         // 20秒自动重平衡

@@ -175,8 +175,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (AckMode.MAUAL.equals(ackMode)) {
                         
                         } else {
-                            Long remove = redisMQClientUtil.removeMessage(queueName, message.getId());
-                            if (remove == null || remove <= 0) {
+                            Boolean remove = redisMQClientUtil.removeMessage(queueName, message.getId());
+                            if (!remove) {
                                 continue;
                             }
                         }

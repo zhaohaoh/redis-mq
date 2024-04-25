@@ -15,9 +15,14 @@ public class Client {
      * 客户端名称
      */
     private String clientId;
-    
+  
     /**
      * 客户端名称
      */
     private String applicationName;
+    
+    /**
+     * workId
+     */
+    private Integer workId;
 }

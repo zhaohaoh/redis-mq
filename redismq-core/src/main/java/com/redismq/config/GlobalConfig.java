@@ -52,9 +52,13 @@ public class GlobalConfig {
     /**
      * 任务执行超时时间 ms
      */
-    protected Long taskTimeout = 120 * 1000L;
+    public Long taskTimeout = 120 * 1000L;
     /**
      * 任务阻塞等待轮询时间 ms
      */
-    protected Long taskWaitTime = 1000L;
+    public Long taskWaitTime = 1000L;
+   /**
+     * 最大机器数量
+    */
+    public Integer maxWorkerIdBits = 8;
 }

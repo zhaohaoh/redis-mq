@@ -402,8 +402,8 @@ public class RedisMQProducer {
         String queueOffset = PREFIX + NAMESPACE + SPLITE +"offset" + SPLITE + queue.getQueueName() ;
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
                 + "redis.call('set',KEYS[1],0) " + "count = redis.call('incrBy',KEYS[1],1)" + "end " + "return count;";
-        return redisMQClientUtil
-                .executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
+        Long num = redisMQClientUtil.executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
+        return num;
     }
     
     /**
@@ -508,8 +508,8 @@ public class RedisMQProducer {
         if (StringUtils.isBlank(queueName)) {
             throw new RedisMqException("tryCancel Virtual Queue is empty");
         }
-        Long aLong = redisMQClientUtil.removeMessage(queueName, msgId);
-        return aLong>0;
+        Boolean aBoolean = redisMQClientUtil.removeMessage(queueName, msgId);
+        return aBoolean;
     }
     
     /**

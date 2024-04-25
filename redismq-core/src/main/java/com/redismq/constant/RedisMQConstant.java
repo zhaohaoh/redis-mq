@@ -59,6 +59,10 @@ public class RedisMQConstant {
     public static final String VIRTUAL_LOCK = "VIRTUAL_LOCK";
     
     /**
+     * 机器id集合
+     */
+    private static final String WORK_ID_ZSET = "WORK_ID_ZSET";
+    /**
      * 获取队列集合
      *
      * @return {@link String}
@@ -118,6 +122,11 @@ public class RedisMQConstant {
     
     public static String getVirtualQueueLock(String virtualQueueName) {
         return PREFIX + NAMESPACE + SPLITE + VIRTUAL_LOCK + SPLITE + virtualQueueName;
+    }
+    
+    
+    public static String getWorkIdZset() {
+        return PREFIX + NAMESPACE + SPLITE + WORK_ID_ZSET;
     }
     
 }

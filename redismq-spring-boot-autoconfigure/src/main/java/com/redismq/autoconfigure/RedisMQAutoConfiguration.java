@@ -9,6 +9,7 @@ import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
+import com.redismq.id.WorkIdGenerator;
 import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.AllocateMessageQueueAveragely;
@@ -44,6 +45,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
+   
 
 
     /**
@@ -52,10 +54,11 @@ public class RedisMQAutoConfiguration implements InitializingBean {
       * @return {@link RedisMQProducer}
     */
     @Bean
-    public RedisMqClient redisMqClient(RedisMQClientUtil redisMQClientUtil) {
+    public RedisMqClient redisMqClient(RedisMQClientUtil redisMQClientUtil, WorkIdGenerator workIdGenerator) {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
         RebalanceImpl rebalance = new RebalanceImpl(new AllocateMessageQueueAveragely());
-        RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance,redisMqProperties.getApplicationName());
+        RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance,
+                redisMqProperties.getApplicationName(),workIdGenerator);
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }
@@ -74,7 +77,10 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         RedisClient redisClient = new StringRedisTemplateAdapter(redisTemplate);
         return redisClient;
     }
-    
+    @Bean
+    public WorkIdGenerator workIdGenerator(RedisClient redisClient) {
+        return new WorkIdGenerator(redisClient,redisMqProperties.getGlobalConfig().getMaxWorkerIdBits());
+    }
 
 
     /**

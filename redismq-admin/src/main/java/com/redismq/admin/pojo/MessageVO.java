@@ -1,6 +1,5 @@
 package com.redismq.admin.pojo;
 
-import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
 import lombok.Data;
 
 import java.util.Map;
@@ -22,8 +21,7 @@ public class MessageVO {
     /**
      * 消息id
      */
-    private String id = NanoIdUtils.randomNanoId();
-    
+    private String id;
     
     /**
      * 用来路由虚拟队列的key

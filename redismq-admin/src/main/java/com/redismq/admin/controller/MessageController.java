@@ -56,8 +56,8 @@ public class MessageController {
      */
     @PostMapping("deleteMessage")
     public ResponseEntity deleteMessage(@RequestBody Message message){
-        Long aLong = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
-        return ResponseEntity.ok(aLong);
+        Boolean success = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
+        return ResponseEntity.ok(success);
     }
     
 }
