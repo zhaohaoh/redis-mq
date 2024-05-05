@@ -1,10 +1,12 @@
 package com.redismq.interceptor;
 
-import com.redismq.Message;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+;
 
 /**
  * @Author: hzh

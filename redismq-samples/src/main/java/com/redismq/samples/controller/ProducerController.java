@@ -1,6 +1,6 @@
 package com.redismq.samples.controller;
 
-import com.redismq.connection.RedisClient;
+import com.redismq.common.connection.RedisClient;
 import com.redismq.samples.consumer.JavaBean;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;

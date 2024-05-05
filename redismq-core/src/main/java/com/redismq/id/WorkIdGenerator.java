@@ -1,7 +1,7 @@
 package com.redismq.id;
 
-import com.redismq.connection.RedisClient;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.connection.RedisClient;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;

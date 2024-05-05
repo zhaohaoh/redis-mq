@@ -13,8 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.redismq.constant.StateConstant.RUNNING;
-import static com.redismq.constant.StateConstant.STOP;
+
+import static com.redismq.common.constant.StateConstant.RUNNING;
+import static com.redismq.common.constant.StateConstant.STOP;
 import static com.redismq.delay.DelayTimeoutTaskManager.EXECUTOR;
 
 /**

@@ -15,9 +15,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
-import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
-import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_MESSAGE_LISTENERCONTAINER;
-import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
+import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
+import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_MESSAGE_LISTENERCONTAINER;
+import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
 
 /**
  * 配置springredis  避免循环依赖

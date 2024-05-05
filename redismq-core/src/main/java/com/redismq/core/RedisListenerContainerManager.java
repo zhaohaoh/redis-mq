@@ -1,7 +1,7 @@
 package com.redismq.core;
 
-import com.redismq.constant.PushMessage;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.PushMessage;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.exception.RedisMqException;
@@ -21,12 +21,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.BLOCKING_QUEUE_SIZE;
-import static com.redismq.constant.GlobalConstant.BOSS_NUM;
-import static com.redismq.constant.GlobalConstant.DELAY_BLOCKING_QUEUE_SIZE;
-import static com.redismq.constant.GlobalConstant.THREAD_NUM_MAX;
-import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
-import static com.redismq.constant.StateConstant.RUNNING;
+import static com.redismq.common.constant.GlobalConstant.BLOCKING_QUEUE_SIZE;
+import static com.redismq.common.constant.GlobalConstant.BOSS_NUM;
+import static com.redismq.common.constant.GlobalConstant.DELAY_BLOCKING_QUEUE_SIZE;
+import static com.redismq.common.constant.GlobalConstant.THREAD_NUM_MAX;
+import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
+import static com.redismq.common.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
 
 

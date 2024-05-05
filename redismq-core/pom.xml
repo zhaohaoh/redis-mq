@@ -8,7 +8,7 @@
    <version>0.3.5</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
-   <version>0.3.5</version>
+  
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-core</artifactId>
@@ -19,9 +19,9 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-            <version>4.1.42.Final</version>
+            <groupId>io.github.zhaohaoh</groupId>
+            <artifactId>redismq-rpc</artifactId>
+            <version>0.3.5</version>
         </dependency>
         <!--        redis-->
         <dependency>

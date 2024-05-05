@@ -1,7 +1,7 @@
 package com.redismq.admin.controller;
 
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.pojo.Client;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.pojo.Client;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

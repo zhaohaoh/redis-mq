@@ -1,15 +1,15 @@
 package com.redismq.admin.controller;
 
 import com.alibaba.fastjson.JSONValidator;
-import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageDTO;
 import com.redismq.admin.pojo.PageResult;
 import com.redismq.admin.pojo.QueuePageSelect;
 import com.redismq.admin.pojo.VQueue;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.RedisMQConstant;
-import com.redismq.queue.Queue;
-import com.redismq.utils.JsonSerializerUtil;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.Message;
+import com.redismq.common.pojo.Queue;
+import com.redismq.common.serializer.JsonSerializerUtil;
 import com.redismq.utils.RedisMQTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
+import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
 
 
 @RestController

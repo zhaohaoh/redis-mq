@@ -1,6 +1,6 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.interceptor.DefaultProducerInterceptor;
 import com.redismq.interceptor.ProducerInterceptor;

@@ -1,6 +1,6 @@
 package com.redismq.utils;
 
-import com.redismq.Message;
+import com.redismq.common.pojo.Message;
 import com.redismq.core.RedisMQProducer;
 import java.time.Duration;
 import java.util.List;

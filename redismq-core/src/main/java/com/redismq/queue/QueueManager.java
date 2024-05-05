@@ -1,7 +1,8 @@
 package com.redismq.queue;
 
 
-import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.common.pojo.Queue;
+import com.redismq.common.connection.RedisMQClientUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -14,7 +15,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
+import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
+
 
 /**
  * @Author: hzh

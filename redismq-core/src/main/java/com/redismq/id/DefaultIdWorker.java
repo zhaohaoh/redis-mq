@@ -1,6 +1,6 @@
 package com.redismq.id;
 
-import com.redismq.config.GlobalConfigCache;
+import com.redismq.common.config.GlobalConfigCache;
 
 import java.util.concurrent.ThreadLocalRandom;
 

@@ -1,11 +1,14 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.config.GlobalConfigCache;
+import com.redismq.common.config.GlobalConfigCache;
+import com.redismq.common.config.NettyConfig;
+import com.redismq.common.connection.RedisClient;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.connection.RedisMQServerUtil;
+import com.redismq.common.connection.StringRedisTemplateAdapter;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.util.ServerManager;
 import com.redismq.config.RedisProperties;
-import com.redismq.connection.RedisClient;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.connection.StringRedisTemplateAdapter;
-import com.redismq.constant.RedisMQConstant;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.core.RedisMqClient;
@@ -14,6 +17,7 @@ import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.AllocateMessageQueueAveragely;
 import com.redismq.rebalance.RebalanceImpl;
+import com.redismq.rpc.client.RemotingClient;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +30,8 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 import java.util.List;
 
-import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
-import static com.redismq.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
+import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
+import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
 
 
 /**
@@ -62,9 +66,15 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }
+    
     @Bean
     public RedisMQClientUtil redisMQClientUtil(RedisClient redisClient) {
         return new RedisMQClientUtil(redisClient);
+    }
+    
+    @Bean
+    public RedisMQServerUtil redisMQServerUtil(RedisClient redisClient) {
+        return new RedisMQServerUtil(redisClient);
     }
 
      /**
@@ -89,16 +99,20 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      * @return {@link RedisMQTemplate}
      */
     @Bean
-    public RedisMQTemplate redisMQTemplate(RedisMQClientUtil redisMQClientUtil) {
-        RedisMQProducer redisMQProducer = new RedisMQProducer(redisMQClientUtil);
+    public RedisMQTemplate redisMQTemplate(RedisMQClientUtil redisMQClientUtil,@Autowired(required = false) RemotingClient remotingClient) {
+        RedisMQProducer redisMQProducer = new RedisMQProducer(redisMQClientUtil,remotingClient);
         redisMQProducer.setProducerInterceptors(producerInterceptors);
         return new RedisMQTemplate(redisMQProducer);
     }
+    
     @Bean
     public QueueManager queueManager() {
         return new QueueManager();
     }
-    
+    @Bean
+    public ServerManager serverManager(){
+        return  new ServerManager();
+    }
 
     /**
      * 初始化执行
@@ -109,5 +123,8 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         RedisMQConstant.NAMESPACE = redisMqProperties.getNamespace();
         GlobalConfigCache.GLOBAL_CONFIG = redisMqProperties.getGlobalConfig();
         GlobalConfigCache.QUEUE_CONFIG = redisMqProperties.getQueueConfig();
+        NettyConfig nettyConfig = redisMqProperties.getNettyConfig();
+        nettyConfig.init();
+        GlobalConfigCache.NETTY_CONFIG = nettyConfig;
     }
 }

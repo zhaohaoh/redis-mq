@@ -1,10 +1,11 @@
 package com.redismq.core;
 
-import com.redismq.constant.PushMessage;
-import com.redismq.constant.RedisMQConstant;
-import com.redismq.queue.Queue;
+
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.PushMessage;
+import com.redismq.common.pojo.Queue;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQStringMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

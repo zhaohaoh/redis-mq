@@ -1,6 +1,6 @@
 //package com.redismq.samples.com.redismq.samples.consumer;
 //
-//import com.redismq.queue.Queue;
+//import com.redismq.common.pojo.Queue;
 //import org.springframework.context.annotation.Bean;
 //import org.springframework.context.annotation.Configuration;
 //

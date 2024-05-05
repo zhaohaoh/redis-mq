@@ -1,16 +1,16 @@
 package com.redismq.container;
 
-import com.redismq.Message;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.AckMode;
+import com.redismq.common.pojo.Message;
+import com.redismq.common.constant.AckMode;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
 import com.redismq.delay.DelayTimeoutTaskManager;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
-import com.redismq.queue.Queue;
+import com.redismq.common.pojo.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQStringMapper;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +29,10 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.THREAD_NUM_MAX;
-import static com.redismq.constant.GlobalConstant.WORK_THREAD_STOP_WAIT;
-import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
+import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.common.constant.GlobalConstant.THREAD_NUM_MAX;
+import static com.redismq.common.constant.GlobalConstant.WORK_THREAD_STOP_WAIT;
+import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
 
 

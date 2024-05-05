@@ -1,22 +1,21 @@
 package com.redismq.core;
 
 import com.google.common.collect.Lists;
-import com.redismq.Message;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.PushMessage;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.Message;
+import com.redismq.common.pojo.PushMessage;
+import com.redismq.common.pojo.Queue;
+import com.redismq.common.pojo.SendMessageParam;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.exception.QueueFullException;
 import com.redismq.exception.RedisMqException;
+import com.redismq.id.MsgIDGenerator;
 import com.redismq.interceptor.ProducerInterceptor;
-import com.redismq.pojo.SendMessageParam;
-import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
+import com.redismq.rpc.client.RemotingClient;
 import com.redismq.utils.RedisMQDataHelper;
-import com.redismq.utils.RedisMQStringMapper;
 import com.redismq.utils.SeataUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.ByteBufOutputStream;
 import io.seata.core.context.RootContext;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -25,8 +24,6 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,11 +32,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.SPLITE;
-import static com.redismq.constant.GlobalConstant.V_QUEUE_SPLITE;
-import static com.redismq.constant.RedisMQConstant.NAMESPACE;
-import static com.redismq.constant.RedisMQConstant.PREFIX;
+import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
+import static com.redismq.common.constant.RedisMQConstant.NAMESPACE;
+import static com.redismq.common.constant.RedisMQConstant.PREFIX;
 
 /**
  * @Author: hzh
@@ -49,7 +46,9 @@ public class RedisMQProducer {
     
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
     
-    private RedisMQClientUtil redisMQClientUtil;
+    private final RedisMQClientUtil redisMQClientUtil;
+    
+    private final RemotingClient remotingClient;
     
     private List<ProducerInterceptor> producerInterceptors;
     
@@ -64,11 +63,12 @@ public class RedisMQProducer {
     }
     
     
-    public RedisMQProducer(RedisMQClientUtil redisMQClientUtil) {
+    public RedisMQProducer(RedisMQClientUtil redisMQClientUtil,RemotingClient remotingClient) {
         this.redisMQClientUtil = redisMQClientUtil;
         if (GLOBAL_CONFIG.seataState) {
             this.seataUtil = new SeataUtil();
         }
+        this.remotingClient=remotingClient;
     }
     
     /**
@@ -262,6 +262,10 @@ public class RedisMQProducer {
      * @return boolean
      */
     private boolean doSendMessage(PushMessage pushMessage, List<SendMessageParam> sendMessageParams) {
+        for (SendMessageParam sendMessageParam : sendMessageParams) {
+            Message message = sendMessageParam.getMessage();
+            message.setId(MsgIDGenerator.generateIdStr());
+        }
         //构建redis的请求参数按顺序消息和scope对应
         if (sendMessageParams.size() > 100) {
             //只所以要分离集合发送是因为lua脚本的参数长度有限
@@ -286,7 +290,6 @@ public class RedisMQProducer {
         //发送前操作
         beforeSend(messageList);
         try {
-            
             Boolean success = null;
             Boolean sendAfterCommit = RedisMQDataHelper.get();
             if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
@@ -310,6 +313,13 @@ public class RedisMQProducer {
             } else {
                 success = this.sendRedisMessage(pushMessage, sendMessageParams);
                 afterSend(messageList, success);
+            }
+            //rpc
+            if (remotingClient !=null ) {
+                for (SendMessageParam param : sendMessageParams) {
+                    Message message = param.getMessage();
+                    remotingClient.sendAsync(message);
+                }
             }
             return success != null && success;
         } catch (Exception e) {
@@ -381,23 +391,14 @@ public class RedisMQProducer {
                 return true;
             }
         }
+        
         if (size == -1L) {
             log.error("RedisMQ Producer Queue Full");
             return false;
         }
         return false;
     }
-    public ByteBuf encode(Object in)  {
-        ByteBuf out = ByteBufAllocator.DEFAULT.buffer();
-        try {
-            ByteBufOutputStream os = new ByteBufOutputStream(out);
-            RedisMQStringMapper.STRING_MAPPER.writeValue((OutputStream) os, in);
-            return os.buffer();
-        } catch (IOException e) {
-            out.release();
-        }
-        return null;
-    }
+ 
     private Long increment(Queue queue) {
         String queueOffset = PREFIX + NAMESPACE + SPLITE +"offset" + SPLITE + queue.getQueueName() ;
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "

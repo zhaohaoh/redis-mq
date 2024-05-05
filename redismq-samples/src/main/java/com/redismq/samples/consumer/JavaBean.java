@@ -1,6 +1,6 @@
 package com.redismq.samples.consumer;
 
-import com.redismq.utils.RedisMQStringMapper;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import lombok.Data;
 
 @Data

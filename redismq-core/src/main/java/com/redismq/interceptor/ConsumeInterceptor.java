@@ -1,6 +1,6 @@
 package com.redismq.interceptor;
 
-import com.redismq.Message;
+import com.redismq.common.pojo.Message;
 
 /**
  * @Author: hzh

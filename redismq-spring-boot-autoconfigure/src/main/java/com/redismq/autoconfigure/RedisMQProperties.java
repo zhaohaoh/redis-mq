@@ -1,7 +1,8 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.config.GlobalConfig;
-import com.redismq.config.QueueConfig;
+import com.redismq.common.config.GlobalConfig;
+import com.redismq.common.config.NettyConfig;
+import com.redismq.common.config.QueueConfig;
 import com.redismq.config.RedisProperties;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -40,4 +41,7 @@ public class RedisMQProperties {
     
     @NestedConfigurationProperty
     private QueueConfig queueConfig = new QueueConfig();
+    
+    @NestedConfigurationProperty
+    private NettyConfig nettyConfig = new NettyConfig();
 }

@@ -20,6 +20,11 @@
     <dependencies>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
+            <artifactId>redismq-rpc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-core</artifactId>
            <version>0.3.5</version>
         </dependency>

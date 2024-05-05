@@ -1,11 +1,11 @@
 package com.redismq.admin.controller;
 
-import com.redismq.Message;
 import com.redismq.admin.pojo.MQMessageQueryDTO;
 import com.redismq.admin.pojo.MessageVO;
 import com.redismq.admin.pojo.PageResult;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.Message;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.BeanUtils;

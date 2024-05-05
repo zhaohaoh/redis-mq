@@ -1,7 +1,7 @@
 package com.redismq.rebalance;
 
 
-import com.redismq.pojo.Client;
+import com.redismq.common.pojo.Client;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -4,7 +4,7 @@ import com.redismq.samples.rocket.AppendMessageResult;
 import com.redismq.samples.rocket.AppendMessageStatus;
 import com.redismq.samples.rocket.CrcUtil;
 import com.redismq.samples.rocket.Message;
-import com.redismq.utils.RedisMQStringMapper;
+import com.redismq.common.serializer.RedisMQStringMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

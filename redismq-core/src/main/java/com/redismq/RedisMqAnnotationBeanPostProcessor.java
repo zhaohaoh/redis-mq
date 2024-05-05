@@ -1,8 +1,8 @@
 package com.redismq;
 
 
-import com.redismq.config.GlobalConfigCache;
-import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.common.config.GlobalConfigCache;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
@@ -10,9 +10,9 @@ import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
-import com.redismq.queue.Queue;
+import com.redismq.common.pojo.Queue;
 import com.redismq.queue.QueueManager;
-import com.redismq.utils.RedisMQStringMapper;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,7 +47,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.redismq.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.GlobalConstant.SPLITE;
+
 
 //Bean的后置处理器切入点
 public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Ordered, ApplicationContextAware, SmartLifecycle, DisposableBean {

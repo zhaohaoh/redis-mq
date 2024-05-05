@@ -1,21 +1,21 @@
 package com.redismq.container;
 
-import com.redismq.connection.RedisMQClientUtil;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.interceptor.ConsumeInterceptor;
-import com.redismq.queue.Queue;
+import com.redismq.common.pojo.Queue;
 import lombok.Data;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.SPLITE;
-import static com.redismq.constant.StateConstant.PAUSE;
-import static com.redismq.constant.StateConstant.RUNNING;
-import static com.redismq.constant.StateConstant.STOP;
+import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.StateConstant.PAUSE;
+import static com.redismq.common.constant.StateConstant.RUNNING;
+import static com.redismq.common.constant.StateConstant.STOP;
+import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
 
 /**
  * 容器抽象类

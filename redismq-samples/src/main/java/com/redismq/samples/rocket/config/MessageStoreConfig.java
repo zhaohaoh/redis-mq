@@ -1,6 +1,6 @@
 //package com.redismq.samples.rocket.config;
 //
-//import com.redismq.constant.FlushDiskType;
+//import com.redismq.common.constant.FlushDiskType;
 //import lombok.Data;
 //
 //import java.io.File;

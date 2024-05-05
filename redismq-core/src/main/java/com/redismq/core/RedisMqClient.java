@@ -2,14 +2,14 @@ package com.redismq.core;
 
 
 import com.aventrix.jnanoid.jnanoid.NanoIdUtils;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.PushMessage;
-import com.redismq.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.pojo.Client;
+import com.redismq.common.pojo.PushMessage;
+import com.redismq.common.pojo.Queue;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.id.MsgIDGenerator;
 import com.redismq.id.WorkIdGenerator;
-import com.redismq.pojo.Client;
-import com.redismq.queue.Queue;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.RebalanceImpl;
@@ -29,13 +29,13 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.redismq.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.constant.GlobalConstant.CLIENT_EXPIRE;
-import static com.redismq.constant.GlobalConstant.CLIENT_RABALANCE_TIME;
-import static com.redismq.constant.GlobalConstant.CLIENT_REGISTER_TIME;
-import static com.redismq.constant.GlobalConstant.SPLITE;
-import static com.redismq.constant.RedisMQConstant.getRebalanceLock;
-import static com.redismq.constant.RedisMQConstant.getVirtualQueueLock;
+import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.common.constant.GlobalConstant.CLIENT_EXPIRE;
+import static com.redismq.common.constant.GlobalConstant.CLIENT_RABALANCE_TIME;
+import static com.redismq.common.constant.GlobalConstant.CLIENT_REGISTER_TIME;
+import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.RedisMQConstant.getRebalanceLock;
+import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
 
 
 /**
@@ -139,8 +139,12 @@ public class RedisMqClient {
         }
        
         log.debug("registerClient :{} applicationName:{} workId:{}", clientId, applicationName,workId);
+        Client client = new Client();
+        client.setClientId(clientId);
+        client.setApplicationName(applicationName);
+        client.setWorkId(workId);
         //注册客户端
-        redisMQStoreUtil.registerClient(clientId,applicationName,workId);
+        redisMQStoreUtil.registerClient(client);
     }
     
     public List<Client> allClient() {
@@ -173,6 +177,8 @@ public class RedisMqClient {
         //        registerClient();
         // 先订阅平衡消息,以免平衡的消息没有收到
         rebalanceSubscribe();
+        // 订阅服务器消息
+        serverSubscribe();
         // 重平衡
         rebalance();
         // 30秒自动注册
@@ -183,6 +189,11 @@ public class RedisMqClient {
         redisListenerContainerManager.startRedisListener();
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
+    }
+    
+    private void serverSubscribe() {
+        redisMessageListenerContainer.addMessageListener(new RedisServerListener(),
+                new ChannelTopic(RedisMQConstant.getServerTopic()));
     }
     
     

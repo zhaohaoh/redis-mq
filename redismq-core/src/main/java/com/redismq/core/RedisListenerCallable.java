@@ -1,11 +1,11 @@
 package com.redismq.core;
 
-import com.redismq.Message;
-import com.redismq.connection.RedisMQClientUtil;
-import com.redismq.constant.AckMode;
+import com.redismq.common.pojo.Message;
+import com.redismq.common.constant.AckMode;
+import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.exception.RedisMqException;
 import com.redismq.interceptor.ConsumeInterceptor;
-import com.redismq.utils.RedisMQStringMapper;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

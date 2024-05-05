@@ -1,6 +1,6 @@
 package com.redismq.samples.consumer;
 
-import com.redismq.Message;
+import com.redismq.common.pojo.Message;
 import com.redismq.RedisListener;
 import org.springframework.stereotype.Component;
 
