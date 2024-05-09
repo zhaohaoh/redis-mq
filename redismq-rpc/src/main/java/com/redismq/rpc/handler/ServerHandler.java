@@ -2,7 +2,6 @@ package com.redismq.rpc.handler;
 
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
-import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.rpc.client.AbstractNettyRemoting;
 import com.redismq.rpc.proccess.RemoteServerProccessManager;
 import io.netty.channel.Channel;
@@ -27,7 +26,8 @@ public class ServerHandler extends ChannelDuplexHandler {
     
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        log.error("nettyServer error :" + cause);
+       
+        log.error("nettyServer error : " ,cause);
         ctx.close();
     }
 
@@ -93,10 +93,10 @@ public class ServerHandler extends ChannelDuplexHandler {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         //接受json串
-        String data = (String) msg;
-        log.info("nettyServer Receive message :" + ctx.channel().remoteAddress() + data);
+        RemoteMessage remoteMessage = (RemoteMessage) msg;
+        log.info("nettyServer Receive message :" + ctx.channel().remoteAddress() + remoteMessage);
         
-        RemoteMessage remoteMessage = RedisMQStringMapper.toBean(data, RemoteMessage.class);
+//        RemoteMessage remoteMessage = RedisMQStringMapper.toBean(data, RemoteMessage.class);
         RemoteResponse remoteResponse = new RemoteResponse();
         remoteResponse.setChannelHandlerContext(ctx);
         remoteServerProccessManager.processMessage(remoteResponse,remoteMessage);

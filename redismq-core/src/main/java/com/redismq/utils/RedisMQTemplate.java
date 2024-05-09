@@ -2,8 +2,8 @@ package com.redismq.utils;
 
 import com.redismq.common.pojo.Message;
 import com.redismq.core.RedisMQProducer;
+
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
@@ -77,19 +77,19 @@ public class RedisMQTemplate {
         return redisMQProducer.sendMessage(obj, queue, tag,key);
     }
 
-    /**
-     * 批量一次性打包发送队列消息  消费仍然是一对一消费
-     */
-    public boolean sendBatchMessage(List<?> messages, String queue) {
-        return redisMQProducer.sendBatchMessage(messages, queue, "");
-    }
-
-    /**
-     * 批量一次性打包发送队列消息  消费仍然是一对一消费
-     */
-    public boolean sendBatchMessage(List<?> messages, String queue, String tag) {
-        return redisMQProducer.sendBatchMessage(messages, queue, tag);
-    }
+//    /**
+//     * 批量一次性打包发送队列消息  消费仍然是一对一消费
+//     */
+//    public boolean sendBatchMessage(List<?> messages, String queue) {
+//        return redisMQProducer.sendBatchMessage(messages, queue, "");
+//    }
+//
+//    /**
+//     * 批量一次性打包发送队列消息  消费仍然是一对一消费
+//     */
+//    public boolean sendBatchMessage(List<?> messages, String queue, String tag) {
+//        return redisMQProducer.sendBatchMessage(messages, queue, tag);
+//    }
 
 
     /**

@@ -5,6 +5,7 @@ import java.util.Objects;
 public class PushMessage {
     //虚拟队列
     private String queue;
+    //执行任务时间 相同会去重
     private Long timestamp;
 
     public String getQueue() {

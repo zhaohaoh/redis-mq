@@ -8,6 +8,7 @@ import com.redismq.admin.pojo.VQueue;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Message;
+import com.redismq.common.pojo.PushMessage;
 import com.redismq.common.pojo.Queue;
 import com.redismq.common.serializer.JsonSerializerUtil;
 import com.redismq.utils.RedisMQTemplate;
@@ -84,7 +85,10 @@ public class QueueController {
         if (lock){
             throw  new RuntimeException("队列正在被锁定");
         }
-        redisMQClientUtil.publishPullMessage(vQueueNameByVQueue);
+        PushMessage pushMessage = new PushMessage();
+        pushMessage.setTimestamp(System.currentTimeMillis());
+        pushMessage.setQueue(vQueueNameByVQueue);
+        redisMQClientUtil.publishPullMessage(pushMessage);
         log.info("publishPullMessage :{}",vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

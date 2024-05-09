@@ -99,10 +99,14 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      * @return {@link RedisMQTemplate}
      */
     @Bean
-    public RedisMQTemplate redisMQTemplate(RedisMQClientUtil redisMQClientUtil,@Autowired(required = false) RemotingClient remotingClient) {
-        RedisMQProducer redisMQProducer = new RedisMQProducer(redisMQClientUtil,remotingClient);
+    public RedisMQTemplate redisMQTemplate(RedisMQProducer redisMQProducer) {
         redisMQProducer.setProducerInterceptors(producerInterceptors);
         return new RedisMQTemplate(redisMQProducer);
+    }
+    
+    @Bean
+    public RedisMQProducer redisMQProducer(RedisMQClientUtil redisMQClientUtil,@Autowired(required = false) RemotingClient remotingClient) {
+        return new RedisMQProducer(redisMQClientUtil,remotingClient);
     }
     
     @Bean

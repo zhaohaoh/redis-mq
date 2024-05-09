@@ -52,7 +52,9 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<AddressI
         if (obj != null && obj.isActive()) {
             return true;
         }
-        LOGGER.info("channel valid false,channel:" + obj);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("channel valid false,channel:" + obj);
+        }
         return false;
     }
     

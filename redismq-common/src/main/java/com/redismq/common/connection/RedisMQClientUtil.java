@@ -225,10 +225,7 @@ public class RedisMQClientUtil {
     /**
      * 发布拉取消息的topic
      */
-    public void publishPullMessage(String vQueueName) {
-        PushMessage pushMessage = new PushMessage();
-        pushMessage.setQueue(RedisMQConstant.getVQueueNameByVQueue(vQueueName));
-        pushMessage.setTimestamp(System.currentTimeMillis());
+    public void publishPullMessage(PushMessage pushMessage) {
         redisClient.convertAndSend(getTopic(), pushMessage);
     }
     

@@ -1,4 +1,4 @@
-package com.redismq.exception;
+package com.redismq.common.exception;
 
 public class RedisMqException extends RuntimeException {
     public RedisMqException() {

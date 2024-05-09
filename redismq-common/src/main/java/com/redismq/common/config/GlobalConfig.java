@@ -1,6 +1,7 @@
 package com.redismq.common.config;
 
 
+import com.redismq.common.constant.ProducerAck;
 import lombok.Data;
 
 
@@ -22,12 +23,19 @@ public class GlobalConfig {
     /**
      * 生产者重试次数
      */
-    public int producerRetryCount = 3;
+    public int producerRetryCount = 30;
     /**
      * 生产者重试间隔
      */
     public int producerRetrySleep = 200;
-
+    /**
+     * 生产者批量发送消息限制最大数量
+     */
+    public int producerMaxBatchSize = 200;
+    /**
+     * 生产者消息确认机制
+     */
+    public ProducerAck productAck = ProducerAck.ASYNC;
     /**
      * 队列最大大小
      */
@@ -61,4 +69,5 @@ public class GlobalConfig {
      * 最大机器数量
     */
     public Integer maxWorkerIdBits = 8;
+
 }

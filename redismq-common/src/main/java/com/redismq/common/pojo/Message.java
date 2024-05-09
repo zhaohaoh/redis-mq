@@ -82,6 +82,12 @@ public class Message implements Serializable {
      */
     private Long offset;
     
+    
+    /**
+     * 执行时间
+     */
+    private Long executeTime;
+    
     /**
      * 消息头部
      */

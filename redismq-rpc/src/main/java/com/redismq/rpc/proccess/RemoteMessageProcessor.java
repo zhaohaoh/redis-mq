@@ -3,6 +3,8 @@ package com.redismq.rpc.proccess;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
 
+import java.util.List;
+
 /**
  * rpc消息处理器
  *
@@ -17,7 +19,7 @@ public interface RemoteMessageProcessor {
      * @param message 消息
      * @throws Exception 异常
      */
-    void process(RemoteResponse ctx, RemoteMessage message) throws Exception;
+    void process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception;
     
-    Integer[] getType();
+    Integer  getType();
 }

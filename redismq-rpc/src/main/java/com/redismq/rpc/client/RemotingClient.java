@@ -1,14 +1,13 @@
 package com.redismq.rpc.client;
 
-import com.redismq.common.pojo.MergedWarpMessage;
-
-import java.util.concurrent.TimeoutException;
+import java.util.List;
 
 public interface RemotingClient {
+    Object sendSync(Object msg,int messageType);
     
-    Object sendSync(Object msg) throws TimeoutException;
+    Object sendBatchSync(List<?> msg,int messageType);
     
-    void sendAsync(Object remoteMessage);
-    
-    void sendBatchAsync(String serverAddress, MergedWarpMessage remoteMessage);
+    void sendAsync(Object message,int messageType);
+ 
+ 
 }

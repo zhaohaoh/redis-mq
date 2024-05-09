@@ -7,8 +7,8 @@ import java.util.concurrent.TimeoutException;
 
 /**
  */
-public class MessageFuture {
-    private Message message;
+public class RemoteMessageFuture {
+    private RemoteMessage requestMessage;
     private long timeout;
     private long start = System.currentTimeMillis();
     private transient CompletableFuture<Object> origin = new CompletableFuture<>();
@@ -67,17 +67,17 @@ public class MessageFuture {
      *
      * @return the request message
      */
-    public Message getMessage() {
-        return message;
+    public RemoteMessage getRequestMessage() {
+        return requestMessage;
     }
 
     /**
      * Sets request message.
      *
-     * @param message the request message
+     * @param requestMessage the request message
      */
-    public void setMessage(Message message) {
-        this.message = message;
+    public void setRequestMessage(RemoteMessage requestMessage) {
+        this.requestMessage = requestMessage;
     }
 
     /**

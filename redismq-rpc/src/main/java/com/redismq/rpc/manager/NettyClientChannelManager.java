@@ -112,9 +112,9 @@ public class NettyClientChannelManager {
                     return;
                 }
                 if (ch.compareTo(channel) == 0) {
-                    if (LOGGER.isInfoEnabled()) {
-                        LOGGER.info("return to pool, rm channel:{}", channel);
-                    }
+//                    if (LOGGER.isInfoEnabled()) {
+//                        LOGGER.info("return to pool, rm channel:{}", channel);
+//                    }
                     destroyChannel(serverAddress, channel);
                 } else {
                     nettyClientKeyPool.returnObject(addressInfo, channel);

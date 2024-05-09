@@ -2,6 +2,8 @@ package com.redismq.rpc.client;
 
 import com.redismq.common.config.NettyConfig;
 import com.redismq.common.constant.TransportServerType;
+import com.redismq.rpc.codec.ProtocolV1Decoder;
+import com.redismq.rpc.codec.ProtocolV1Encoder;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -14,14 +16,11 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollMode;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.internal.PlatformDependent;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -67,8 +66,8 @@ public class NettyClientBootstrap {
             @Override
             public void initChannel(SocketChannel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
-                pipeline.addLast(new StringDecoder(StandardCharsets.UTF_8));
-                pipeline.addLast(new StringEncoder(StandardCharsets.UTF_8));
+                pipeline.addLast(new ProtocolV1Encoder());
+                pipeline.addLast(new ProtocolV1Decoder());
                 pipeline.addLast(new IdleStateHandler(nettyConfig.getHeartbeatReadSeconds(),
                         nettyConfig.getHeartbeatWriteSeconds(),
                         0));

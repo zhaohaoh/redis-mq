@@ -1,6 +1,8 @@
 package com.redismq.rpc.server;
 
 import com.redismq.common.config.NettyConfig;
+import com.redismq.rpc.codec.ProtocolV1Decoder;
+import com.redismq.rpc.codec.ProtocolV1Encoder;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
@@ -13,14 +15,11 @@ import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
-import io.netty.handler.codec.string.StringDecoder;
-import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -91,8 +90,8 @@ public class NettyServerBootstrap {
                     //对心跳检测进一步处理的Handler  观察者模式
 //                    pipeline.addLast(heartbeatHandler);
                     //StringDecoder将接受的码流转换为字符串
-                    pipeline.addLast(new StringDecoder(StandardCharsets.UTF_8));
-                    pipeline.addLast(new StringEncoder(StandardCharsets.UTF_8));
+                    pipeline.addLast(new ProtocolV1Encoder());
+                    pipeline.addLast(new ProtocolV1Decoder());
                     //LineBasedFrameDecoder遍历ByteBuf中的可读字节，按行（\n \r\n）处理
                     pipeline.addLast(new LineBasedFrameDecoder(65535));
 //                    pipeline.addLast(channelHandlerAdapter);

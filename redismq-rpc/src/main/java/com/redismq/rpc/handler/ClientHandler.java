@@ -38,7 +38,7 @@ public class ClientHandler extends ChannelDuplexHandler {
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         Channel channel = ctx.channel();
-        log.info("nettyClient :" + channel.remoteAddress() + "  channelActive");
+//        log.info("nettyClient :" + channel.remoteAddress() + "  channelActive");
         //连接成功后，向服务端发送消息
         //        ctx.writeAndFlush("[连接server服务成功]:");
     }

@@ -65,7 +65,7 @@ public class NettyServerAutoConfigration {
     }
     
     @Bean
-    @ConditionalOnProperty(value = "spring.redismq.nettyConfig.server.mysql",havingValue = "mysql",matchIfMissing = true)
+    @ConditionalOnProperty(value = "spring.redismq.nettyConfig.server.store",havingValue = "mysql",matchIfMissing = true)
     public MessageStoreStrategy messageStoreStrategy(JdbcTemplate jdbcTemplate){
         return  new JdbcStoreStrategy(jdbcTemplate);
     }

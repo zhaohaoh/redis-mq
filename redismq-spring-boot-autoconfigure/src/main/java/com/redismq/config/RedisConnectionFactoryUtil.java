@@ -1,6 +1,6 @@
 package com.redismq.config;
 
-import com.redismq.exception.RedisMqException;
+import com.redismq.common.exception.RedisMqException;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;

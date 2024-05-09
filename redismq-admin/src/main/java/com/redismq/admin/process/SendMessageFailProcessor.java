@@ -1,11 +1,10 @@
 package com.redismq.admin.process;
 
 import com.redismq.admin.store.MessageStoreStrategy;
+import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.constant.MessageType;
-import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
-import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.rpc.proccess.RemoteMessageProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -20,7 +19,7 @@ import java.util.List;
  * @date 2024/04/30
  */
 @Component
-public class MQMessageProcessor implements RemoteMessageProcessor {
+public class SendMessageFailProcessor implements RemoteMessageProcessor {
     
     @Autowired
     private MessageStoreStrategy messageStoreStrategy;
@@ -28,17 +27,17 @@ public class MQMessageProcessor implements RemoteMessageProcessor {
     @Override
     public void process(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
         
-        List<Message> list = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
-            Message msg = RedisMQStringMapper.toBean(message.getBody(), Message.class);
-            list.add(msg);
+            String body = message.getBody();
+            ids.add(body);
         }
         
-     messageStoreStrategy.saveMessages(list);
+        messageStoreStrategy.updateStatusByIds(ids, MessageStatus.FAIL.getCode());
     }
     
     @Override
     public Integer getType() {
-        return MessageType.CREATE_MESSAGE;
+        return MessageType.SEND_MESSAGE_FAIL;
     }
 }
