@@ -23,6 +23,7 @@ import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -224,41 +225,48 @@ public class AbstractNettyRemoting implements RemotingClient {
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
-        
-        MergedRemoteMessage mergedWarpMessage = new MergedRemoteMessage();
+     
         List<RemoteMessage> remoteMessages = msg.stream()
                 .map(o -> RpcMessageUtil.buildRequestMessage(o, addressInfo, messageType)).collect(Collectors.toList());
-        mergedWarpMessage.setMessages(remoteMessages);
+       
         
-        RemoteMessage remoteMessage = RpcMessageUtil
-                .buildRequestMessage(mergedWarpMessage, addressInfo, MessageType.BATCH_MESSAGE);
+        BlockingQueue<RemoteMessage> basket = basketMap
+                .computeIfAbsent(serverAddress, key -> new LinkedBlockingQueue<>());
         
-        RemoteMessageFuture messageFuture = new RemoteMessageFuture();
-        messageFuture.setRequestMessage(remoteMessage);
-        messageFuture.setTimeout(timeoutMillis);
-        REMOTE_FUTURES.put(remoteMessage.getId(), messageFuture);
-        
-        Channel channel = nettyClientChannelManager.acquireChannel(serverAddress);
-        //提前校验消息是否可写 否则可能会导致内存溢出或者消息丢失
-        channelWritableCheck(channel, remoteMessage);
-        ChannelFuture channelFuture = channel.writeAndFlush(remoteMessage);
-        channelFuture.addListener((ChannelFutureListener) future -> {
-            if (!future.isSuccess()) {
-                log.error("rpc writeAndFlush message err ", future.cause());
-                RemoteMessageFuture remove = REMOTE_FUTURES.remove(remoteMessage.getId());
-                if (remove != null) {
-                    remove.setResultMessage(new RedisMQRpcException("rpc writeAndFlush message err ", future.cause()));
-                }
-                nettyClientChannelManager.destroyChannel(future.channel());
+        List<RemoteMessageFuture> remoteMessageFutures = new ArrayList<>();
+        for (RemoteMessage message : remoteMessages) {
+            RemoteMessageFuture future = new RemoteMessageFuture();
+            future.setRequestMessage(message);
+            future.setTimeout(timeoutMillis);
+            remoteMessageFutures.add(future);
+    
+            REMOTE_FUTURES.put(message.getId(), future);
+            if (!basket.offer(message)) {
+                log.error("put message into basketMap offer failed, serverAddress:{},remoteMessage:{}", serverAddress,
+                        message);
             }
-        });
+        }
         
+        //唤醒异步合并发送线程
+        if (!isSending) {
+            synchronized (mergeLock) {
+                mergeLock.notifyAll();
+            }
+        }
+    
         //同步阻塞等待响应结果
         try {
-            return messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
+            for (RemoteMessageFuture remoteMessageFuture : remoteMessageFutures) {
+                Object result = remoteMessageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
+                if (result != null && !"true".equals(String.valueOf(result))) {
+                    log.error("sendBatchSync rpc result error :{}", result);
+                    throw new RedisMQRpcException("sendBatchSync rpc result error");
+                }
+            }
+            return true;
         } catch (Exception exx) {
             log.error("wait response error:{},ip:{},request:{}", exx.getMessage(), serverAddress,
-                    remoteMessage.getBody());
+                    remoteMessages.toArray());
             if (exx instanceof TimeoutException) {
                 throw new RedisMQRpcException("rpc timeout ", exx);
             } else {
@@ -313,7 +321,7 @@ public class AbstractNettyRemoting implements RemotingClient {
                 log.error(ex.getMessage());
             }
         }
-        if (address==null){
+        if (address == null) {
             throw new RedisMQRpcException("no available server");
         }
         return address;

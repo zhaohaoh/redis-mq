@@ -1,4 +1,4 @@
-package com.redismq.admin.store;
+package com.redismq.server.store;
 
 import com.redismq.common.pojo.Message;
 

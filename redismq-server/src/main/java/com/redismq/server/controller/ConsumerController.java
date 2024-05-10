@@ -1,4 +1,4 @@
-package com.redismq.admin.controller;
+package com.redismq.server.controller;
 
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.pojo.Client;

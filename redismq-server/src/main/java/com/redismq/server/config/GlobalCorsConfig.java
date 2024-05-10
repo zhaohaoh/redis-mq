@@ -1,4 +1,4 @@
-package com.redismq.admin.config;
+package com.redismq.server.config;
 
 
 import org.springframework.context.annotation.Bean;

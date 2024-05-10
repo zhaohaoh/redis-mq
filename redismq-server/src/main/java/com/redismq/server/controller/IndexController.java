@@ -1,4 +1,4 @@
-package com.redismq.admin.controller;
+package com.redismq.server.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;

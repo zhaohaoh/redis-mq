@@ -106,7 +106,7 @@ public class ClientHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         //设置返回消息
         RemoteMessage remoteMessage = (RemoteMessage) msg;
-        RemoteMessageFuture remoteMessageFuture = RpcGlobalCache.REMOTE_FUTURES.get(remoteMessage.getId());
+        RemoteMessageFuture remoteMessageFuture = RpcGlobalCache.REMOTE_FUTURES.remove(remoteMessage.getId());
         if (remoteMessageFuture!=null){
             remoteMessageFuture.setResultMessage(remoteMessage.getBody());
         }

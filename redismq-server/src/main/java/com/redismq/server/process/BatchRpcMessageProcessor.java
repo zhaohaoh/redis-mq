@@ -1,4 +1,4 @@
-package com.redismq.admin.process;
+package com.redismq.server.process;
 
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.pojo.MergedRemoteMessage;
@@ -26,7 +26,7 @@ import static com.redismq.rpc.proccess.RemoteServerProccessManager.PROCESSOR_TAB
 public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
     
     @Override
-    public void doProcess(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
+    public boolean doProcess(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
         RemoteMessage remoteMessage = messages.get(0);
         MergedRemoteMessage mergedRemoteMessage = RedisMQStringMapper
                 .toBean(remoteMessage.getBody(), MergedRemoteMessage.class);
@@ -40,7 +40,7 @@ public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
             ExecutorService executorService = servicePair.getValue();
             if (executorService != null) {
                 try {
-                    executorService.submit(() -> {
+                     executorService.submit(() -> {
                         try {
                             servicePair.getKey().process(ctx, value);
                         } catch (Throwable th) {
@@ -57,7 +57,7 @@ public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
                 key.process(ctx, value); // 这里只处理第一个，因为批量消息都是同一个请求
             }
         }
-     
+         return true;
     }
    
     

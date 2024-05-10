@@ -1,7 +1,7 @@
-package com.redismq.admin.config;
+package com.redismq.server.config;
 
-import com.redismq.admin.store.JdbcStoreStrategy;
-import com.redismq.admin.store.MessageStoreStrategy;
+import com.redismq.server.store.JdbcStoreStrategy;
+import com.redismq.server.store.MessageStoreStrategy;
 import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.config.NettyConfig;
 import com.redismq.common.connection.RedisMQServerUtil;

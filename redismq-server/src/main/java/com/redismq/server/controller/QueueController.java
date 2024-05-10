@@ -1,10 +1,10 @@
-package com.redismq.admin.controller;
+package com.redismq.server.controller;
 
 import com.alibaba.fastjson.JSONValidator;
-import com.redismq.admin.pojo.MQMessageDTO;
-import com.redismq.admin.pojo.PageResult;
-import com.redismq.admin.pojo.QueuePageSelect;
-import com.redismq.admin.pojo.VQueue;
+import com.redismq.server.pojo.MQMessageDTO;
+import com.redismq.server.pojo.PageResult;
+import com.redismq.server.pojo.QueuePageSelect;
+import com.redismq.server.pojo.VQueue;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Message;

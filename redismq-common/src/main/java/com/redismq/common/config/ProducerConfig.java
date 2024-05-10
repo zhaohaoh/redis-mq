@@ -30,10 +30,14 @@ public class ProducerConfig {
     /**
      * 忽略rpc错误请求，只有同步的时候有效
      */
-    public boolean ignoreRpcError = false;
+    public boolean ignoreRpcError = true;
     /**
-     * 忽略rpc错误请求，只有同步的时候有效  20秒 rpc默认15秒
+     *  发送消息超时60秒 rpc默认30秒
      */
-    public long sendMaxTimeout = 20 * 1000;
+    public long sendMaxTimeout = 60 * 1000;
+    /**
+     * 生产者异步发送队列大小。小了影响吞吐量，默认10000
+     */
+    public int producerBasketSize = 10000;
 
 }

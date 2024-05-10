@@ -19,7 +19,7 @@ public interface RemoteMessageProcessor {
      * @param message 消息
      * @throws Exception 异常
      */
-    void process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception;
+    boolean process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception;
     
     Integer  getType();
 }

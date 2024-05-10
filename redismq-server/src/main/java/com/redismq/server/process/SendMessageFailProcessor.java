@@ -1,6 +1,6 @@
-package com.redismq.admin.process;
+package com.redismq.server.process;
 
-import com.redismq.admin.store.MessageStoreStrategy;
+import com.redismq.server.store.MessageStoreStrategy;
 import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.pojo.RemoteMessage;
@@ -25,7 +25,7 @@ public class SendMessageFailProcessor extends AbstractMessageProcessor {
     private MessageStoreStrategy messageStoreStrategy;
     
     @Override
-    public void doProcess(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
+    public boolean doProcess(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
         
         List<String> ids = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
@@ -33,7 +33,7 @@ public class SendMessageFailProcessor extends AbstractMessageProcessor {
             ids.add(body);
         }
         
-        messageStoreStrategy.updateStatusByIds(ids, MessageStatus.FAIL.getCode());
+        return messageStoreStrategy.updateStatusByIds(ids, MessageStatus.FAIL.getCode());
     }
     
     @Override

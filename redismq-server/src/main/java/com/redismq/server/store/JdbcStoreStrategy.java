@@ -1,4 +1,4 @@
-package com.redismq.admin.store;
+package com.redismq.server.store;
 
 import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.pojo.Message;
@@ -59,10 +59,8 @@ public class JdbcStoreStrategy implements MessageStoreStrategy {
                         + ")";
         String sql = "insert into" + TABLE_NAME + TABLE_FIELDS + values;
         log.info("create message :{} params:{}",sql,insertSqlParams);
-        jdbcTemplate
-                        .batchUpdate(sql,insertSqlParams);
-     
-        return true;
+        int[] ints = jdbcTemplate.batchUpdate(sql, insertSqlParams);
+        return ints.length>0;
     }
     
     @Override
@@ -70,8 +68,8 @@ public class JdbcStoreStrategy implements MessageStoreStrategy {
         String values = "(" + String.join(",", ids) + ")";
         String sql = "update " + TABLE_NAME + " set " + " status " + "= " + status + " where id in " + values;
         log.info("update message status :{}",sql);
-        jdbcTemplate.update(sql);
-        return true;
+        int update = jdbcTemplate.update(sql);
+        return update>0;
     }
     
     @Override

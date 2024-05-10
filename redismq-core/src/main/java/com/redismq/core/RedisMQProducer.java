@@ -68,7 +68,7 @@ public class RedisMQProducer {
     
     private List<ProducerInterceptor> producerInterceptors;
     
-    private final BlockingQueue<Message> basket = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Message> basket = new LinkedBlockingQueue<>(PRODUCER_CONFIG.getProducerBasketSize());
     
     private SeataUtil seataUtil;
     
@@ -322,12 +322,12 @@ public class RedisMQProducer {
         messageFuture.setTimeout(timeoutMillis);
         FUTURES.put(message.getId(), messageFuture);
         
-        //需要处理成如果队列满了的话阻塞等待
-        if (!basket.offer(message)) {
-            log.error("MQProducer put message into basketMap offer failed, queue :{}, message:{}",
-                    message.getVirtualQueueName(), message);
-            return false;
+        //队列满了的话阻塞等待
+        try {
+            basket.put(message);
+        } catch (InterruptedException e) {
         }
+        
         if (!isSending) {
             synchronized (mergeLock) {
                 mergeLock.notifyAll();
@@ -370,11 +370,7 @@ public class RedisMQProducer {
         } else {
             //同步确认
             if (remotingClient != null) {
-                try {
-                    remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
-                } catch (Exception exx) {
-                    log.error("remotingClient sendBatchSync error: ", exx);
-                }
+                remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
             }
         }
         
@@ -488,7 +484,12 @@ public class RedisMQProducer {
                 try {
                     remotingClient.sendBatchSync(msgIds, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
                 } catch (Exception exx) {
-                    log.error("remotingClient sendBatchSync error: ", exx);
+                    boolean ignoreRpcError = PRODUCER_CONFIG.ignoreRpcError;
+                    if (ignoreRpcError) {
+                        log.error("remotingClient ignoreRpcError sendBatchSync ig error: ", exx);
+                    } else {
+                        throw exx;
+                    }
                 }
             }
             setResults(messages, success ? true : new QueueFullException("RedisMQ Producer Queue Full"));

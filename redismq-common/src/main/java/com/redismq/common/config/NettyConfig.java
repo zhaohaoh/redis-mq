@@ -30,7 +30,7 @@ public class NettyConfig {
     /**
      * rpc通信超时时间 传递消息超时时间
      */
-    private long rpcRequestTimeout = Duration.ofSeconds(15).toMillis();
+    private long rpcRequestTimeout = Duration.ofSeconds(30).toMillis();
     /**
      * 轮询批量发送消息的阻塞时间 调大会增加发消息的延迟  调小会增加cpu消耗
      */

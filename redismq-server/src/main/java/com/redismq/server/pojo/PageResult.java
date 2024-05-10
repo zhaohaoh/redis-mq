@@ -1,4 +1,4 @@
-package com.redismq.admin.pojo;
+package com.redismq.server.pojo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

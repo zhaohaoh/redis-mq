@@ -1,8 +1,8 @@
-package com.redismq.admin.controller;
+package com.redismq.server.controller;
 
-import com.redismq.admin.pojo.MQMessageQueryDTO;
-import com.redismq.admin.pojo.MessageVO;
-import com.redismq.admin.pojo.PageResult;
+import com.redismq.server.pojo.MQMessageQueryDTO;
+import com.redismq.server.pojo.MessageVO;
+import com.redismq.server.pojo.PageResult;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Message;
