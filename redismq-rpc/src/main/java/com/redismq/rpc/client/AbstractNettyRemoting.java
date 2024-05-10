@@ -38,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
+import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
 import static com.redismq.rpc.cache.RpcGlobalCache.REMOTE_FUTURES;
 
 @Slf4j
@@ -301,13 +302,13 @@ public class AbstractNettyRemoting implements RemotingClient {
     protected String loadBalance(String group, Object msg) {
         String address = null;
         int count = 0;
-        while (count <= 5) {
+        while (count <=  PRODUCER_CONFIG.loadBalanceRetryCount) {
             count++;
             try {
                 Set<Server> servers = ServerManager.getLocalAvailServers();
                 if (CollectionUtils.isEmpty(servers)) {
-                    Thread.sleep(10);
-                    return null;
+                    Thread.sleep(PRODUCER_CONFIG.loadBalanceRetryMills);
+                    continue;
                 }
                 if (servers.size() == 1) {
                     return servers.iterator().next().getAddress();

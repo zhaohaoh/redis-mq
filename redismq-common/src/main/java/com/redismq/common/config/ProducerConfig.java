@@ -12,6 +12,14 @@ public class ProducerConfig {
      */
     public int producerRetryCount = 30;
     /**
+     * 生产 loadBalance 加载服务 重试
+     */
+    public int loadBalanceRetryCount  = 100;
+    /**
+     * 生产 loadBalance 加载服务 重试间隔
+     */
+    public int loadBalanceRetryMills = 10;
+    /**
      * 生产者重试间隔
      */
     public int producerRetrySleep = 200;

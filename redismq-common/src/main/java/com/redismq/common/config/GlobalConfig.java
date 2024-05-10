@@ -23,7 +23,7 @@ public class GlobalConfig {
     /**
      * 队列最大大小
      */
-    public int queueMaxSize = 600000;
+    public int queueMaxSize = 100000;
     /**
      * 是否全局开启事务提交后发送
      */
