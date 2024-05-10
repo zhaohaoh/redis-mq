@@ -5,7 +5,7 @@ import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
-import com.redismq.rpc.proccess.RemoteMessageProcessor;
+import com.redismq.rpc.proccess.AbstractMessageProcessor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,13 +19,13 @@ import java.util.List;
  * @date 2024/04/30
  */
 @Component
-public class SendMessageSuccessProcessor implements RemoteMessageProcessor {
+public class SendMessageSuccessProcessor extends AbstractMessageProcessor {
     
     @Autowired
     private MessageStoreStrategy messageStoreStrategy;
     
     @Override
-    public void process(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
+    public void doProcess(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
         
         List<String> ids = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {

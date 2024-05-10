@@ -127,6 +127,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         RedisMQConstant.NAMESPACE = redisMqProperties.getNamespace();
         GlobalConfigCache.GLOBAL_CONFIG = redisMqProperties.getGlobalConfig();
         GlobalConfigCache.QUEUE_CONFIG = redisMqProperties.getQueueConfig();
+        GlobalConfigCache.PRODUCER_CONFIG = redisMqProperties.getProducerConfig();
         NettyConfig nettyConfig = redisMqProperties.getNettyConfig();
         nettyConfig.init();
         GlobalConfigCache.NETTY_CONFIG = nettyConfig;

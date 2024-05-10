@@ -149,7 +149,7 @@ public class NettyConfig {
         /**
          * 默认监听端口
          */
-        private int port = 8091;
+        private int port = 10520;
 
         /**
          * 服务端处理消息的线程池大小

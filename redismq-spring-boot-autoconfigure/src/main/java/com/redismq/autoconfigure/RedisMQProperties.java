@@ -2,6 +2,7 @@ package com.redismq.autoconfigure;
 
 import com.redismq.common.config.GlobalConfig;
 import com.redismq.common.config.NettyConfig;
+import com.redismq.common.config.ProducerConfig;
 import com.redismq.common.config.QueueConfig;
 import com.redismq.config.RedisProperties;
 import lombok.Data;
@@ -44,4 +45,8 @@ public class RedisMQProperties {
     
     @NestedConfigurationProperty
     private NettyConfig nettyConfig = new NettyConfig();
+    
+    @NestedConfigurationProperty
+    private ProducerConfig producerConfig = new ProducerConfig();
+  
 }

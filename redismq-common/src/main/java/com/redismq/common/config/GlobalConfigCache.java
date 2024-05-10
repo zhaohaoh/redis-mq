@@ -11,6 +11,10 @@ public class GlobalConfigCache {
     /**
      * 配置
      */
+    public static ProducerConfig PRODUCER_CONFIG;
+    /**
+     * 配置
+     */
     public static QueueConfig QUEUE_CONFIG;
     /**
      * 存储配置

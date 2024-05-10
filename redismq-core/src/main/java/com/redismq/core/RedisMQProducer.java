@@ -45,6 +45,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
+import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
 import static com.redismq.common.constant.MessageType.SEND_MESSAGE_FAIL;
@@ -314,7 +315,7 @@ public class RedisMQProducer {
     private boolean sendOffMessage(Message message) {
         message.setId(MsgIDGenerator.generateIdStr());
         
-        long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
+        long timeoutMillis = PRODUCER_CONFIG.getSendMaxTimeout();
         
         MessageFuture messageFuture = new MessageFuture();
         messageFuture.setMessage(message);
@@ -360,7 +361,7 @@ public class RedisMQProducer {
         beforeSend(messages);
         
         // 如果是异步确认
-        if (GLOBAL_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
+        if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
             for (Message message : messages) {
                 if (remotingClient != null) {
                     remotingClient.sendAsync(message, MessageType.CREATE_MESSAGE);
@@ -369,7 +370,11 @@ public class RedisMQProducer {
         } else {
             //同步确认
             if (remotingClient != null) {
-                remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
+                try {
+                    remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
+                } catch (Exception exx) {
+                    log.error("remotingClient sendBatchSync error: ", exx);
+                }
             }
         }
         
@@ -443,17 +448,17 @@ public class RedisMQProducer {
         
         int count = 0;
         boolean success = false;
-        while (size == null || count < GLOBAL_CONFIG.producerRetryCount) {
+        while (size == null || count < PRODUCER_CONFIG.producerRetryCount) {
             size = redisMQClientUtil.executeLua(lua, list, objects);
             if (size == null || size < 0) {
                 try {
-                    Thread.sleep(GLOBAL_CONFIG.producerRetrySleep);
+                    Thread.sleep(PRODUCER_CONFIG.producerRetrySleep);
                 } catch (InterruptedException ignored) {
                 }
                 count++;
                 log.warn("RedisMQ sendMessage retry");
             } else {
-                if (GLOBAL_CONFIG.printProducerLog) {
+                if (PRODUCER_CONFIG.printProducerLog) {
                     log.info("RedisMQ sendMessage success  message:{}", RedisMQStringMapper.toJsonStr(paramsList));
                 }
                 //发布订阅
@@ -468,7 +473,7 @@ public class RedisMQProducer {
         }
         
         // 如果是异步确认
-        if (GLOBAL_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
+        if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
             for (Message message : messages) {
                 if (remotingClient != null) {
                     String messageId = message.getId();
@@ -480,7 +485,11 @@ public class RedisMQProducer {
             //同步确认
             if (remotingClient != null) {
                 List<String> msgIds = messages.stream().map(Message::getId).collect(Collectors.toList());
-                remotingClient.sendBatchSync(msgIds, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
+                try {
+                    remotingClient.sendBatchSync(msgIds, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
+                } catch (Exception exx) {
+                    log.error("remotingClient sendBatchSync error: ", exx);
+                }
             }
             setResults(messages, success ? true : new QueueFullException("RedisMQ Producer Queue Full"));
         }
@@ -645,7 +654,7 @@ public class RedisMQProducer {
                     List<Message> messages = mergedWarpMessage.getMessages();
                     messages.add(msg);
                     //超过指定数量直接发送
-                    if (messages.size() >= GLOBAL_CONFIG.producerMaxBatchSize) {
+                    if (messages.size() >= PRODUCER_CONFIG.producerMaxBatchSize) {
                         break;
                     }
                 }

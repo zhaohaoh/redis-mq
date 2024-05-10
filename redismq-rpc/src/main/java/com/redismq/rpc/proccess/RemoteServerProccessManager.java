@@ -2,7 +2,6 @@ package com.redismq.rpc.proccess;
 
 
 import com.redismq.common.pojo.RemoteMessage;
-import com.redismq.common.pojo.RemoteMessageFuture;
 import com.redismq.common.pojo.RemoteResponse;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +16,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.redismq.rpc.cache.RpcGlobalCache.REMOTE_FUTURES;
 
 /**
  * rpc消息处理过程
@@ -99,17 +96,6 @@ public class RemoteServerProccessManager {
                 }
             }
         }
-        
-        RemoteMessageFuture remoteMessageFuture = REMOTE_FUTURES.get(remoteMessage.getId());
-        if (remoteMessageFuture!=null) {
-            remoteMessageFuture.setResultMessage(true);
-        }
-        //        //如果是rpc的话写回通道 否则使用http或者本地
-        //        ChannelHandlerContext channelHandlerContext = response.getChannelHandlerContext();
-        //        //这里暂时不会往客户端回复，这里消息是空的
-        //        if (channelHandlerContext != null && response.getRpcMessage() !=null ) {
-        //            channelHandlerContext.writeAndFlush(response.getRpcMessage())
-        //                    .awaitUninterruptibly(30000, TimeUnit.MILLISECONDS);
-        //        }
+    
     }
 }

@@ -1,7 +1,10 @@
 package com.redismq.rpc.handler;
 
 
+import com.redismq.common.pojo.RemoteMessage;
+import com.redismq.common.pojo.RemoteMessageFuture;
 import com.redismq.common.util.NetUtil;
+import com.redismq.rpc.cache.RpcGlobalCache;
 import com.redismq.rpc.client.AbstractNettyRemoting;
 import com.redismq.rpc.manager.NettyClientChannelManager;
 import io.netty.channel.Channel;
@@ -99,5 +102,14 @@ public class ClientHandler extends ChannelDuplexHandler {
         nettyClientChannelManager.releaseChannel(NetUtil.getAddressFromChannel(ctx.channel()), ctx.channel());
     }
     
-  
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        //设置返回消息
+        RemoteMessage remoteMessage = (RemoteMessage) msg;
+        RemoteMessageFuture remoteMessageFuture = RpcGlobalCache.REMOTE_FUTURES.get(remoteMessage.getId());
+        if (remoteMessageFuture!=null){
+            remoteMessageFuture.setResultMessage(remoteMessage.getBody());
+        }
+        super.channelRead(ctx, msg);
+    }
 }

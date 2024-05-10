@@ -3,10 +3,9 @@ package com.redismq.admin.process;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.pojo.MergedRemoteMessage;
 import com.redismq.common.pojo.RemoteMessage;
-import com.redismq.common.pojo.RemoteMessageFuture;
 import com.redismq.common.pojo.RemoteResponse;
 import com.redismq.common.serializer.RedisMQStringMapper;
-import com.redismq.rpc.cache.RpcGlobalCache;
+import com.redismq.rpc.proccess.AbstractMessageProcessor;
 import com.redismq.rpc.proccess.RemoteMessageProcessor;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
@@ -24,10 +23,10 @@ import static com.redismq.rpc.proccess.RemoteServerProccessManager.PROCESSOR_TAB
 
 @Component
 @Slf4j
-public class BatchRpcMessageProcessor implements RemoteMessageProcessor {
+public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
     
     @Override
-    public void process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
+    public void doProcess(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
         RemoteMessage remoteMessage = messages.get(0);
         MergedRemoteMessage mergedRemoteMessage = RedisMQStringMapper
                 .toBean(remoteMessage.getBody(), MergedRemoteMessage.class);
@@ -44,7 +43,6 @@ public class BatchRpcMessageProcessor implements RemoteMessageProcessor {
                     executorService.submit(() -> {
                         try {
                             servicePair.getKey().process(ctx, value);
-                            setResult(messages);
                         } catch (Throwable th) {
                             log.error(th.getMessage(), th);
                         } finally {
@@ -57,24 +55,11 @@ public class BatchRpcMessageProcessor implements RemoteMessageProcessor {
             } else {
                 RemoteMessageProcessor key = servicePair.getKey();
                 key.process(ctx, value); // 这里只处理第一个，因为批量消息都是同一个请求
-                setResult(messages);
             }
         }
+     
     }
-    
-    /**
-     * 设置结果
-     *
-     * @param messages 信息
-     */
-    private void setResult(List<RemoteMessage> messages) {
-        for (RemoteMessage msg : messages) {
-            RemoteMessageFuture future = RpcGlobalCache.REMOTE_FUTURES.remove(msg.getId());
-            if (future != null) {
-                future.setResultMessage(true);
-            }
-        }
-    }
+   
     
     @Override
     public Integer getType() {

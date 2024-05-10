@@ -16,7 +16,7 @@
         <module>redismq-spring-boot-starter</module>
 <!--        <module>redismq-spring-boot3-starter</module>-->
         <module>redismq-samples</module>
-        <module>redismq-admin</module>
+        <module>redismq-server</module>
         <module>redismq-rpc</module>
         <module>redismq-common</module>
     </modules>

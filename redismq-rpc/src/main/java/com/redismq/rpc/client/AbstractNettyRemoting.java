@@ -18,6 +18,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
@@ -148,6 +149,7 @@ public class AbstractNettyRemoting implements RemotingClient {
     @Override
     public void sendAsync(Object msg, int messageType) {
         String serverAddress = loadBalance(null, msg);
+        
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
         AddressInfo addressInfo = new AddressInfo();
@@ -290,18 +292,29 @@ public class AbstractNettyRemoting implements RemotingClient {
     @SuppressWarnings("unchecked")
     protected String loadBalance(String group, Object msg) {
         String address = null;
-        try {
-            Set<Server> servers = ServerManager.getLocalAvailServers();
-            if (CollectionUtils.isEmpty(servers)) {
-                return null;
+        int count = 0;
+        while (count <= 5) {
+            count++;
+            try {
+                Set<Server> servers = ServerManager.getLocalAvailServers();
+                if (CollectionUtils.isEmpty(servers)) {
+                    Thread.sleep(10);
+                    return null;
+                }
+                if (servers.size() == 1) {
+                    return servers.iterator().next().getAddress();
+                }
+                List<String> serverList = servers.stream().map(Server::getAddress).collect(Collectors.toList());
+                address = selectBalance.select(serverList, msg.toString());
+                if (StringUtils.isNotEmpty(address)) {
+                    break;
+                }
+            } catch (Exception ex) {
+                log.error(ex.getMessage());
             }
-            if (servers.size() == 1) {
-                return servers.iterator().next().getAddress();
-            }
-            List<String> serverList = servers.stream().map(Server::getAddress).collect(Collectors.toList());
-            address = selectBalance.select(serverList, msg.toString());
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
+        }
+        if (address==null){
+            throw new RedisMQRpcException("no available server");
         }
         return address;
     }

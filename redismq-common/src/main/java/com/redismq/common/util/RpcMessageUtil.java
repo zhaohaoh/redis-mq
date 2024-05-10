@@ -17,11 +17,11 @@ public class RpcMessageUtil {
         return rpcMessage;
     }
 
-    public static RemoteMessage buildResponseMessage(Object msg, Integer messageType) {
+    public static RemoteMessage buildResponseMessage(String id,Object responseMsg ,Integer messageType) {
         RemoteMessage rpcMessage = new RemoteMessage();
-        rpcMessage.setId(UUID.randomUUID().toString());
         rpcMessage.setMessageType(messageType);
-        rpcMessage.setBody(RedisMQStringMapper.toJsonStr(msg));
+        rpcMessage.setBody(RedisMQStringMapper.toJsonStr(responseMsg));
+        rpcMessage.setId(id);
         return rpcMessage;
     }
 }

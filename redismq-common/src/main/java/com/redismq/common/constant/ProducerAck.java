@@ -8,11 +8,17 @@ import lombok.Getter;
 public enum ProducerAck {
 
     /**
-     * 生产者确认机制
+     * 异步确认
      */
     ASYNC("async" ),
-    SYNC("sync" ),
-    ALL("all");
+    /**
+     * 同步确认
+     */
+    SYNC("sync" );
+    /**
+     * 暂无，不可选。预留
+     */
+//    ALL("all");
 
     private final String name;
 }
