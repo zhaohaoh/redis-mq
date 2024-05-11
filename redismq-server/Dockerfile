@@ -10,4 +10,4 @@ ENV PARAMS=""
 ENV JAVA_OPTS=""
 
 #5个日志文件 一个20M轮流
-ENTRYPOINT java -jar ${JAVA_OPTS} ${JAVA_AGENT} ${PARAMS} -Dspring.config.location=/config/ -Dloader.path=/lib -Djava.security.egd=file:/dev/./urandom app.jar
+ENTRYPOINT java -jar ${JAVA_OPTS} ${JAVA_AGENT} ${PARAMS} app.jar
