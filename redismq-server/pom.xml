@@ -96,6 +96,58 @@
 <!--                </execution>-->
 <!--            </executions>-->
         </plugin>
+        <plugin>
+            <groupId>com.google.cloud.tools</groupId>
+            <artifactId>jib-maven-plugin</artifactId>
+            <version>3.3.1</version>
+            <configuration>
+                <from>
+                    <image>openjdk:8u222-jdk</image>
+<!--                    <platforms>-->
+<!--                        <platform>-->
+<!--                            <architecture>${jib-maven-plugin.architecture}</architecture>-->
+<!--                            <os>linux</os>-->
+<!--                        </platform>-->
+<!--                    </platforms>-->
+                </from>
+                <to>
+                    <image>registry.cn-hangzhou.aliyuncs.com/zhaohaoh/hzh-repo</image>
+                    <tags>
+                        <tag>test-v0.1</tag>
+                    </tags>
+                </to>
+                <container>
+<!--                    // 项目文件存放镜像中的目录-->
+                    <appRoot>/app</appRoot>
+<!--                    <workingDirectory>/application</workingDirectory>-->
+<!--                    <volumes>/application/log</volumes>-->
+                    <entrypoint>
+                        <arg>sh</arg>
+                        <arg>-c</arg>
+                        <arg>java ${JAVA_OPTS} -cp /app/resources/:/app/classes/:/app/libs/* com.redismq.server.AdminApplication</arg>
+                    </entrypoint>
+                    <ports>
+                        <port>8088</port>
+                    </ports>
+                    <environment>
+<!--                        <SPRING_OUTPUT_ANSI_ENABLED>ALWAYS</SPRING_OUTPUT_ANSI_ENABLED>-->
+<!--                        <JHIPSTER_SLEEP>0</JHIPSTER_SLEEP>-->
+                    </environment>
+                    <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                    <user>1000</user>
+                </container>
+<!--                <extraDirectories>-->
+<!--&lt;!&ndash;                    <paths>src/main/docker/jib</paths>&ndash;&gt;-->
+<!--                    <paths>src</paths>-->
+<!--                    <permissions>-->
+<!--                        <permission>-->
+<!--                            <file>/entrypoint.sh</file>-->
+<!--                            <mode>755</mode>-->
+<!--                        </permission>-->
+<!--                    </permissions>-->
+<!--                </extraDirectories>-->
+            </configuration>
+        </plugin>
     </plugins>
     </build>
 </project>
