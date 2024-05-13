@@ -7,8 +7,8 @@ import com.redismq.common.pojo.RemoteResponse;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.rpc.proccess.AbstractMessageProcessor;
 import com.redismq.rpc.proccess.RemoteMessageProcessor;
-import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 

@@ -3,8 +3,8 @@ package com.redismq.rpc.proccess;
 
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
-import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.MDC;
 
 import java.util.Collections;
@@ -61,7 +61,7 @@ public class RemoteServerProccessManager {
     
     public void registerProcessor(RemoteMessageProcessor remoteMessageProcessor) {
         //循环添加远程消息处理器  先用同步线程
-        PROCESSOR_TABLE.put(remoteMessageProcessor.getType(), new Pair<>(remoteMessageProcessor, null));
+        PROCESSOR_TABLE.put(remoteMessageProcessor.getType(), Pair.of(remoteMessageProcessor, null));
     }
     
     /**
