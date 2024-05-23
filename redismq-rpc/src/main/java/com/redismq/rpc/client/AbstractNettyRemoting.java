@@ -7,26 +7,22 @@ import com.redismq.common.pojo.AddressInfo;
 import com.redismq.common.pojo.MergedRemoteMessage;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteMessageFuture;
-import com.redismq.common.pojo.Server;
 import com.redismq.common.rebalance.RandomBalance;
 import com.redismq.common.rebalance.ServerSelectBalance;
 import com.redismq.common.util.NetUtil;
 import com.redismq.common.util.RpcMessageUtil;
-import com.redismq.common.util.ServerManager;
 import com.redismq.rpc.manager.NettyClientChannelManager;
+import com.redismq.rpc.util.ServerUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
 import static com.redismq.rpc.cache.RpcGlobalCache.REMOTE_FUTURES;
 
 @Slf4j
@@ -103,7 +98,7 @@ public class AbstractNettyRemoting implements RemotingClient {
      */
     @Override
     public Object sendSync(Object msg, int messageType) {
-        String serverAddress = loadBalance(null, msg);
+        String serverAddress = ServerUtil.loadBalance(null, msg);
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
         AddressInfo addressInfo = new AddressInfo();
@@ -150,7 +145,7 @@ public class AbstractNettyRemoting implements RemotingClient {
     
     @Override
     public void sendAsync(Object msg, int messageType) {
-        String serverAddress = loadBalance(null, msg);
+        String serverAddress = ServerUtil.loadBalance(null, msg);
         
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
@@ -222,7 +217,7 @@ public class AbstractNettyRemoting implements RemotingClient {
      */
     @Override
     public Object sendBatchSync(List<?> msg, int messageType) {
-        String serverAddress = loadBalance(null, msg);
+        String serverAddress = ServerUtil.loadBalance(null, msg);
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
@@ -294,40 +289,6 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }
     }
-    
-    /**
-     * 两个参数暂时无用，预留
-     */
-    @SuppressWarnings("unchecked")
-    protected String loadBalance(String group, Object msg) {
-        String address = null;
-        int count = 0;
-        while (count <=  PRODUCER_CONFIG.loadBalanceRetryCount) {
-            count++;
-            try {
-                Set<Server> servers = ServerManager.getLocalAvailServers();
-                if (CollectionUtils.isEmpty(servers)) {
-                    Thread.sleep(PRODUCER_CONFIG.loadBalanceRetryMills);
-                    continue;
-                }
-                if (servers.size() == 1) {
-                    return servers.iterator().next().getAddress();
-                }
-                List<String> serverList = servers.stream().map(Server::getAddress).collect(Collectors.toList());
-                address = selectBalance.select(serverList, msg.toString());
-                if (StringUtils.isNotEmpty(address)) {
-                    break;
-                }
-            } catch (Exception ex) {
-                log.error(ex.getMessage());
-            }
-        }
-        if (address == null) {
-            throw new RedisMQRpcException("no available server");
-        }
-        return address;
-    }
-    
     
     private class MergedSendRunnable implements Runnable {
         
