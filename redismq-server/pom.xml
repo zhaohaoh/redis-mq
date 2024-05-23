@@ -36,17 +36,17 @@
             <artifactId>spring-boot-starter-web</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-boot-starter</artifactId>
-            <version>3.22.1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.data</groupId>
-                    <artifactId>spring-data-redis</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.redisson</groupId>-->
+<!--            <artifactId>redisson-spring-boot-starter</artifactId>-->
+<!--            <version>3.20.1</version>-->
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>org.springframework.data</groupId>-->
+<!--                    <artifactId>spring-data-redis</artifactId>-->
+<!--                </exclusion>-->
+<!--            </exclusions>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
@@ -88,13 +88,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
             <version>${spring-boot.version}</version>
-<!--            <executions>-->
-<!--                <execution>-->
-<!--                    <goals>-->
-<!--                        <goal>repackage</goal>-->
-<!--                    </goals>-->
-<!--                </execution>-->
-<!--            </executions>-->
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
         </plugin>
         <plugin>
             <groupId>com.google.cloud.tools</groupId>
@@ -115,12 +115,17 @@
                     <tags>
                         <tag>test-v0.1</tag>
                     </tags>
+<!--                通过plugins的jib:build方式传入  jib:build -Dusername= -Dpasswor=       -f pom.xml                  -->
+                    <auth>
+                        <username>${username}</username>
+                        <password>${password}</password>
+                    </auth>
                 </to>
                 <container>
 <!--                    // 项目文件存放镜像中的目录-->
                     <appRoot>/app</appRoot>
 <!--                    <workingDirectory>/application</workingDirectory>-->
-<!--                    <volumes>/application/log</volumes>-->
+<!--                    <volumes>/applicat ion/log</volumes>-->
                     <entrypoint>
                         <arg>sh</arg>
                         <arg>-c</arg>
@@ -134,7 +139,6 @@
 <!--                        <JHIPSTER_SLEEP>0</JHIPSTER_SLEEP>-->
                     </environment>
                     <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
-                    <user>1000</user>
                 </container>
 <!--                <extraDirectories>-->
 <!--&lt;!&ndash;                    <paths>src/main/docker/jib</paths>&ndash;&gt;-->

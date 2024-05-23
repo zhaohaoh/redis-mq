@@ -29,35 +29,40 @@ public class RedisMqServer {
      * 注册线程客户端维持心跳线程
      */
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
+    
     /**
      * 清理过期消息
      */
     private final ScheduledThreadPoolExecutor clearExpireMessage = new ScheduledThreadPoolExecutor(1);
+    
     /**
      * RedisMQServerUtil
      */
     private final RedisMQServerUtil redisMQServerUtil;
+    
     private final MessageStoreStrategy messageStoreStrategy;
     
     
-    public RedisMqServer(RedisMQServerUtil redisMQServerUtil,MessageStoreStrategy messageStoreStrategy) {
+    public RedisMqServer(RedisMQServerUtil redisMQServerUtil, MessageStoreStrategy messageStoreStrategy) {
         this.redisMQServerUtil = redisMQServerUtil;
         this.messageStoreStrategy = messageStoreStrategy;
     }
     
     public void registerServer() {
-        String localIp = NetUtil.getLocalIp();
-        int port = GlobalConfigCache.NETTY_CONFIG.getServer().getPort();
-        Server server = new Server();
-        server.setAddress(localIp + ":" + port);
-        redisMQServerUtil.registerServer(server);
-        ServerRegisterInfo serverRegisterInfo = new ServerRegisterInfo();
-        serverRegisterInfo.setRegister(true);
-        serverRegisterInfo.setAddress(server.getAddress());
-        redisMQServerUtil.publishServer(serverRegisterInfo);
-        if (log.isDebugEnabled()){
-            log.debug("registerServer :{} ", server);
+        try {
+            String localIp = NetUtil.getLocalIp();
+            int port = GlobalConfigCache.NETTY_CONFIG.getServer().getPort();
+            Server server = new Server();
+            server.setAddress(localIp + ":" + port);
+            redisMQServerUtil.registerServer(server);
+            ServerRegisterInfo serverRegisterInfo = new ServerRegisterInfo();
+            serverRegisterInfo.setRegister(true);
+            serverRegisterInfo.setAddress(server.getAddress());
+            redisMQServerUtil.publishServer(serverRegisterInfo);
+        } catch (Exception e) {
+            log.error("registerServer error : ", e);
         }
+        
     }
     
     /**
@@ -67,11 +72,12 @@ public class RedisMqServer {
     public void startRegisterServerTask() {
         NettyConfig nettyConfig = GlobalConfigCache.NETTY_CONFIG;
         int serverRegisterExpireSeconds = nettyConfig.getServer().getServerRegisterExpireSeconds();
-        registerThread.scheduleAtFixedRate(this::registerServer, serverRegisterExpireSeconds, serverRegisterExpireSeconds,
-                TimeUnit.SECONDS);
+        registerThread
+                .scheduleAtFixedRate(this::registerServer, serverRegisterExpireSeconds, serverRegisterExpireSeconds,
+                        TimeUnit.SECONDS);
         
-        clearExpireMessage.scheduleAtFixedRate(this::clearExpireMessage, 0, 1,
-                TimeUnit.DAYS);
+        clearExpireMessage.scheduleAtFixedRate(this::clearExpireMessage, 0, 1, TimeUnit.DAYS);
+        log.info("redisMqServer  startRegisterServerTask");
     }
     
     public void clearExpireMessage() {
@@ -89,6 +95,7 @@ public class RedisMqServer {
         serverRegisterInfo.setRegister(false);
         serverRegisterInfo.setAddress(server.getAddress());
         redisMQServerUtil.publishServer(serverRegisterInfo);
+        log.error("removeServer :{}", serverRegisterInfo);
     }
     
 }

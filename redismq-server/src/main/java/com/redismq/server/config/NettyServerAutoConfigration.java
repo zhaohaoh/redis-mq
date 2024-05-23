@@ -10,6 +10,7 @@ import com.redismq.rpc.proccess.RemoteMessageProcessor;
 import com.redismq.rpc.proccess.RemoteServerProccessManager;
 import com.redismq.rpc.server.NettyServerBootstrap;
 import io.netty.channel.ChannelHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +24,7 @@ import java.util.List;
  * @author hzh
  * @date 2024/04/30
  */
+@Slf4j
 @Configuration
 @ConditionalOnProperty(value = "spring.redismq.nettyConfig.server.enable",havingValue = "true")
 public class NettyServerAutoConfigration {
@@ -40,6 +42,7 @@ public class NettyServerAutoConfigration {
     
     @Bean
     public RedisMqServer redisMqServer(RedisMQServerUtil redisMQServerUtil,MessageStoreStrategy messageStoreStrategy){
+         log.info("redisMqServer init");
         return new RedisMqServer(redisMQServerUtil,messageStoreStrategy);
     }
     
