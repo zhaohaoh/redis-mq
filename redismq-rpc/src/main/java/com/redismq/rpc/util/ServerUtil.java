@@ -23,6 +23,18 @@ import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
 public class ServerUtil {
     
     private static final ServerSelectBalance SELECT_BALANCE = new RandomBalance();
+    
+    /**
+     * 获取有效的服务器列表
+     */
+    public static Set<Server> getAvailServerList() {
+        Set<Server> servers = ServerManager.getLocalAvailServers();
+        if (CollectionUtils.isEmpty(servers)) {
+            return ServerManager.getRemoteAvailServers();
+        }
+        return servers;
+    }
+    
     /**
      * 两个参数暂时无用，预留
      */
@@ -33,7 +45,7 @@ public class ServerUtil {
         while (count <=  PRODUCER_CONFIG.loadBalanceRetryCount) {
             count++;
             try {
-                Set<Server> servers = ServerManager.getLocalAvailServers();
+                Set<Server> servers = getAvailServerList();
                 if (CollectionUtils.isEmpty(servers)) {
                     Thread.sleep(PRODUCER_CONFIG.loadBalanceRetryMills);
                     continue;

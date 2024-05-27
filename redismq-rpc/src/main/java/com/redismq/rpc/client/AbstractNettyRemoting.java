@@ -99,6 +99,7 @@ public class AbstractNettyRemoting implements RemotingClient {
     @Override
     public Object sendSync(Object msg, int messageType) {
         String serverAddress = ServerUtil.loadBalance(null, msg);
+        
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
         AddressInfo addressInfo = new AddressInfo();
@@ -146,7 +147,6 @@ public class AbstractNettyRemoting implements RemotingClient {
     @Override
     public void sendAsync(Object msg, int messageType) {
         String serverAddress = ServerUtil.loadBalance(null, msg);
-        
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
         AddressInfo addressInfo = new AddressInfo();
@@ -221,10 +221,9 @@ public class AbstractNettyRemoting implements RemotingClient {
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
-     
+        
         List<RemoteMessage> remoteMessages = msg.stream()
                 .map(o -> RpcMessageUtil.buildRequestMessage(o, addressInfo, messageType)).collect(Collectors.toList());
-       
         
         BlockingQueue<RemoteMessage> basket = basketMap
                 .computeIfAbsent(serverAddress, key -> new LinkedBlockingQueue<>());
@@ -235,7 +234,7 @@ public class AbstractNettyRemoting implements RemotingClient {
             future.setRequestMessage(message);
             future.setTimeout(timeoutMillis);
             remoteMessageFutures.add(future);
-    
+            
             REMOTE_FUTURES.put(message.getId(), future);
             if (!basket.offer(message)) {
                 log.error("put message into basketMap offer failed, serverAddress:{},remoteMessage:{}", serverAddress,
@@ -249,7 +248,7 @@ public class AbstractNettyRemoting implements RemotingClient {
                 mergeLock.notifyAll();
             }
         }
-    
+        
         //同步阻塞等待响应结果
         try {
             for (RemoteMessageFuture remoteMessageFuture : remoteMessageFutures) {

@@ -1,9 +1,10 @@
 package com.redismq.rpc.manager;
 
+import com.redismq.common.pojo.AddressInfo;
 import com.redismq.common.pojo.Server;
 import com.redismq.common.util.NetUtil;
 import com.redismq.common.util.ServerManager;
-import com.redismq.common.pojo.AddressInfo;
+import com.redismq.rpc.util.ServerUtil;
 import io.netty.channel.Channel;
 import org.apache.commons.pool.impl.GenericKeyedObjectPool;
 import org.slf4j.Logger;
@@ -153,7 +154,7 @@ public class NettyClientChannelManager {
      *
      */
     public void reconnect() {
-        Set<Server> availList = getAvailServerList();
+        Set<Server> availList = ServerUtil.getAvailServerList();
         if (CollectionUtils.isEmpty(availList)) {
             return;
         }
@@ -213,17 +214,6 @@ public class NettyClientChannelManager {
         return channelFromPool;
     }
     
-    
-    /**
-     * 获取有效的服务器列表
-     */
-    private Set<Server> getAvailServerList() {
-        Set<Server> servers = ServerManager.getLocalAvailServers();
-        if (CollectionUtils.isEmpty(servers)) {
-            return ServerManager.getRemoteAvailServers();
-        }
-        return servers;
-    }
     
     
     private Channel getExistAliveChannel(Channel channel, String serverAddress) {

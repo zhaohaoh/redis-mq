@@ -167,6 +167,14 @@ public class NettyConfig {
          */
         private int connectTimeoutMillis = 10000;
         /**
+         * 拉取服务超时时间
+         */
+        private int selectServerTimeoutMillis = 10000;
+        /**
+         * 健康检测
+         */
+        private boolean health = true;
+        /**
          * 发送缓冲区大小  150 KB
          */
         private int clientSocketSndBufSize = 153600;
