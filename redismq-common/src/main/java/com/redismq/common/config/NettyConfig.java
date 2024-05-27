@@ -1,6 +1,5 @@
 package com.redismq.common.config;
 
-import com.redismq.common.constant.StoreEnum;
 import com.redismq.common.constant.TransportProtocolType;
 import com.redismq.common.constant.TransportServerType;
 import io.netty.channel.Channel;
@@ -124,10 +123,6 @@ public class NettyConfig {
          * 启动服务端
          */
         private boolean enable = true;
-        /**
-         * 存储消息的策略
-         */
-        private StoreEnum store = StoreEnum.MYSQL;
         /**
          * 发送缓冲区大小
          */

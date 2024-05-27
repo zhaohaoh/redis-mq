@@ -1,5 +1,6 @@
 package com.redismq.server.store;
 
+import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.serializer.RedisMQStringMapper;
@@ -75,7 +76,8 @@ public class JdbcStoreStrategy implements MessageStoreStrategy {
     @Override
     public void clearExpireMessage() {
         Date date = new Date();
-        date = DateUtils.addMonths(date, -1);
+        long days = GlobalConfigCache.GLOBAL_STORE_CONFIG.getExpireTime().toDays();
+        date = DateUtils.addDays(date, (int) -days);
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         String format = simpleDateFormat.format(date);
         String deleteSql = "delete from " + TABLE_NAME + "where create_time <=" + format;

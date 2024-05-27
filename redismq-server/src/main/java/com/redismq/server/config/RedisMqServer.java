@@ -19,7 +19,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: hzh
- * @Date: 2022/11/4 16:44 RedisMQ客户端  实现负载均衡
  */
 public class RedisMqServer {
     
@@ -48,6 +47,10 @@ public class RedisMqServer {
         this.messageStoreStrategy = messageStoreStrategy;
     }
     
+    /**
+     * 注册服务
+     *
+     */
     public void registerServer() {
         try {
             String localIp = NetUtil.getLocalIp();
@@ -80,10 +83,16 @@ public class RedisMqServer {
         log.info("redisMqServer  startRegisterServerTask");
     }
     
+    /**
+     * 清除过期消息
+     */
     public void clearExpireMessage() {
         messageStoreStrategy.clearExpireMessage();
     }
     
+    /**
+     * 删除下线服务
+     */
     @PreDestroy
     public void removeServer() {
         String localIp = NetUtil.getLocalIp();

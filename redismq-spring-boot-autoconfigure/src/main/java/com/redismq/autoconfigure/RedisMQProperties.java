@@ -1,6 +1,7 @@
 package com.redismq.autoconfigure;
 
 import com.redismq.common.config.GlobalConfig;
+import com.redismq.common.config.GlobalStoreConfig;
 import com.redismq.common.config.NettyConfig;
 import com.redismq.common.config.ProducerConfig;
 import com.redismq.common.config.QueueConfig;
@@ -48,5 +49,6 @@ public class RedisMQProperties {
     
     @NestedConfigurationProperty
     private ProducerConfig producerConfig = new ProducerConfig();
-  
+    @NestedConfigurationProperty
+    private GlobalStoreConfig storeConfig = new GlobalStoreConfig();
 }
