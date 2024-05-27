@@ -4,6 +4,12 @@ package com.redismq.common.config;
 import lombok.Data;
 
 
+/**
+ * 全局配置
+ *
+ * @author hzh
+ * @date 2024/05/27
+ */
 @Data
 public class GlobalConfig {
 

@@ -20,7 +20,6 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -58,8 +57,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     private final Set<Class<?>> nonAnnotatedClasses = Collections.newSetFromMap(new ConcurrentHashMap<>(64));
     private final Map<String, List<RedisListenerEndpoint>> redisListenerEndpointMap = new ConcurrentHashMap<>();
     //    为了让RedisMQAutoConfiguration加载执行init方法
-    @Autowired
-    private RedisMqClient redisMqClient;
+//    private RedisMqClient redisMqClient;
 
 
     //bean初始化后的回调方法 查找出RedisListener注解标记的类
@@ -113,6 +111,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
     //处理RedisListener注解
     private void process(RedisListener redisListener, Method method, Object bean) {
+        RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
         //添加订阅监听类  为了快速使用spring封装好的监听容器.  发布订阅的实现
         if (StringUtils.isNotBlank(redisListener.channelTopic())) {
             handlerPubSub(redisListener, method, bean);
@@ -145,7 +144,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.queueMaxSize() > 0) {
             queue.setQueueMaxSize(redisListener.queueMaxSize());
         }
-
+    
+    
         redisMqClient.registerQueue(queue);
 
         QueueManager.registerLocalQueue(queue);
@@ -174,6 +174,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
     @Override
     public void start() {
+        RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
         this.registryBeanQueue();
         redisMqClient.getAllQueue().forEach(QueueManager::registerRedisQueue);
         if (!CollectionUtils.isEmpty(QueueManager.getLocalQueues())) {
@@ -196,6 +197,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         Map<String, ConsumeInterceptor> consumeInterceptorMap = applicationContext.getBeansOfType(ConsumeInterceptor.class);
         //没有配置取全局配置
         AtomicBoolean create = new AtomicBoolean(false);
+        RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
         queues.forEach((name, queue) -> {
             List<RedisListenerEndpoint> listenerEndpoints = redisListenerEndpointMap.get(name);
             if (CollectionUtils.isEmpty(listenerEndpoints)) {
@@ -231,6 +233,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     @Override
     public void stop() {
         if (!CollectionUtils.isEmpty(QueueManager.getLocalQueues())) {
+            RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
             redisMqClient.destory();
             isRunning = false;
         }
@@ -264,6 +267,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             if (nameList.stream().distinct().count() != nameList.size()) {
                 throw new RedisMqException("redismq duplicate queueName");
             }
+            RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
             for (Queue queue : queues) {
                 redisMqClient.registerQueue(queue);
             }
