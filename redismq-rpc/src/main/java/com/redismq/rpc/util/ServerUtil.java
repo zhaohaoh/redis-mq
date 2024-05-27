@@ -15,10 +15,14 @@ import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
 
+/**
+ * 服务工具
+ *
+ */
 @Slf4j
 public class ServerUtil {
     
-    private static final ServerSelectBalance selectBalance = new RandomBalance();
+    private static final ServerSelectBalance SELECT_BALANCE = new RandomBalance();
     /**
      * 两个参数暂时无用，预留
      */
@@ -38,7 +42,7 @@ public class ServerUtil {
                     return servers.iterator().next().getAddress();
                 }
                 List<String> serverList = servers.stream().map(Server::getAddress).collect(Collectors.toList());
-                address = selectBalance.select(serverList, msg.toString());
+                address = SELECT_BALANCE.select(serverList, msg.toString());
                 if (StringUtils.isNotEmpty(address)) {
                     break;
                 }

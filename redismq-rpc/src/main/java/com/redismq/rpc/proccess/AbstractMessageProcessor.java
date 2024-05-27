@@ -12,6 +12,12 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 抽象消息处理器
+ *
+ * @author hzh
+ * @date 2024/05/27
+ */
 @Slf4j
 public abstract class AbstractMessageProcessor implements RemoteMessageProcessor {
     

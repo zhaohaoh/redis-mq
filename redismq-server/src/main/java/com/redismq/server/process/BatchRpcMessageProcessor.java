@@ -21,6 +21,12 @@ import java.util.stream.Collectors;
 
 import static com.redismq.rpc.proccess.RemoteServerProccessManager.PROCESSOR_TABLE;
 
+/**
+ * 批处理rpc消息处理器  对批量的消息进行消息分发
+ *
+ * @author hzh
+ * @date 2024/05/27
+ */
 @Component
 @Slf4j
 public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
