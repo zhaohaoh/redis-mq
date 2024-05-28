@@ -360,17 +360,26 @@ public class RedisMQProducer {
         List<Message> messages = mergedWarpMessage.getMessages();
         beforeSend(messages);
         
-        // 如果是异步确认
-        if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
-            for (Message message : messages) {
+      
+        try {
+            // 如果是异步确认
+            if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
+                for (Message message : messages) {
+                    if (remotingClient != null) {
+                        remotingClient.sendAsync(message, MessageType.CREATE_MESSAGE);
+                    }
+                }
+            } else {
+                //同步确认
                 if (remotingClient != null) {
-                    remotingClient.sendAsync(message, MessageType.CREATE_MESSAGE);
+                    remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
                 }
             }
-        } else {
-            //同步确认
-            if (remotingClient != null) {
-                remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
+        }catch (Exception e){
+            if (PRODUCER_CONFIG.ignoreRpcError){
+                log.error("remotingClient ignoreRpcError sendBatchSync ig error: ", e);
+            }else {
+                throw e;
             }
         }
         
@@ -472,8 +481,17 @@ public class RedisMQProducer {
         if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
             for (Message message : messages) {
                 if (remotingClient != null) {
+                    try {
                     String messageId = message.getId();
                     remotingClient.sendAsync(messageId, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
+                    } catch (Exception exx) {
+                        boolean ignoreRpcError = PRODUCER_CONFIG.ignoreRpcError;
+                        if (ignoreRpcError) {
+                            log.error("remotingClient ignoreRpcError sendBatchSync ig error: ", exx);
+                        } else {
+                            throw exx;
+                        }
+                    }
                 }
             }
             setResults(messages, success ? true : new QueueFullException("RedisMQ Producer Queue Full"));

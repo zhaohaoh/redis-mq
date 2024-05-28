@@ -11,12 +11,14 @@ import com.redismq.common.rebalance.RandomBalance;
 import com.redismq.common.rebalance.ServerSelectBalance;
 import com.redismq.common.util.NetUtil;
 import com.redismq.common.util.RpcMessageUtil;
+import com.redismq.common.util.ServerManager;
 import com.redismq.rpc.manager.NettyClientChannelManager;
 import com.redismq.rpc.util.ServerUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -98,6 +100,11 @@ public class AbstractNettyRemoting implements RemotingClient {
      */
     @Override
     public Object sendSync(Object msg, int messageType) {
+        if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
+                .isEmpty(ServerManager.getLocalAvailServers())) {
+            return null;
+        }
+        
         String serverAddress = ServerUtil.loadBalance(null, msg);
         
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
@@ -146,6 +153,11 @@ public class AbstractNettyRemoting implements RemotingClient {
     
     @Override
     public void sendAsync(Object msg, int messageType) {
+        if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
+                .isEmpty(ServerManager.getLocalAvailServers())) {
+            return;
+        }
+        
         String serverAddress = ServerUtil.loadBalance(null, msg);
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         
@@ -193,6 +205,10 @@ public class AbstractNettyRemoting implements RemotingClient {
      * 发送异步消息
      */
     private void sendBatchAsync(String serverAddress, MergedRemoteMessage mergedWarpMessage) {
+        if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
+                .isEmpty(ServerManager.getLocalAvailServers())) {
+            return;
+        }
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
         RemoteMessage remoteMessage = RpcMessageUtil
@@ -217,6 +233,10 @@ public class AbstractNettyRemoting implements RemotingClient {
      */
     @Override
     public Object sendBatchSync(List<?> msg, int messageType) {
+        if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
+                .isEmpty(ServerManager.getLocalAvailServers())) {
+            return null;
+        }
         String serverAddress = ServerUtil.loadBalance(null, msg);
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         AddressInfo addressInfo = new AddressInfo();

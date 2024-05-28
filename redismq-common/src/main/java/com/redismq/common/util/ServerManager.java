@@ -1,7 +1,6 @@
 package com.redismq.common.util;
 
 import com.redismq.common.connection.RedisMQServerUtil;
-import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Server;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +34,6 @@ public class ServerManager {
     public static Set<Server> getRemoteAvailServers() {
         Set<Server> servers = redisMQServerUtil.getServers();
         if (CollectionUtils.isEmpty(servers)) {
-            log.error("no available server found in namespace :{}", RedisMQConstant.NAMESPACE);
             return new HashSet<>();
         }
         ServerManager.SERVERS = new HashSet<>(servers);
@@ -52,12 +50,14 @@ public class ServerManager {
         SERVERS.remove(server);
         log.info("removeExpireServer :{}", server);
     }
+    
     /**
      * 添加本地服务
      */
     public static void addLocalServer(Server server) {
         SERVERS.add(server);
     }
+    
     /**
      * 添加本地服务
      */

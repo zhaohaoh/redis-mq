@@ -173,7 +173,7 @@ public class NettyConfig {
         /**
          * 健康检测
          */
-        private boolean health = true;
+        private boolean health = false;
         /**
          * 发送缓冲区大小  150 KB
          */

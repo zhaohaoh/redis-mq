@@ -14,7 +14,6 @@ import com.redismq.rpc.manager.NettyPoolableFactory;
 import com.redismq.rpc.util.ServerUtil;
 import io.netty.channel.ChannelHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -29,7 +28,8 @@ import java.util.Set;
 @Configuration
 @ConditionalOnProperty(value = "spring.redismq.netty-config.client.enable", havingValue = "true")
 @AutoConfigureAfter(RedisMQAutoConfiguration.class)
-public class NettyClientAutoConfigration implements CommandLineRunner {
+public class NettyClientAutoConfigration {
+    
     
     /**
      * netty客户端引导程序
@@ -68,7 +68,7 @@ public class NettyClientAutoConfigration implements CommandLineRunner {
     
  
     
-    @Override
+    
     public void run(String... args) throws Exception {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isEnable()) {
             return;

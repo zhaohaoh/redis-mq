@@ -1,9 +1,14 @@
 package com.redismq.rpc.client;
 
+import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.config.NettyConfig;
 import com.redismq.common.constant.TransportServerType;
+import com.redismq.common.exception.RedisMqException;
+import com.redismq.common.pojo.Server;
+import com.redismq.common.util.ServerManager;
 import com.redismq.rpc.codec.ProtocolV1Decoder;
 import com.redismq.rpc.codec.ProtocolV1Encoder;
+import com.redismq.rpc.util.ServerUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -19,9 +24,13 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.internal.PlatformDependent;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.CollectionUtils;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -35,11 +44,14 @@ public class NettyClientBootstrap {
     
     private final List<ChannelHandler> channelHandlers;
     
-    public NettyClientBootstrap(List<ChannelHandler> channelHandlers,NettyConfig nettyConfig) {
+    
+    private final ScheduledExecutorService selectServer = new ScheduledThreadPoolExecutor(1);
+    
+    public NettyClientBootstrap(List<ChannelHandler> channelHandlers, NettyConfig nettyConfig) {
         this.nettyConfig = nettyConfig;
         NettyConfig.Client client = nettyConfig.getClient();
         this.eventLoopGroupWorker = new NioEventLoopGroup(client.getClientThreadSize());
-        this.channelHandlers=channelHandlers;
+        this.channelHandlers = channelHandlers;
     }
     
     public void start() {
@@ -69,13 +81,17 @@ public class NettyClientBootstrap {
                 pipeline.addLast(new ProtocolV1Encoder());
                 pipeline.addLast(new ProtocolV1Decoder());
                 pipeline.addLast(new IdleStateHandler(nettyConfig.getHeartbeatReadSeconds(),
-                        nettyConfig.getHeartbeatWriteSeconds(),
-                        0));
+                        nettyConfig.getHeartbeatWriteSeconds(), 0));
                 if (channelHandlers != null) {
                     channelHandlers.forEach(pipeline::addLast);
                 }
             }
         });
+        boolean health = GlobalConfigCache.NETTY_CONFIG.getClient().isHealth();
+        if (health) {
+            healthCheck();
+        }
+        reloadServer();
     }
     
     public void shutdown() {
@@ -99,16 +115,48 @@ public class NettyClientBootstrap {
             NettyConfig.Client client = nettyConfig.getClient();
             f.await(client.getConnectTimeoutMillis(), TimeUnit.MILLISECONDS);
             if (f.isCancelled()) {
-                throw new RuntimeException( "connect cancelled, can not connect to services-server.",f.cause());
+                throw new RuntimeException("connect cancelled, can not connect to services-server.", f.cause());
             } else if (!f.isSuccess()) {
-                throw new RuntimeException(  "connect failed, can not connect to services-server.",f.cause());
+                throw new RuntimeException("connect failed, can not connect to services-server.", f.cause());
             } else {
                 channel = f.channel();
             }
         } catch (Exception e) {
-            throw new RuntimeException( "can not connect to redismq-server.",e);
+            throw new RuntimeException("can not connect to redismq-server.", e);
         }
         return channel;
+    }
+    
+    public void healthCheck() {
+        Set<Server> availServerList = null;
+        long currentTimeMillis = System.currentTimeMillis();
+        int timeout = GlobalConfigCache.NETTY_CONFIG.getClient().getSelectServerTimeoutMillis();
+        while (CollectionUtils.isEmpty(availServerList)) {
+            availServerList = ServerUtil.getAvailServerList();
+            if (CollectionUtils.isEmpty(availServerList)) {
+                if (System.currentTimeMillis() - currentTimeMillis > timeout) {
+                    throw new RedisMqException("load balance server error");
+                }
+                log.error("load balance server error,waiting...");
+                try {
+                    Thread.sleep(500L);
+                } catch (InterruptedException e) {
+                }
+            }
+        }
+    }
+    
+    /**
+     * 加载服务器
+     *
+     * @throws Exception 例外
+     */
+    public void reloadServer() {
+//        Set<Server> availServerList = ServerManager.getLocalAvailServers();
+//        if (!CollectionUtils.isEmpty(availServerList)) {
+//            return;
+//        }
+        Set<Server> remoteAvailServers = ServerManager.getRemoteAvailServers();
     }
     
 }
