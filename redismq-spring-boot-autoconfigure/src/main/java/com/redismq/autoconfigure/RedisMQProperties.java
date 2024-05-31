@@ -49,6 +49,7 @@ public class RedisMQProperties {
     
     @NestedConfigurationProperty
     private ProducerConfig producerConfig = new ProducerConfig();
+    
     @NestedConfigurationProperty
     private GlobalStoreConfig storeConfig = new GlobalStoreConfig();
 }

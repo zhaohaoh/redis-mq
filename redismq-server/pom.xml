@@ -111,9 +111,9 @@
 <!--                    </platforms>-->
                 </from>
                 <to>
-                    <image>registry.cn-hangzhou.aliyuncs.com/zhaohaoh/hzh-repo</image>
+                    <image>registry.cn-hangzhou.aliyuncs.com/zhaohaoh/redis-mq</image>
                     <tags>
-                        <tag>test-v0.1</tag>
+                        <tag>${project.version}</tag>
                     </tags>
 <!--                通过plugins的jib:build方式传入  jib:build -Dusername= -Dpasswor=       -f pom.xml                  -->
                     <auth>

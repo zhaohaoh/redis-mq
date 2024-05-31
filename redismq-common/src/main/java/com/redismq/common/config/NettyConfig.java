@@ -21,11 +21,6 @@ import java.time.Duration;
 
 @Data
 public class NettyConfig {
-    
-    /**
-     * The constant WORKER_THREAD_SIZE.
-     */
-    protected int workerThreadSize = 1;
     /**
      * rpc通信超时时间 传递消息超时时间
      */
@@ -149,9 +144,9 @@ public class NettyConfig {
         /**
          * 服务端处理消息的线程池大小
          */
-        private int minServerPoolSize = 50;
-        
-        private int maxServerPoolSize = 500;
+//        private int minServerPoolSize = 50;
+//
+//        private int maxServerPoolSize = 500;
        
         private int serverRegisterExpireSeconds = 5;
     }
