@@ -16,7 +16,7 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ## 文档地址
 [详细文档](https://zhaohaoh.github.io/redismq-docsify/#/)
 
-##作者的话 
+## 作者的话 
 如果觉得好用的话，请star支持一下。
 
 
