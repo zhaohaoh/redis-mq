@@ -5,7 +5,6 @@ import com.redismq.samples.consumer.JavaBean;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,8 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @Author: hzh
@@ -52,23 +49,8 @@ public class ProducerController {
      * 发送普通消息
      */
     @PostMapping("sendMessage")
-    @Transactional
     public void sendMessage() {
-        for (int i = 0; i < 115; i++) {
-            JavaBean javaBean = new JavaBean();
-            javaBean.setA("ff");
-            javaBean.setB(222);
-            List<JavaBean> s=new ArrayList<>();
-            s.add(javaBean);
-//            try {
-//                Thread.sleep(500L);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-            redisMQTemplate.sendMessage( javaBean, "earthquakeTrigger");
-  
-        }
-        
+        redisMQTemplate.sendMessage("普通消息消费", "test1");
     }
     /**
      * 发送顺序消息

@@ -689,7 +689,7 @@ public class RedisMQProducer {
                         mergeMsg.setPushMessage(pushMessage);
                         //拆分队列发送
                         doSend(mergeMsg);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         log.error("mergeSend call failed: {}", e.getMessage(), e);
                         for (Message message : mergeMsg.getMessages()) {
                             String id = message.getId();

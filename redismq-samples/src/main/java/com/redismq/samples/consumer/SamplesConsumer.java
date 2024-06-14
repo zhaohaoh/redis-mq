@@ -47,6 +47,13 @@ public class SamplesConsumer  {
         System.out.println(javaBean);
         System.out.println(message);
     }
+    
+    @RedisListener(queue = "test1")
+    public void aa(Message message) {
+        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
+        System.out.println(javaBean);
+        System.out.println(message);
+    }
 //
 //
 //    /**

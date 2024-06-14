@@ -50,11 +50,11 @@ spring.redismq.client.port=6379
 spring.redismq.client.username=你的用户
 spring.redismq.client.password=你的密码
 #虚拟队列数量默认是1，单机redis配多了没有意义
-spring.redismq.virtual=1
+spring.redismq.queue-config.virtual=1
 #默认值true 事务提交后发送
 spring.redismq.global-config.send-after-commit=true
 #如果有seata事务需要开启 默认值false
-spring.redismq.global-config.seata-state=true
+spring.redismq.global-config.seata-state=false
 #默认单个队列消息堆积上限值
 spring.redismq.global-config.queueMaxSize=100000
 ```
