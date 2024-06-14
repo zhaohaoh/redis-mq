@@ -149,7 +149,7 @@ public class QueueController {
     @DeleteMapping("deleteQueue")
     public ResponseEntity<Void> deleteQueue(String queue) {
         //队列名就是topic名
-        Queue removeQueue = redisMQClientUtil.getQueue(RedisMQConstant.getVQueueNameByVQueue(queue));
+        Queue removeQueue = redisMQClientUtil.getQueue(queue);
         redisMQClientUtil.removeQueue(removeQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
