@@ -167,7 +167,7 @@ public class SamplesConsumer {
     /**
      * delaytest1消费延时队列
      */
-    @RedisListener(topic = "delaytest1", delay = true)
+    @RedisListener(queue = "delaytest1", delay = true)
     public void delaytest1(String test) {
         System.out.println(test);
     }
@@ -175,7 +175,7 @@ public class SamplesConsumer {
     /**
      * 普通消息消费
      */
-    @RedisListener(topic = "test1")
+    @RedisListener(queue = "test1")
     public void test1(String test) {
         System.out.println(test);
     }
@@ -183,12 +183,12 @@ public class SamplesConsumer {
     /**
      * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序
      */
-    @RedisListener(topic = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
+    @RedisListener(queue = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
     public void order(Message message) {
         System.out.println(message);
     }
 
-    @RedisListener(topic = "time",tag = "bussiness1",delay = true)
+    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
     public void time(Message message) {
         System.out.println(message);
     }
@@ -199,7 +199,7 @@ public class SamplesConsumer {
      *
      * @param message 消息
      */
-    @RedisListener(topic = "MultiTag",tag = "bussiness1")
+    @RedisListener(queue = "MultiTag",tag = "bussiness1")
     public void multiTag1(Message message) {
         //模拟业务消费
         try {
@@ -211,7 +211,7 @@ public class SamplesConsumer {
         System.out.println(name+message);
     }
 
-    @RedisListener(topic = "MultiTag",tag = "bussiness2")
+    @RedisListener(queue = "MultiTag",tag = "bussiness2")
     public void multiTag2(Message message) {
         //模拟业务消费
         try {

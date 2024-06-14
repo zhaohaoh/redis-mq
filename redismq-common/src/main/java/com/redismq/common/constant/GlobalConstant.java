@@ -1,7 +1,6 @@
 package com.redismq.common.constant;
 
 public class GlobalConstant {
-
     /**
      * 分隔符
      */
@@ -49,5 +48,4 @@ public class GlobalConstant {
      * 工作线程等待停止的时间
      */
     public static int WORK_THREAD_STOP_WAIT = 60;
-
 }

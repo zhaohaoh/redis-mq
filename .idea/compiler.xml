@@ -7,9 +7,9 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="redismq-spring-boot-autoconfigure" />
         <module name="redismq-spring-boot3-starter" />
         <module name="redismq-rpc" />
+        <module name="redismq-spring-boot-autoconfigure" />
         <module name="redismq-server" />
         <module name="redismq-samples" />
         <module name="redismq-spring-boot-starter" />
@@ -17,5 +17,8 @@
         <module name="redismq-core" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel target="8">
+      <module name="redis-mq" target="8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

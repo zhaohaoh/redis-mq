@@ -4,10 +4,10 @@
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
-        <option value="$PROJECT_DIR$/pom.xml" />
         <option value="$PROJECT_DIR$/redismq-admin/pom.xml" />
         <option value="$PROJECT_DIR$/redismq-spring-boot-starter3/pom.xml" />
         <option value="$PROJECT_DIR$/redismq-spring-boot3-starter/pom.xml" />
+        <option value="$PROJECT_DIR$/pom.xml" />
       </list>
     </option>
   </component>

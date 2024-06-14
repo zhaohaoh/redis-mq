@@ -40,5 +40,6 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <scope>provided</scope>
         </dependency>
+     
     </dependencies>
 </project>

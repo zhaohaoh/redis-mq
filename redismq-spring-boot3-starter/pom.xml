@@ -182,7 +182,7 @@
                     <!-- TODO 临时解决不规范的javadoc生成报错,后面要规范化后把这行去掉 -->
                     <additionalparam>-Xdoclint:none</additionalparam>
                     <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
-                </configuration>9
+                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -191,7 +191,6 @@
                         </goals>
                     </execution>
                 </executions>
-            
             </plugin>
         </plugins>
     </build>
