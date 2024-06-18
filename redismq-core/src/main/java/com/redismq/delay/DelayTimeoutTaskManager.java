@@ -32,7 +32,8 @@ public class DelayTimeoutTaskManager {
             }
             return t;
         }
-    });
+    }, new ThreadPoolExecutor.CallerRunsPolicy());
+    
     public DelayTimeoutTask computeIfAbsent(String name, Function<? super String, ? extends DelayTimeoutTask> mappingFunction) {
         return tasks.computeIfAbsent(name, mappingFunction);
     }

@@ -42,7 +42,21 @@ public class ProducerController {
         JavaBean javaBean = new JavaBean();
         javaBean.setA("ff");
         javaBean.setB(222);
-        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(60).toMillis());
+        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(500).toMillis());
+    }
+    
+    @PostMapping("sendDelayMessage2")
+    public void sendDelayMessage2() {
+        //        for (int i = 0; i < 100; i++) {
+        //            JavaBean javaBean = new JavaBean();
+        //            javaBean.setA("ff");
+        //            javaBean.setB(222);
+        //            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
+        //        }
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(1).toMillis());
     }
     
     /**

@@ -16,7 +16,7 @@ public class SamplesConsumer  {
 //    /**
 //     * delaytest1消费延时队列
 //     */
-    @RedisListener(queue = "delaytest1", virtual = 4,delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
+    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
     public void delaytest1(JavaBean test) {
         System.out.println(test);
         throw new RuntimeException();

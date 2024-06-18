@@ -280,10 +280,6 @@ public class RedisMqClient {
             RedisMQListenerContainer redisistenerContainer = redisListenerContainerManager
                     .getRedisistenerContainer(k);
             redisistenerContainer.pause();
-            for (String lock : list) {
-                log.info("pause queue :{} key:{}",k,lock);
-                redisistenerContainer.unLockQueue(lock);
-            }
         
             //获取虚拟队列重新推送到阻塞队列
             virtualQueues.forEach(vq -> {

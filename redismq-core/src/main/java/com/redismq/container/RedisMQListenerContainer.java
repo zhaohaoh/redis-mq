@@ -8,7 +8,6 @@ import com.redismq.common.pojo.Queue;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
-import com.redismq.delay.DelayTimeoutTaskManager;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
 import org.apache.commons.lang3.tuple.Pair;
@@ -48,11 +47,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * 延长锁看门狗
      */
     private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
-    
-    /**
-     * 延时任务管理器
-     */
-    private final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
     
     private volatile ScheduledFuture<?> scheduledFuture;
     
@@ -271,23 +265,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public void start(String virtualQueue, Long startTime) {
         
         running();
-        
-        // 虚拟队列锁定执行任务默认时长,有看门狗机制
-        String virtualQueueLock = getVirtualQueueLock(virtualQueue);
-        
-        // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
-        Boolean success = lockQueue(virtualQueueLock);
-        if (GLOBAL_CONFIG.printConsumeLog) {
-            log.info("current virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
-        }
-        //获取锁失败
-        if (success == null || !success) {
-            return;
-        }
 
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager
-                .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask() {
+                .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask(virtualQueue,redisMQClientUtil) {
                     @Override
                     protected Set<Long> pullTask() {
                         try {
@@ -305,7 +286,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             return new LinkedHashSet<>(delayTimes);
                         } finally {
                             INVOKE_VIRTUAL_QUEUES.remove(virtualQueue);
-                            unLockQueue(virtualQueueLock);
                         }
                     }
                 });
@@ -313,7 +293,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             delayTimeoutTaskManager.schedule(timeoutTask, startTime);
         } catch (Exception e) {
             log.error("delayTimeoutTaskManager schedule ", e);
-            unLockQueue(virtualQueueLock);
         }
     }
     
