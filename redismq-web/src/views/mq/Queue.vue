@@ -545,13 +545,12 @@ onMounted(() => {
 const getQueueList = async (params) => {
   let res = await proxy.$api.mq.queueList(params);
 
-  console.log(params);
+  console.log(res);
   res.list.forEach((r) => {
     r.ackMode = r.ackMode == "maual" ? "手动" : "自动";
     r.retryInterval = r.retryInterval + "ms";
   });
 
-  console.log(res.total);
   queueQueryPage.total = res.total;
   queueTableData.value = res.list;
   console.log("abc" + queueTableData.value);
