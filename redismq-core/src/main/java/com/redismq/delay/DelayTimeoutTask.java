@@ -135,8 +135,7 @@ public abstract class DelayTimeoutTask {
     
             //获取锁失败
             if (success == null || !success) {
-                log.info("获取锁失败 virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
-                return false;
+                 return false;
             }
         }
         
