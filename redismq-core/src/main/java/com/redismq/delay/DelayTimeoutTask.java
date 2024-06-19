@@ -71,7 +71,7 @@ public abstract class DelayTimeoutTask {
     private final AtomicReference<TimeoutTask> lastTimeoutTask = new AtomicReference<>();
     
     public void start(Long startTime) {
-        scheduleTask(startTime);
+        scheduleTask(startTime,false);
     }
     
     public void stop() {
@@ -84,7 +84,7 @@ public abstract class DelayTimeoutTask {
         unLockQueue(virtualQueueLock);
     }
     
-    private void scheduleTask(final Long startTime) {
+    private void scheduleTask(final Long startTime,boolean forceLock) {
         if (startTime == null || !isRunning()) {
             //结束本次循环调用
             return;
@@ -101,8 +101,8 @@ public abstract class DelayTimeoutTask {
             long l = timer.pendingTimeouts();
             Timeout timeout = timer.newTimeout(t -> {
                 try {
-                    invokeTask();
-                } finally {
+                  invokeTask(false);
+                }finally {
                     //任务执行完清理缓存
                     timeoutTaskMap.remove(startTime);
                 }
@@ -111,7 +111,7 @@ public abstract class DelayTimeoutTask {
             timeoutTaskMap.put(startTime, newTimeTask);
         } else {
             //立即执行
-            invokeTask();
+            invokeTask(forceLock);
         }
     }
     
@@ -121,18 +121,23 @@ public abstract class DelayTimeoutTask {
     
     protected abstract Set<Long> pullTask();
     
-    private void invokeTask() {
+    private boolean invokeTask(boolean forceLock) {
         // 虚拟队列锁定执行任务默认时长,有看门狗机制
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
         
-        // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
-        Boolean success = lockQueue(virtualQueueLock);
-        if (GLOBAL_CONFIG.printConsumeLog) {
-            log.info("current virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
-        }
-        //获取锁失败
-        if (success == null || !success) {
-            return;
+        //如果是强制锁直接执行方法
+        if (!forceLock){
+            // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
+            Boolean success = lockQueue(virtualQueueLock);
+            if (GLOBAL_CONFIG.printConsumeLog) {
+                log.info("current virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
+            }
+    
+            //获取锁失败
+            if (success == null || !success) {
+                log.info("获取锁失败 virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
+                return false;
+            }
         }
         
         Runnable runnable = () -> {
@@ -144,7 +149,7 @@ public abstract class DelayTimeoutTask {
                         //重复调用
                         for (Long nextTime : nextTimes) {
                             if (isRunning()) {
-                                scheduleTask(nextTime);
+                                scheduleTask(nextTime,true);
                             }
                         }
                     }
@@ -159,7 +164,7 @@ public abstract class DelayTimeoutTask {
             log.info("execute task unLockQueue error: ", e);
             unLockQueue(virtualQueueLock);
         }
-        
+        return true;
     }
     
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
