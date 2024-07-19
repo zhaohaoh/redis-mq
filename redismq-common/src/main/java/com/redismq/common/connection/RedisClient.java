@@ -9,9 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * @Author: hzh
- * @Date: 2022/11/4 15:33
- * 连接redis客户端操作链
+ * @author hzh
+ * @date 2024/7/19 10:39
  */
 public interface RedisClient {
 
