@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <version>0.4.1</version>
+    <version>0.4.2</version>
     <groupId>io.github.zhaohaoh</groupId>
     <modelVersion>4.0.0</modelVersion>
     <!-- 有很多兼容性问题。暂无法支持-->
@@ -11,7 +11,7 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>0.4.1</version>
+        <version>0.4.2</version>
     </parent>
     
     <properties>
@@ -47,7 +47,7 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-autoconfigure</artifactId>
-           <version>0.4.1</version>
+           <version>0.4.2</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
