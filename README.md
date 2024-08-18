@@ -260,9 +260,14 @@ public class RedisMQInterceptorConfiguration {
 解决redis内存消息堆积的问题，加入生产者临时持久化消息机制
 
 ## 作者
+加好友接受一手更新
 ![img.png](img.png)
-# 版权 | License
 
+
+## 版本更新记录
+0.4.2 多客户端topic负载问题 重要！
+
+# 版权 | License
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 
