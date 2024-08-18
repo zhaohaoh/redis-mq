@@ -1,7 +1,8 @@
 package com.redismq.samples.consumer;
 
-import com.redismq.common.pojo.Message;
 import com.redismq.RedisListener;
+import com.redismq.utils.RedisMQTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,49 +12,62 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class SamplesConsumer  {
-
+    @Autowired
+    private RedisMQTemplate redisMQTemplate;
 
 //    /**
 //     * delaytest1消费延时队列
 //     */
-    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
-    public void delaytest1(JavaBean test) {
-        System.out.println(test);
-        throw new RuntimeException();
-    }
-
-    /**
-     * 普通消息消费
-     */
-    @RedisListener(queue = "earthquakeTrigger",virtual = 3)
-    public void test1(Message data) throws InterruptedException {
-        Object body = data.getBody();
-        Thread.sleep(1500L);
-        System.out.println(data.getOffset());
-    }
-
-//    /**
-//     * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序
-//     */
-//    @RedisListener(queue = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
-//    public void order(Message message) {
-//        System.out.println(message);
+//    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
+//    public void delaytest1(JavaBean test) {
+//        System.out.println(test);
 //        throw new RuntimeException();
 //    }
 //
-    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
-    public void time(Message message) {
-        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
-        System.out.println(javaBean);
-        System.out.println(message);
-    }
+//    /**
+//     * 普通消息消费
+//     */
+//    @RedisListener(queue = "earthquakeTrigger",virtual = 3)
+//    public void test1(Message data) throws InterruptedException {
+//        Object body = data.getBody();
+//        Thread.sleep(1500L);
+//        System.out.println(data.getOffset());
+//    }
+//
+////    /**
+////     * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序
+////     */
+////    @RedisListener(queue = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
+////    public void order(Message message) {
+////        System.out.println(message);
+////        throw new RuntimeException();
+////    }
+////
+//    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
+//    public void time(Message message) {
+//        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
+//        System.out.println(javaBean);
+//        System.out.println(message);
+//    }
+//
+//    @RedisListener(queue = "test1")
+//    public void aa(Message message) {
+//        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
+//        System.out.println(javaBean);
+//        System.out.println(message);
+//    }
+//
     
-    @RedisListener(queue = "test1")
-    public void aa(Message message) {
-        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
-        System.out.println(javaBean);
-        System.out.println(message);
+    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+    public void test1(JavaBean test) {
+        redisMQTemplate.sendMessage(test,"test2");
     }
+//
+//    @RedisListener(queue = "test2",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+//    public void test2(JavaBean test) {
+//        System.out.println(test);
+//    }
+    
 //
 //
 //    /**

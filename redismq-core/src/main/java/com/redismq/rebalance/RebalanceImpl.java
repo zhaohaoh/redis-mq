@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,15 +35,24 @@ public class RebalanceImpl {
             log.warn("rebalance get clients is empty");
             return;
         }
-        List<String> clientIds = clients.stream().map(Client::getClientId).collect(Collectors.toList());
+       
         List<String> allQueues = QueueManager.getLocalQueues();
         for (String queue : allQueues) {
+            List<String> clientIds = clients.stream().filter(c -> c.getQueues() != null && c.getQueues().contains(queue))
+                    .map(Client::getClientId).collect(Collectors.toList());
             List<String> virtualQueues = QueueManager.getLocalVirtualQueues(queue);
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, clientIds);
             putCurrentVirtualQueues(queue, vQueues);
         }
         String vQueues = getCurrentVirtualQueues().entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
         log.info("RebalanceImpl rebalance clientId:{} \n clients:{} \n VirtualQueues:\n{}", clientId, clients,vQueues);
+    }
+    
+    public static void main(String[] args) {
+        AllocateMessageQueueStrategy allocateMessageQueueStrategy1 = new AllocateMessageQueueAveragely();
+        List<String> allocate = allocateMessageQueueStrategy1.allocate("v2", Arrays.asList("mq"),
+                Arrays.asList("v1", "v2"));
+        System.out.println(allocate);
     }
 
 }

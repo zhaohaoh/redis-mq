@@ -2,6 +2,8 @@ package com.redismq.common.pojo;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 虚拟队列
  *
@@ -29,4 +31,8 @@ public class Client {
      * 客户端地址
      */
     private String address;
+    /**
+     * 客户端监听的队列
+     */
+    private List<String> queues;
 }

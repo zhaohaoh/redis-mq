@@ -140,7 +140,7 @@ public class QueueManager {
         } else {
             queue = redisMQClientUtil.getQueue(name);
             if (queue!=null){
-                registerLocalQueue(queue);
+                registerRedisQueue(queue);
             }
         }
         return queue;

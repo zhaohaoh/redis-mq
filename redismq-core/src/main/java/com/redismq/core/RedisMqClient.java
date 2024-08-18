@@ -143,6 +143,7 @@ public class RedisMqClient {
         client.setClientId(clientId);
         client.setApplicationName(applicationName);
         client.setWorkId(workId);
+        client.setQueues(QueueManager.getLocalQueues());
         //注册客户端
         redisMQStoreUtil.registerClient(client);
     }

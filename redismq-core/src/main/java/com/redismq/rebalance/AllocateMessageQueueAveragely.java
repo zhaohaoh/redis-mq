@@ -1,12 +1,15 @@
 
 package com.redismq.rebalance;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Average Hashing queue algorithm
  */
+@Slf4j
 public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrategy {
 
     @Override
@@ -24,6 +27,7 @@ public class AllocateMessageQueueAveragely implements AllocateMessageQueueStrate
 
         List<String> result = new ArrayList<>();
         if (!cidAll.contains(currentCID)) {
+            log.error("clientIds not contains currentCID");
             return result;
         }
 

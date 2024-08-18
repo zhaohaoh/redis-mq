@@ -64,7 +64,10 @@ public class ProducerController {
      */
     @PostMapping("sendMessage")
     public void sendMessage() {
-        redisMQTemplate.sendMessage("普通消息消费", "test1");
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        redisMQTemplate.sendMessage(javaBean, "test1");
     }
     /**
      * 发送顺序消息
