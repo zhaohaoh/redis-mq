@@ -266,6 +266,7 @@ public class RedisMQInterceptorConfiguration {
 
 ## 版本更新记录
 0.4.2 多客户端topic负载问题 重要！
+0.4.1 增加消息持久化机制                                                                                     
 
 # 版权 | License
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)

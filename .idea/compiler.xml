@@ -17,6 +17,6 @@
         <module name="redismq-core" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="8" />
+    <bytecodeTargetLevel target="21" />
   </component>
 </project>

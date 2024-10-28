@@ -58,15 +58,15 @@ public class SamplesConsumer  {
 //    }
 //
     
-    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
-    public void test1(JavaBean test) {
-        redisMQTemplate.sendMessage(test,"test2");
-    }
-//
-//    @RedisListener(queue = "test2",maxConcurrency = 64,concurrency = 8,retryMax = 5)
-//    public void test2(JavaBean test) {
-//        System.out.println(test);
+//    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+//    public void test1(JavaBean test) {
+//        redisMQTemplate.sendMessage(test,"test2");
 //    }
+//
+    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+    public void test2(JavaBean test) {
+        System.out.println(test);
+    }
     
 //
 //

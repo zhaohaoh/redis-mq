@@ -8,6 +8,7 @@ import com.redismq.common.connection.RedisMQServerUtil;
 import com.redismq.common.connection.StringRedisTemplateAdapter;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.util.ServerManager;
+import com.redismq.config.RedisConnectionFactoryUtil;
 import com.redismq.config.RedisProperties;
 import com.redismq.core.RedisListenerContainerManager;
 import com.redismq.core.RedisMQProducer;
@@ -25,13 +26,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 import java.util.List;
 
 import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_INNER_MESSAGE_LISTENERCONTAINER;
-import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_REDIS_TEMPLATE;
 
 
 /**
@@ -83,10 +84,16 @@ public class RedisMQAutoConfiguration implements InitializingBean {
        * @return {@link RedisMQProducer}
      */
     @Bean
-    public RedisClient redisClient(@Qualifier(REDISMQ_REDIS_TEMPLATE) StringRedisTemplate redisTemplate) {
-        RedisClient redisClient = new StringRedisTemplateAdapter(redisTemplate);
+    public RedisClient redisClient(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
+        StringRedisTemplate template = new StringRedisTemplate();
+        // 配置连接工厂
+        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
+        template.setConnectionFactory(connectionFactory);
+        template.afterPropertiesSet();
+        RedisClient redisClient = new StringRedisTemplateAdapter(template);
         return redisClient;
     }
+    
     @Bean
     public WorkIdGenerator workIdGenerator(RedisClient redisClient) {
         return new WorkIdGenerator(redisClient,redisMqProperties.getGlobalConfig().getMaxWorkerIdBits());
