@@ -8,6 +8,7 @@ import com.redismq.common.connection.RedisMQServerUtil;
 import com.redismq.common.pojo.Server;
 import com.redismq.common.pojo.ServerRegisterInfo;
 import com.redismq.common.util.NetUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,10 +54,9 @@ public class RedisMqServer {
      */
     public void registerServer() {
         try {
-            String localIp = NetUtil.getLocalIp();
-            int port = GlobalConfigCache.NETTY_CONFIG.getServer().getPort();
+            String address = getAddress();
             Server server = new Server();
-            server.setAddress(localIp + ":" + port);
+            server.setAddress(address);
             redisMQServerUtil.registerServer(server);
             ServerRegisterInfo serverRegisterInfo = new ServerRegisterInfo();
             serverRegisterInfo.setRegister(true);
@@ -95,16 +95,25 @@ public class RedisMqServer {
      */
     @PreDestroy
     public void removeServer() {
-        String localIp = NetUtil.getLocalIp();
-        int port = GlobalConfigCache.NETTY_CONFIG.getServer().getPort();
+        String address = getAddress();
         Server server = new Server();
-        server.setAddress(localIp + ":" + port);
+        server.setAddress(address);
         redisMQServerUtil.removeServer(server);
         ServerRegisterInfo serverRegisterInfo = new ServerRegisterInfo();
         serverRegisterInfo.setRegister(false);
         serverRegisterInfo.setAddress(server.getAddress());
         redisMQServerUtil.publishServer(serverRegisterInfo);
         log.error("removeServer :{}", serverRegisterInfo);
+    }
+    
+    private static String getAddress() {
+        String host = GlobalConfigCache.NETTY_CONFIG.getServer().getHost();
+        if (StringUtils.isBlank(host)){
+            host = NetUtil.getLocalIp();
+        }
+        int port = GlobalConfigCache.NETTY_CONFIG.getServer().getPort();
+        String address = (host + ":" + port);
+        return address;
     }
     
 }

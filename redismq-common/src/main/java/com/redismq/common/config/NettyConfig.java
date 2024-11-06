@@ -137,6 +137,10 @@ public class NettyConfig {
         
         private int writeBufferLowWaterMark = 1048576;
         /**
+         * 监听的服务地址
+         */
+        private String host;
+        /**
          * 默认监听端口
          */
         private int port = 10520;
