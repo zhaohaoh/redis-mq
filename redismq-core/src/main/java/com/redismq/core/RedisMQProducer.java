@@ -176,36 +176,7 @@ public class RedisMQProducer {
         return sendSingleMessage(queue, message, executorTime);
     }
     
-    /**
-     * 批量一次性打包发送队列消息  消费仍然是一对一消费  一次最多发送100条.超过100条会分批次发送 lua脚本语句长度限制
-     */
-    //    public boolean sendBatchMessage(List<?> objs, String queue) {
-    //        return sendBatchMessage(objs, queue, "");
-    //    }
-    //
-    //    /**
-    //     * 批量一次性打包发送队列消息  消费仍然是一对一消费
-    //     */
-    //    public boolean sendBatchMessage(List<?> objs, String queueName, String tag) {
-    //        if (CollectionUtils.isEmpty(objs)) {
-    //            return true;
-    //        }
-    //        Queue queue = hasQueue(queueName);
-    //        List<Message> messages = new ArrayList<>();
-    //        if (objs.get(0) instanceof Message) {
-    //            messages = (List<Message>) objs;
-    //        } else {
-    //            for (Object obj : objs) {
-    //                Message message = new Message();
-    //                message.setQueue(queueName);
-    //                message.setBody(obj);
-    //                message.setTag(tag);
-    //                messages.add(message);
-    //            }
-    //        }
-    //        return sendBatchMessage(queue, messages);
-    //    }
-    
+ 
     /**
      * 延迟消息
      */
@@ -239,6 +210,7 @@ public class RedisMQProducer {
      * @return boolean
      */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
+        Boolean sendAfterCommit = RedisMQDataHelper.get();
         Long increment = increment(queue);
         if (executorTime == null) {
             executorTime = increment;
@@ -258,54 +230,29 @@ public class RedisMQProducer {
         message.setOffset(increment);
         message.setExecuteTime(executorTime);
         
+        if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
+            if (TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        sendOffMessage(message);
+                        
+                    }
+                });
+            } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
+                seataUtil.registerHook(() -> {
+                    sendOffMessage(message);
+                    
+                });
+            } else {
+                this.sendOffMessage(message);
+            }
+        } else {
+            this.sendOffMessage(message);
+        }
+        
         return sendOffMessage(message);
     }
-    
-    /**
-     * 批量发送消息
-     *
-     * @param queue    队列
-     * @param messages 消息
-     * @return boolean
-     */
-    //    public boolean sendBatchMessage(Queue queue, List<Message> messages) {
-    //        Map<PushMessage, List<SendMessageParam>> messageMap = new HashMap<>();
-    //        for (Message message : messages) {
-    //            //有bug要改成lua
-    //            Long increment = increment(queue);
-    //            Long executorTime = increment;
-    //            if (StringUtils.isBlank(message.getVirtualQueueName())) {
-    //                long num;
-    //                if (StringUtils.isNotBlank(message.getKey())) {
-    //                    int fnvHash = fnvHash(message.getKey());
-    //                    num = fnvHash % queue.getVirtual();
-    //                } else {
-    //                    num = increment % queue.getVirtual();
-    //                }
-    //                String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
-    //                message.setVirtualQueueName(virtualQueue);
-    //            }
-    //            message.setOffset(increment);
-    //            message.setExecuteTime(executorTime);
-    //            PushMessage pushMessage = new PushMessage();
-    //            pushMessage.setTimestamp(0L);
-    //            pushMessage.setQueue(message.getVirtualQueueName());
-    //            SendMessageParam sendMessageParam = new SendMessageParam();
-    //            sendMessageParam.setMessage(message);
-    //            sendMessageParam.setExecutorTime(executorTime);
-    //            List<SendMessageParam> messageList = messageMap.computeIfAbsent(pushMessage, m -> new ArrayList<>());
-    //            messageList.add(sendMessageParam);
-    //        }
-    //        // 批次发送有一次失败即为失败
-    //        AtomicBoolean result = new AtomicBoolean(true);
-    //        messageMap.forEach((pushMessage, sendMessageParams) -> {
-    //            boolean success = this.sendMessage(pushMessage, sendMessageParams);
-    //            if (!success) {
-    //                result.set(false);
-    //            }
-    //        });
-    //        return result.get();
-    //    }
     
     /**
      * 做发送消息
@@ -355,7 +302,6 @@ public class RedisMQProducer {
      * 真实发送消息核心方法
      */
     private void doSend(MergedWarpMessage mergedWarpMessage) {
-        Boolean sendAfterCommit = RedisMQDataHelper.get();
         //发送前操作
         List<Message> messages = mergedWarpMessage.getMessages();
         beforeSend(messages);
@@ -382,27 +328,7 @@ public class RedisMQProducer {
                 throw e;
             }
         }
-        
-        if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
-            if (TransactionSynchronizationManager.isActualTransactionActive()) {
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        doSendMessage(mergedWarpMessage);
-                        
-                    }
-                });
-            } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
-                seataUtil.registerHook(() -> {
-                    doSendMessage(mergedWarpMessage);
-                    
-                });
-            } else {
-                this.doSendMessage(mergedWarpMessage);
-            }
-        } else {
-            this.doSendMessage(mergedWarpMessage);
-        }
+        doSendMessage(mergedWarpMessage);
     }
     
     private void afterSend(List<Message> messageList, Boolean success) {

@@ -76,22 +76,7 @@ public class RedisMQTemplate {
     public boolean sendMessage(Object obj, String queue, String tag,String key) {
         return redisMQProducer.sendMessage(obj, queue, tag,key);
     }
-
-//    /**
-//     * 批量一次性打包发送队列消息  消费仍然是一对一消费
-//     */
-//    public boolean sendBatchMessage(List<?> messages, String queue) {
-//        return redisMQProducer.sendBatchMessage(messages, queue, "");
-//    }
-//
-//    /**
-//     * 批量一次性打包发送队列消息  消费仍然是一对一消费
-//     */
-//    public boolean sendBatchMessage(List<?> messages, String queue, String tag) {
-//        return redisMQProducer.sendBatchMessage(messages, queue, tag);
-//    }
-
-
+  
     /**
      * 带tag的队列延迟消息
      */

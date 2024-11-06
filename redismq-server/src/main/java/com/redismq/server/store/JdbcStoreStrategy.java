@@ -66,9 +66,10 @@ public class JdbcStoreStrategy implements MessageStoreStrategy {
     
     @Override
     public boolean updateStatusByIds(List<String> ids, int status) {
+        ids = ids.stream().map(s -> "'" + s + "'").collect(Collectors.toList());
         String values = "(" + String.join(",", ids) + ")";
         String sql = "update " + TABLE_NAME + " set " + " status " + "= " + status + " where id in " + values;
-        log.info("update message status :{}",sql);
+        log.info("update message status SQL :{}",sql);
         int update = jdbcTemplate.update(sql);
         return update>0;
     }
