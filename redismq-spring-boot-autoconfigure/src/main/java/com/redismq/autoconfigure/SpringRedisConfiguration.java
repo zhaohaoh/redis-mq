@@ -2,7 +2,8 @@ package com.redismq.autoconfigure;
 
 import com.redismq.config.RedisConnectionFactoryUtil;
 import com.redismq.config.RedisProperties;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.redisson.api.RedissonClient;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,14 +24,14 @@ import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_MESSAG
  * @date 2022/12/26
  */
 @Configuration
+@AutoConfigureAfter(value = RedissonAutoConfiguration.class)
 public class SpringRedisConfiguration {
     
     private static final String REDIS_PROTOCOL_PREFIX = "redis://";
     
     private static final String REDISS_PROTOCOL_PREFIX = "rediss://";
     
-    @Autowired
-    private RedisProperties redisProperties;
+  
     
     /**
      * redisMQ使用的redisTemplate
@@ -69,8 +70,8 @@ public class SpringRedisConfiguration {
      * @return {@link RedisConnectionFactoryUtil}
      */
     @Bean
-    public RedisConnectionFactoryUtil redisConnectionFactoryUtil(RedisProperties redisProperties) {
-        return new RedisConnectionFactoryUtil(redisProperties);
+    public RedisConnectionFactoryUtil redisConnectionFactoryUtil(RedisProperties redisProperties, RedissonClient redissonClient) {
+        return new RedisConnectionFactoryUtil(redisProperties,redissonClient);
     }
     
     @Bean(REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)

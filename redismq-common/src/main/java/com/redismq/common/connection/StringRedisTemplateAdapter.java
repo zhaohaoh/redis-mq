@@ -166,9 +166,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
     
     
     @Override
-    public Long hashRemove(String key, String hashKey) {
+    public Long mapCacheRemove(String key, String hashKey) {
         return stringRedisTemplate.opsForHash().delete(key, hashKey);
     }
+    
+   
     
     
     /**
@@ -191,6 +193,8 @@ public class StringRedisTemplateAdapter implements RedisClient {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
         }
+        
+ 
         return newMap;
     }
     
@@ -261,6 +265,23 @@ public class StringRedisTemplateAdapter implements RedisClient {
     @Override
     public Boolean exists(String key) {
        return stringRedisTemplate.hasKey(key);
+    }
+    
+    @Override
+    public Boolean lock(String key, String s, Duration duration) {
+        Boolean aBoolean = stringRedisTemplate.opsForValue()
+                .setIfAbsent(key, RedisMQStringMapper.toJsonStr(s), duration);
+        return aBoolean;
+    }
+    
+    @Override
+    public Boolean unlock(String key) {
+        return stringRedisTemplate.delete(key);
+    }
+    
+    @Override
+    public Boolean isLock(String key) {
+        return stringRedisTemplate.hasKey(key);
     }
     
 }

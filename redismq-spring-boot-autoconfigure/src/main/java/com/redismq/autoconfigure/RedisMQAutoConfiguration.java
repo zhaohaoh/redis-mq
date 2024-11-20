@@ -5,7 +5,7 @@ import com.redismq.common.config.NettyConfig;
 import com.redismq.common.connection.RedisClient;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.connection.RedisMQServerUtil;
-import com.redismq.common.connection.StringRedisTemplateAdapter;
+import com.redismq.common.connection.RedissonAdapter;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.util.ServerManager;
 import com.redismq.config.RedisConnectionFactoryUtil;
@@ -17,17 +17,16 @@ import com.redismq.id.WorkIdGenerator;
 import com.redismq.interceptor.ProducerInterceptor;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.AllocateMessageQueueAveragely;
-import com.redismq.rebalance.RebalanceImpl;
+import com.redismq.rebalance.QueueRebalanceImpl;
 import com.redismq.rpc.client.RemotingClient;
 import com.redismq.utils.RedisMQTemplate;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 import java.util.List;
@@ -50,7 +49,8 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     private RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer;
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
-   
+    @Autowired
+    private RedissonClient redissonClient;
 
 
     /**
@@ -61,9 +61,9 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Bean
     public RedisMqClient redisMqClient(RedisMQClientUtil redisMQClientUtil, WorkIdGenerator workIdGenerator) {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
-        RebalanceImpl rebalance = new RebalanceImpl(new AllocateMessageQueueAveragely());
+        QueueRebalanceImpl rebalance = new QueueRebalanceImpl(new AllocateMessageQueueAveragely());
         RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance,
-                redisMqProperties.getApplicationName(),workIdGenerator);
+                redisMqProperties.getConsumserConfig().getApplicationName(),workIdGenerator);
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }
@@ -85,12 +85,12 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      */
     @Bean
     public RedisClient redisClient(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
-        StringRedisTemplate template = new StringRedisTemplate();
-        // 配置连接工厂
-        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
-        template.setConnectionFactory(connectionFactory);
-        template.afterPropertiesSet();
-        RedisClient redisClient = new StringRedisTemplateAdapter(template);
+//        StringRedisTemplate template = new StringRedisTemplate();
+//        // 配置连接工厂
+//        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
+//        template.setConnectionFactory(connectionFactory);
+//        template.afterPropertiesSet();
+        RedisClient redisClient = new RedissonAdapter(redissonClient);
         return redisClient;
     }
     
@@ -139,5 +139,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         NettyConfig nettyConfig = redisMqProperties.getNettyConfig();
         nettyConfig.init();
         GlobalConfigCache.NETTY_CONFIG = nettyConfig;
+        GlobalConfigCache.CONSUMER_CONFIG=redisMqProperties.getConsumserConfig();
     }
 }

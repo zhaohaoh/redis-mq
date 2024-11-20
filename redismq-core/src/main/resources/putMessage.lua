@@ -1,6 +1,4 @@
 
-
-
 -- 无备注版本
 local messageZset = KEYS[1];
 local messageBodyHashKey = KEYS[2];

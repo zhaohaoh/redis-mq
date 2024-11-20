@@ -43,6 +43,9 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ```properties
 #指定环境隔离的分组
 spring.redismq.namespace=default
+# 指定redismq应用名
+#spring.redismq.application-name=${spring.application.name}
+spring.redismq.application-name=redisMQ-cliet
 spring.redismq.client.host=localhost
 #默认的database
 spring.redismq.client.database=6
@@ -69,12 +72,15 @@ spring.application.name=redismq-admin
 spring.mvc.pathmatch.matching-strategy=ant_path_matcher
 spring.jackson.date-format=yyyy-MM-dd HH:mm:ss
 spring.jackson.time-zone=GMT+8
-//你的端口
+##你的端口
 server.port=8088
 #指定环境隔离的分组
 spring.redismq.namespace=你的分组
 spring.redismq.client.host=你的redis地址
 spring.web.resources.static-locations=classpath:/static/
+#此配置代表是否启用tcp服务端
+spring.redismq.netty-config.server.port=10520
+spring.redismq.nettyConfig.server.enable=false
 ```
 本地启动项目或者部署到服务器均可
 # 运行管理界面

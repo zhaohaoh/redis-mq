@@ -1,5 +1,6 @@
 package com.redismq.autoconfigure;
 
+import com.redismq.common.config.ConsumserConfig;
 import com.redismq.common.config.GlobalConfig;
 import com.redismq.common.config.GlobalStoreConfig;
 import com.redismq.common.config.NettyConfig;
@@ -25,18 +26,14 @@ public class RedisMQProperties {
      */
     private String namespace = "";
     
-    
-    /**
-     * 应用名
-     */
-    private String applicationName = "redisMQ-Client";
-    
     /**
      * redis属性
      */
     @NestedConfigurationProperty
     private RedisProperties redisProperties;
     
+    @NestedConfigurationProperty
+    private ConsumserConfig consumserConfig = new ConsumserConfig();
     
     @NestedConfigurationProperty
     private GlobalConfig globalConfig = new GlobalConfig();

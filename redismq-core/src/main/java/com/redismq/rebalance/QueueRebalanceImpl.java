@@ -19,11 +19,11 @@ import static com.redismq.queue.QueueManager.putCurrentVirtualQueues;
  * @Date: 2022/4/25 18:18
  * 队列负载均衡相关
  */
-public class RebalanceImpl {
-    protected static final Logger log = LoggerFactory.getLogger(RebalanceImpl.class);
+public class QueueRebalanceImpl {
+    protected static final Logger log = LoggerFactory.getLogger(QueueRebalanceImpl.class);
     private final AllocateMessageQueueStrategy allocateMessageQueueStrategy;
 
-    public RebalanceImpl(AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
+    public QueueRebalanceImpl(AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
         this.allocateMessageQueueStrategy = allocateMessageQueueStrategy;
     }
 

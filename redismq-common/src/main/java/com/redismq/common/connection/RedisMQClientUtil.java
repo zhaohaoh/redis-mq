@@ -1,17 +1,20 @@
 package com.redismq.common.connection;
 
 
+import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Client;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.PushMessage;
 import com.redismq.common.pojo.Queue;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.RedisMQConstant.getClientCollection;
+import static com.redismq.common.constant.RedisMQConstant.getGroupCollection;
 import static com.redismq.common.constant.RedisMQConstant.getQueueCollection;
 import static com.redismq.common.constant.RedisMQConstant.getRebalanceTopic;
 import static com.redismq.common.constant.RedisMQConstant.getTopic;
@@ -75,16 +79,17 @@ public class RedisMQClientUtil {
     
     public void registerClient(Client client) {
         long heartbeatTime = System.currentTimeMillis();
-        redisClient.zAdd(getClientCollection(), client, heartbeatTime);
+        redisClient.zAdd(getClientCollection(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()), client, heartbeatTime);
     }
     
+    
     /**
-     * 所有客户端
+     * 组内所有客户端
      *
      * @return {@link Set}<{@link String}>
      */
-    public List<Client> getClients() {
-        String clientCollection = getClientCollection();
+    public List<Client> getGroupClients() {
+        String clientCollection = getClientCollection(GlobalConfigCache.CONSUMER_CONFIG.getGroupId());
         Map<Client, Double> clientDoubleMap = redisClient
                 .zRangeWithScores(clientCollection, 0, Long.MAX_VALUE, Client.class);
         if (CollectionUtils.isEmpty(clientDoubleMap)) {
@@ -93,21 +98,73 @@ public class RedisMQClientUtil {
         return clientDoubleMap.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList());
     }
     
+    /**
+     * 所有客户端
+     *
+     * @return {@link Set}<{@link String}>
+     */
+    public List<Client> getAllClients() {
+        Set<String> groups = getGroups();
+        if (CollectionUtils.isEmpty(groups)){
+            return new ArrayList<>();
+        }
+        Map<Client, Double> clientDoubleMap =new HashMap<>();
+        groups.forEach((k)->{
+            String clientCollection = getClientCollection(k);
+            Map<Client, Double> clientDoubleMapT = redisClient
+                    .zRangeWithScores(clientCollection, 0, Long.MAX_VALUE, Client.class);
+            if (!CollectionUtils.isEmpty(clientDoubleMap)) {
+                clientDoubleMap.putAll(clientDoubleMapT);
+            }else{
+                redisClient.zRemove(clientCollection,k);
+            }
+        });
+    
+        return clientDoubleMap.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList());
+    }
+    
+    /**
+     * 获取所有的group
+     * @return
+     */
+    public Set<String> getGroups() {
+        String groupCollection = getGroupCollection();
+        Map<String, Double> doubleMap = redisClient.zRangeWithScores(groupCollection, 0, Long.MAX_VALUE,
+                String.class);
+         if (CollectionUtils.isEmpty(doubleMap)){
+           return new HashSet<>();
+          }
+        return  doubleMap.keySet();
+        
+    }
+    
     
     /**
      * 删除客户端
      */
     public Long removeClient(double start, double end) {
-        return redisClient.zRemoveRangeByScore(getClientCollection(), start, end);
+        return redisClient.zRemoveRangeByScore(getClientCollection(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()), start, end);
     }
     
     /**
      * 删除客户端
      */
     public void removeClient(String clientId) {
-        redisClient.zRemove(getClientCollection(), clientId);
+        redisClient.zRemove(getClientCollection(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()), clientId);
     }
-    
+    /**
+     * 删除客户端
+     */
+    public void removeClient(String groupId,String clientId) {
+        if (StringUtils.isBlank(groupId)){
+            Set<String> groups = getGroups();
+            for (String group : groups) {
+                redisClient.zRemove(getClientCollection(group), clientId);
+            }
+        }else{
+            redisClient.zRemove(getClientCollection(groupId), clientId);
+        }
+    }
     
     /**
      * 放入死队列
@@ -135,8 +192,8 @@ public class RedisMQClientUtil {
         Object[] objects = {msgId};
         List list = redisClient.luaList(lua, params, objects);
         if (!CollectionUtils.isEmpty(list)){
-            int sum = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).sum();
-            success = sum >= 2;
+            long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
+            success = count >= 2;
         }
         if (!success){
             log.error("remove message failed, queueName:{} messageId:{}",queueName,msgId);
@@ -194,7 +251,7 @@ public class RedisMQClientUtil {
      * 删除指定key
      */
     public Boolean unlock(String key) {
-        return redisClient.delete(key);
+        return redisClient.unlock(key);
     }
     
     /**
@@ -209,8 +266,7 @@ public class RedisMQClientUtil {
      * 锁定指定key
      */
     public Boolean lock(String key, Duration duration) {
-        Boolean aBoolean = redisClient.setIfAbsent(key, "", duration);
-        return aBoolean;
+        return redisClient.lock(key, "", duration);
     }
     
     /**
@@ -219,7 +275,16 @@ public class RedisMQClientUtil {
      * @param clientId 客户端id
      */
     public void publishRebalance(String clientId) {
-        redisClient.convertAndSend(getRebalanceTopic(), clientId);
+        redisClient.convertAndSend(getRebalanceTopic(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()), clientId);
+    }
+    
+    /**
+     * 发布重新平衡
+     *
+     * @param clientId 客户端id
+     */
+    public void publishRebalance(String groupId,String clientId) {
+        redisClient.convertAndSend(getRebalanceTopic(groupId), clientId);
     }
     
     /**
@@ -241,7 +306,10 @@ public class RedisMQClientUtil {
     }
     
     public Boolean isLock(String key) {
-        return redisClient.exists(key);
+        return redisClient.isLock(key);
     }
-
+    
+    public void registerGroup() {
+        redisClient.zAdd(getGroupCollection(),GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),System.currentTimeMillis());
+    }
 }

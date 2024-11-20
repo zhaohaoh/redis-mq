@@ -9,9 +9,13 @@ public class GlobalConfigCache {
      */
     public static GlobalConfig GLOBAL_CONFIG;
     /**
-     * 配置
+     * 生产配置
      */
     public static ProducerConfig PRODUCER_CONFIG;
+    /**
+     * 消费者配置
+     */
+    public static ConsumserConfig CONSUMER_CONFIG;
     /**
      * 配置
      */

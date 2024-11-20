@@ -37,6 +37,7 @@ public interface RedisClient {
      * @param key
      */
     Boolean delete(String key);
+
     
     /**
      * 阻塞redis获取set集合中所有的元素
@@ -72,8 +73,26 @@ public interface RedisClient {
      */
     Long sRemove(String key, Object... values);
     
-    Long hashRemove(String key, String hashKey);
     
+    /**
+     *  MapCache 删除
+     */
+    Long mapCacheRemove(String key, String hashKey);
+    
+//
+//    /**
+//     *  MapCache  add
+//     */
+//    boolean mapCachePut(String key, String hashKey,Object val,Duration duration);
+    
+//    /**
+//     *  MapCache  add
+//     */
+//    Map<Object, Object> mapCacheList(String key, String hashKey);
+//    /**
+//     *  MapCache  add
+//     */
+//    Map<Object, Object> mapCacheList(String key);
     
     /**------------------zSet相关操作--------------------------------*/
 
@@ -155,4 +174,15 @@ public interface RedisClient {
     List luaList(String lua, List<String> keys, Object[] args);
     
     Boolean exists(String key);
+    
+    Boolean lock(String key, String s, Duration duration);
+    
+    /**
+     * 解锁
+     *
+     * @param key
+     */
+    Boolean unlock(String key);
+    
+    Boolean isLock(String key);
 }
