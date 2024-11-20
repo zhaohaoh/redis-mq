@@ -245,13 +245,13 @@ public class RedisMQProducer {
                     
                 });
             } else {
-                this.sendOffMessage(message);
+                return  this.sendOffMessage(message);
             }
         } else {
-            this.sendOffMessage(message);
+            return  this.sendOffMessage(message);
         }
         
-        return sendOffMessage(message);
+        return true;
     }
     
     /**
