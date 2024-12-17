@@ -3,7 +3,6 @@ package com.redismq.autoconfigure;
 import com.redismq.config.RedisConnectionFactoryUtil;
 import com.redismq.config.RedisProperties;
 import org.redisson.api.RedissonClient;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,7 +23,6 @@ import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_MESSAG
  * @date 2022/12/26
  */
 @Configuration
-@AutoConfigureAfter(value = RedissonAutoConfiguration.class)
 public class SpringRedisConfiguration {
     
     private static final String REDIS_PROTOCOL_PREFIX = "redis://";

@@ -41,10 +41,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     private List<ProducerInterceptor> producerInterceptors;
     @Autowired
     private RedissonClient redissonClient;
-   
-
-
-
+    
     
     @Bean
     public RedisMQClientUtil redisMQClientUtil(RedisClient redisClient) {

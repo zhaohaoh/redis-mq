@@ -2,5 +2,6 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
    com.redismq.autoconfigure.RedisMQAutoConfiguration,\
    com.redismq.autoconfigure.SpringRedisConfiguration,\
    com.redismq.autoconfigure.RedisMQInterceptorAutoConfiguration,\
-   com.redismq.autoconfigure.RedissonAutoConfiguration
-
+   com.redismq.autoconfigure.RedissonAutoConfiguration,\
+   com.redismq.autoconfigure.RedisMQClientAutoConfiguration
+#springboot3的在旁边的文件，不要忘了加了

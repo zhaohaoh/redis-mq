@@ -22,6 +22,7 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -207,7 +208,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                 return;
             }
             create.set(true);
-            RemotingClient remotingClient = applicationContext.getBean(RemotingClient.class);
+            ObjectProvider<RemotingClient> beanProvider = applicationContext.getBeanProvider(RemotingClient.class);
+            
+            RemotingClient remotingClient = beanProvider.getIfAvailable();
             
             String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
             //消费者组偏移量

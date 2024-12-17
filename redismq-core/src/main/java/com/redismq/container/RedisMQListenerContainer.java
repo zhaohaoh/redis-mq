@@ -265,6 +265,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return null;
         }
         
+        if (remotingClient == null){
+            log.warn("remotingClient not register not getOffsetLowStoreMessage please open spring.redismq.netty-config.client.enable=true");
+            return null;
+        }
+        
         List<Message> messages = new ArrayList<>();
         long diff = lastOffset - lastGroupOffset;
         if (diff <=0){

@@ -14,7 +14,6 @@ import com.redismq.id.WorkIdGenerator;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.QueueRebalanceImpl;
-import com.redismq.rpc.client.RemotingClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -99,19 +98,14 @@ public class RedisMqClient {
      * 是否订阅消息
      */
     private boolean isSub;
-    private  RemotingClient remotingClient;
-    private  RedisMQProducer redisMQProducer;
     public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
-            QueueRebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator,
-    RemotingClient remotingClient,RedisMQProducer redisMQProducer) {
+            QueueRebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator) {
         this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
         this.applicationName = applicationName;
         this.workIdGenerator = workIdGenerator;
-        this.remotingClient=remotingClient;
-        this.redisMQProducer=redisMQProducer;
     }
     
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
