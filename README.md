@@ -22,12 +22,12 @@ Redis-MQ 是利用redis实现mq的功能的中间件
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>0.4.3</version>
+            <version>0.5.0-beta</version>
         </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot3-starter</artifactId>
-            <version>0.4.3</version>
+            <version>0.5.0-beta</version>
         </dependency>
 ```
 ## 注意事项

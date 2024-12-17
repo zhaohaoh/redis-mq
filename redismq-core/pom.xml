@@ -5,7 +5,7 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-    <version>0.4.3</version>
+    <version>0.5.0-beta</version>
     </parent>
     <groupId>io.github.zhaohaoh</groupId>
   
@@ -21,7 +21,7 @@
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-rpc</artifactId>
-            <version>0.4.3</version>
+            <version>0.5.0-beta</version>
         </dependency>
         <!--        redis-->
         <dependency>
