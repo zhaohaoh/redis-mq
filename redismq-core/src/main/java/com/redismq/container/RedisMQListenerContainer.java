@@ -1,15 +1,19 @@
 package com.redismq.container;
 
+import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.AckMode;
+import com.redismq.common.constant.MessageType;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.Queue;
+import com.redismq.common.pojo.QueueGroupOffset;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
+import com.redismq.rpc.client.RemotingClient;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +22,7 @@ import org.springframework.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -27,6 +32,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.common.constant.GlobalConstant.THREAD_NUM_MAX;
@@ -51,7 +57,21 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private volatile ScheduledFuture<?> scheduledFuture;
     
     private final ThreadPoolExecutor work;
-    private long lastOffset = 0;
+    private RemotingClient remotingClient;
+    
+    /**
+     * 分组内最后的偏移量
+     */
+    protected long lastGroupOffset = 0;
+    /**
+     * 启动时队列的最新偏移量
+     */
+    protected long lastOffset = 0;
+    /**
+     * 是否拉取偏移量差值的消息
+     * 消费者偏移量是否超过允许的最大值。如果超过-拉取消息一直到当前偏移量
+     */
+    private  boolean pullOffsetLow;
     /**
      * 停止
      */
@@ -71,8 +91,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     }
     
     public RedisMQListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,
-            List<ConsumeInterceptor> consumeInterceptorList) {
-        super(redisMQClientUtil, queue, consumeInterceptorList);
+            List<ConsumeInterceptor> consumeInterceptorList,RemotingClient remotingClient,long lastGroupOffset,long lastOffset) {
+        super(redisMQClientUtil, queue, consumeInterceptorList );
         lifeExtension();
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(), 60L, TimeUnit.SECONDS,
                 // 这个范围内的视为核心线程可以处理 队列的数量
@@ -101,15 +121,19 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 return t;
             }
         }, new ThreadPoolExecutor.CallerRunsPolicy());
+        this.lastGroupOffset=lastGroupOffset;
+        this.lastOffset=lastOffset;
+        pullOffsetLow =  lastOffset - lastGroupOffset > GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax();
+        this.remotingClient=remotingClient;
     }
     
     /**
      * 拉取队列消息
      *
-     * @param queueName 队列名称
+     * @param vQueueName 队列名称
      * @return {@link Set}<{@link Long}>
      */
-    public Set<Long> pull(String queueName) {
+    public Set<Long> pull(String vQueueName) {
         Set<Long> delayTimes = new LinkedHashSet<>();
         List<Future<Boolean>> futures = new ArrayList<>();
         while (isRunning()) {
@@ -133,9 +157,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                 }
                 
-                List<Message> messages = redisMQClientUtil.pullMessage(queueName, 0,pullTime, 0, pullSize);
+                // 先获取偏移量落后的group的持久化的message
+                List<Message> messages = getOffsetLowStoreMessage(vQueueName);
+                // 从redis中获取消息
+                if (CollectionUtils.isEmpty(messages)){
+                    messages = redisMQClientUtil.pullMessage(vQueueName, 0,pullTime, 0, pullSize);
+                }
                 if (CollectionUtils.isEmpty(messages)) {
-                
                     //响应中断
                     if (!isRunning()) {
                         return delayTimes;
@@ -149,7 +177,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     if (delay) {
                         //如果没有数据获取头部数据100条的时间.加入时间轮.到点的时候再过来取真实数据
                         List<Pair<Message, Double>> pairs = redisMQClientUtil
-                                .pullMessageByTimeWithScope(queueName, pullTime, 0, GLOBAL_CONFIG.delayQueuePullSize);
+                                .pullMessageByTimeWithScope(vQueueName, pullTime, 0, GLOBAL_CONFIG.delayQueuePullSize);
                         pairs.forEach((pair -> delayTimes.add(pair.getValue().longValue())));
                     }
                     break;
@@ -169,7 +197,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (AckMode.MAUAL.equals(ackMode)) {
                         
                         } else {
-                            Boolean remove = redisMQClientUtil.removeMessage(queueName, message.getId());
+                            Boolean remove = redisMQClientUtil.ackMessage(vQueueName, message.getId(),message.getOffset());
                             if (!remove) {
                                 continue;
                             }
@@ -178,7 +206,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
                         if (callable == null) {
                             // 如果是框架中的异常,说明异常是不可修复的.删除异常的消息
-                            redisMQClientUtil.removeMessage(queueName, message.getId());
+                            redisMQClientUtil.removeMessage(vQueueName, message.getId());
                             log.error("RedisMqException   not found queue or tag removeMessage:{}",
                                     RedisMQStringMapper.toJsonStr(message));
                             continue;
@@ -189,7 +217,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (!delay){
                             Message lastMsg = messages.get(messages.size() - 1);
                             // 获取最后一个消息的偏移量的下一个值
-                            lastOffset = lastMsg.getOffset() +1 ;
+                            lastGroupOffset = lastMsg.getOffset() +1 ;
                         }
                     } catch (Throwable e) {
                         if (isRunning()) {
@@ -199,7 +227,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
                 if (CollectionUtils.isEmpty(callableInvokes)) {
                     if (isRunning()) {
-                        log.error("redisMQ callableInvokes isEmpty queueName:{}", queueName);
+                        log.error("redisMQ callableInvokes isEmpty queueName:{}", vQueueName);
                     }
                     continue;
                 }
@@ -225,6 +253,61 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
         }
         return delayTimes;
+    }
+    
+    /**
+     * 获取偏移量落后的队列消息
+     * @param vQueueName
+     * @return
+     */
+    private  List<Message> getOffsetLowStoreMessage(String vQueueName) {
+        if (!pullOffsetLow){
+            return null;
+        }
+        
+        List<Message> messages = new ArrayList<>();
+        long diff = lastOffset - lastGroupOffset;
+        if (diff <=0){
+            //如果消息偏移量已经消费完了
+            //获取最新偏移量看下差距
+            Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(queueName);
+            //如果最新偏移量的差距又超过了偏差值
+            if (queueMaxOffset-lastGroupOffset > GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax()){
+                log.info("vQueueName:{} groupId:{} lastOffsetRefresh oldLastOffset:{} queueMaxOffset:{}",
+                        vQueueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),lastOffset,queueMaxOffset);
+                lastOffset = queueMaxOffset;
+                diff = lastOffset - lastGroupOffset;
+            }else{
+                pullOffsetLow = false;
+                return null;
+            }
+        }
+        if (GlobalConfigCache.NETTY_CONFIG.getServer().isEnable() && diff > 0){
+            log.info("vQueueName:{} groupId:{} diff:{} doPullMessage",vQueueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),diff);
+            QueueGroupOffset offsetDTO = new QueueGroupOffset();
+            offsetDTO.setOffset(lastGroupOffset);
+            offsetDTO.setVQueue(vQueueName);
+            offsetDTO.setLastOffset(lastOffset);
+            //根据偏移量获取 100条滞后消息 如果全获取 内存不够
+            String object = (String) remotingClient.sendSync(offsetDTO, MessageType.GET_QUEUE_MESSAGE_BY_OFFSET);
+            List<Map> list = RedisMQStringMapper.toList(object, Map.class);
+            if (list != null) {
+                log.info("Consumer Group Offset Low RetryConsumer  \n queueAndOffset :{}\nqueueAndMessage :{}",
+                        lastGroupOffset, list);
+                for (Map map : list) {
+                    String jsonStr = RedisMQStringMapper.toJsonStr(map);
+                    Message msg = RedisMQStringMapper.toBean(jsonStr, Message.class);
+                    messages.add(msg);
+                }
+            }
+        }
+        if (!CollectionUtils.isEmpty(messages)) {
+            log.info("Group offset Low groupId :{} offset :{} messageIds:{}",
+                    GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), lastGroupOffset,
+                    messages.stream().map(Message::getId).collect(Collectors.toList()));
+        }
+       
+        return messages;
     }
     
     /**

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -206,14 +207,15 @@ public class RedisMQProducer {
      *
      * @param queue        队列
      * @param message      消息
-     * @param executorTime 执行时间
+     * @param executorScope 执行时间
      * @return boolean
      */
     public boolean sendSingleMessage(Queue queue, Message message, Long executorTime) {
         Boolean sendAfterCommit = RedisMQDataHelper.get();
         Long increment = increment(queue);
+        Long executorScope = executorTime;
         if (executorTime == null) {
-            executorTime = increment;
+            executorScope = increment;
         }
         
         if (StringUtils.isBlank(message.getVirtualQueueName())) {
@@ -228,7 +230,8 @@ public class RedisMQProducer {
             message.setVirtualQueueName(virtualQueue);
         }
         message.setOffset(increment);
-        message.setExecuteTime(executorTime);
+        message.setExecuteScope(executorScope);
+        message.setExecuteTime(executorTime==null ? System.currentTimeMillis() : executorTime);
         
         if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
@@ -236,7 +239,6 @@ public class RedisMQProducer {
                     @Override
                     public void afterCommit() {
                         sendOffMessage(message);
-                        
                     }
                 });
             } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
@@ -258,7 +260,7 @@ public class RedisMQProducer {
      *
      * @return boolean
      */
-    private boolean sendOffMessage(Message message) {
+    public boolean sendOffMessage(Message message) {
         message.setId(MsgIDGenerator.generateIdStr());
         
         long timeoutMillis = PRODUCER_CONFIG.getSendMaxTimeout();
@@ -350,15 +352,20 @@ public class RedisMQProducer {
         PushMessage pushMessage = mergedWarpMessage.getPushMessage();
         Queue queue = QueueManager.getQueueByVirtual(pushMessage.getQueue());
         Integer queueMaxSize = queue.getQueueMaxSize();
-        String lua = "local messageZset = KEYS[1];\n" + "local messageBodyHashKey = KEYS[2];\n"
-                + "local queueSize = ARGV[1];\n" + "local size = redis.call('zcard', messageZset);\n"
-                + "if size and tonumber(size) >= tonumber(queueSize) then\n" + "return -1;\n" + "end\n"
-                + "for i=2, #ARGV, 4 do\n" + "    redis.call('zadd', messageZset, ARGV[i],ARGV[i+1]);\n"
+        String lua ="local messageZsets = KEYS[1];\n" + "local queueSize = ARGV[1];\n" + "local size = 0; \n"
+                + "for messageZset in messageZsets:gmatch(\"([^,]+)\") do\n"
+                + "    size = redis.call('zcard', messageZset);\n"
+                + "    if size and tonumber(size) >= tonumber(queueSize) then\n" + "        return -1;\n" + "    end\n"
+                + "end\n" + "local messageBodyHashKey = KEYS[2];\n" + "\n" + "for i=2, #ARGV, 4 do\n"
+                + "    for messageZset in messageZsets:gmatch(\"([^,]+)\") do\n"
+                + "        redis.call('zadd', messageZset, ARGV[i],ARGV[i+1]);\n" + "    end\n"
                 + "    redis.call(\"hset\", messageBodyHashKey, ARGV[i+2],ARGV[i+3] )\n" + "end\n" + "return size;";
         pushMessage.setQueue(RedisMQConstant.getVQueueNameByVQueue(pushMessage.getQueue()));
         List<String> list = new ArrayList<>();
-        //消息详情key名字
-        list.add(pushMessage.getQueue());
+        // 消息详情key名字 doSendMessage  发送的队列名称增加分组名group   2024-11-27
+        Set<String> group = redisMQClientUtil.getGroups();
+        String queueGroups = group.stream().map(g -> pushMessage.getQueue() + SPLITE + g).collect(Collectors.joining(","));
+        list.add(queueGroups);
         list.add(pushMessage.getQueue() + ":body");
         Long size = -2L;
         
@@ -367,8 +374,8 @@ public class RedisMQProducer {
         //队列最大值
         paramsList.add(queueMaxSize);
         for (Message param : messages) {
-            //过期时间
-            paramsList.add(param.getExecuteTime());
+            //执行时间
+            paramsList.add(param.getExecuteScope());
             //消息
             paramsList.add(param.getId());
             paramsList.add(param.getId());
@@ -459,7 +466,7 @@ public class RedisMQProducer {
     }
     
     private Long increment(Queue queue) {
-        String queueOffset = PREFIX + NAMESPACE + SPLITE + "offset" + SPLITE + queue.getQueueName();
+        String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queue.getQueueName();
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
                 + "redis.call('set',KEYS[1],0) " + "count = redis.call('incrBy',KEYS[1],1)" + "end " + "return count;";
         Long num = redisMQClientUtil.executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
@@ -609,7 +616,7 @@ public class RedisMQProducer {
                         pushMessage.setQueue(queue);
                         pushMessage.setTimestamp(0L);
                         //订阅推送设置最早执行的时间
-                        mergeMsg.getMessages().stream().map(Message::getExecuteTime).min(Long::compareTo)
+                        mergeMsg.getMessages().stream().map(Message::getExecuteScope).min(Long::compareTo)
                                 .ifPresent(pushMessage::setTimestamp);
                         mergeMsg.setPushMessage(pushMessage);
                         //拆分队列发送

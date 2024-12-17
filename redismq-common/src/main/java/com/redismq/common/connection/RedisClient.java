@@ -54,6 +54,11 @@ public interface RedisClient {
      * @return 之前已经存在返回false, 不存在返回true
      */
     Boolean setIfAbsent(String key, Object value, Duration duration);
+    
+    /**
+     * string get
+     */
+    Object get(String key);
  
     /**
      * set添加元素
@@ -105,7 +110,7 @@ public interface RedisClient {
      * @return
      */
     Boolean zAdd(String key, Object value, double score);
-
+    Boolean zAddIfAbsent(String key, Object value, double score);
     
 
     /**
@@ -127,9 +132,10 @@ public interface RedisClient {
      */
     <T> Map<T,Double> zRangeWithScores(String key, long start,
                                                             long end,Class<T> tClass);
- 
+    
     
  
+    Double zScore(String key,String member);
  
 
    
@@ -163,7 +169,7 @@ public interface RedisClient {
      * @param end   终止
      * @return {@link Map}<{@link Message}, {@link Double}>
      */
-    Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end);
+    Map<Message, Double> zrangeMessage(String key,String group, double min, double max, long start, long end);
     
     
     /**

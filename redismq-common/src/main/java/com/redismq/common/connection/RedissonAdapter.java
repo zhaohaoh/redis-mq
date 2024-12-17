@@ -12,9 +12,9 @@ import org.redisson.client.protocol.ScoredEntry;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -101,8 +101,13 @@ public class RedissonAdapter implements RedisClient {
     public Boolean setIfAbsent(String key, Object value, Duration duration) {
         return redissonClient.getBucket(key).setIfAbsent(RedisMQStringMapper.toJsonStr(value), duration);
     }
-
-
+    
+    @Override
+    public Object get(String key) {
+        return redissonClient.getBucket(key).get();
+    }
+    
+    
     /**
      * set添加元素
      *
@@ -170,6 +175,19 @@ public class RedissonAdapter implements RedisClient {
     public Boolean zAdd(String key, Object value, double score) {
         return redissonClient.getScoredSortedSet(key).add(score, RedisMQStringMapper.toJsonStr(value));
     }
+    
+    /**
+     * 添加元素,有序集合是按照元素的score值由小到大排列
+     *
+     * @param key
+     * @param value
+     * @param score
+     * @return
+     */
+    @Override
+    public Boolean zAddIfAbsent(String key, Object value, double score) {
+        return redissonClient.getScoredSortedSet(key).addIfAbsent(score, RedisMQStringMapper.toJsonStr(value));
+    }
 
     /**
      * @param key
@@ -178,7 +196,7 @@ public class RedissonAdapter implements RedisClient {
      */
     @Override
     public Long zRemove(String key, Object... values) {
-        List<Object> collect = Arrays.stream(values).collect(Collectors.toList());
+        List<String> collect = Arrays.stream(values).map(RedisMQStringMapper::toJsonStr).collect(Collectors.toList());
         redissonClient.getScoredSortedSet(key).removeAll(collect);
         return 1L;
     }
@@ -206,6 +224,21 @@ public class RedissonAdapter implements RedisClient {
         }
         return newMap;
     }
+    
+    /**
+     * 获取zset的成员的分数
+     *
+     * @param key
+     * @param start
+     * @param end
+     * @return
+     */
+    @Override
+    public   Double zScore(String key,String member) {
+        RScoredSortedSet<String> scoredSortedSet = redissonClient.getScoredSortedSet(key);
+        Double score = scoredSortedSet.getScore(member);
+        return score;
+    }
 
     /**
      * 获取集合大小
@@ -230,20 +263,24 @@ public class RedissonAdapter implements RedisClient {
     }
     
     @Override
-    public Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end) {
+    public Map<Message, Double> zrangeMessage(String key,String group,double min, double max, long start, long end) {
         String lua =
-                "local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
+                "local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
                         + "    local message = redis.call('hget', KEYS[1] .. ':body',data[i]);\n"
                         + "    if (message) then\n" + "        table.insert(result,message);\n"
                         + "        table.insert(result,data[i+1]);\n" + "    else\n"
-                        + "        redis.call('zrem', KEYS[1],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
+                        + "        redis.call('zrem', KEYS[2],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
+        List<String> keys= new ArrayList<>();
+        keys.add(key);
+        keys.add(key+":"+group);
+        
         Object[] array = new Object[4];
         array[0] = min;
         array[1] = max == 0D ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
-        List list = luaList(lua, Collections.singletonList(key), array);
+        List list = luaList(lua, keys, array);
         Map<Message, Double> newMap = new LinkedHashMap<>();
         for (int i = 0; i < list.size(); i += 2) {
             Object msgObj = list.get(i);

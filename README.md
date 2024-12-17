@@ -252,6 +252,10 @@ public class RedisMQInterceptorConfiguration {
 }
 ```
 
+## 目前正在处理消息分组
+消息增加group，一条消息可被多个分组同时订阅。目前的难点是。redis是内存队列。
+如果一个分组偏移量延迟，那有很多消息如果不被删除，会导致redis内存溢出
+
 ## 作者
 加好友进群聊，问题及时响应！一手更新资料！
 ![img.png](img.png)

@@ -129,7 +129,8 @@
                     <entrypoint>
                         <arg>sh</arg>
                         <arg>-c</arg>
-                        <arg>java ${JAVA_OPTS} -cp /app/resources/:/app/classes/:/app/libs/* com.redismq.server.AdminApplication</arg>
+                        <arg>java ${JAVA_OPTS} -cp /app/resources/:/app/classes/:/app/libs/*
+                            com.redismq.server.ServerApplication</arg>
                     </entrypoint>
                     <ports>
                         <port>8088</port>

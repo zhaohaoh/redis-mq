@@ -102,6 +102,9 @@ public class ClientHandler extends ChannelDuplexHandler {
         nettyClientChannelManager.releaseChannel(NetUtil.getAddressFromChannel(ctx.channel()), ctx.channel());
     }
     
+    /**
+     * 接受服务端发来的消息
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         //设置返回消息

@@ -101,6 +101,9 @@ public class RedisMQStringMapper {
 
     // 将json数据转换成pojo对象
     public static <T> T toBean(String json, Class<T> beanType) {
+        if (beanType.equals(String.class)){
+            return (T)json;
+        }
         try {
             T t = STRING_MAPPER.readValue(json, beanType);
             return t;

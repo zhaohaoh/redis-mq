@@ -46,6 +46,9 @@ public class MessageSerializer extends StdSerializer<Message> {
         jsonGenerator.writeStringField("queue", message.getQueue());
         jsonGenerator.writeStringField("tag", message.getTag());
         jsonGenerator.writeStringField("virtualQueueName", message.getVirtualQueueName());
+        jsonGenerator.writeObjectField("executeTime",message.getExecuteTime());
+        jsonGenerator.writeObjectField("executorScope",message.getExecuteScope());
+        
         Map<String, Object> header = message.getHeader();
         if (header != null) {
             jsonGenerator.writeObjectField("header", header);

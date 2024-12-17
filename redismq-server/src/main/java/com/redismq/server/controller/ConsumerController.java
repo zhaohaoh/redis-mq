@@ -32,8 +32,8 @@ public class ConsumerController {
      * 强制下线客户端 还没做拉黑,就算下线了该客户端还会自动注册
      */
     @GetMapping("down")
-    public void down(String groupId,String clientId) {
-        redisMQClientUtil.removeClient(groupId,clientId);
+    public void down(Client client) {
+        redisMQClientUtil.removeClient(client);
     }
     
     /**

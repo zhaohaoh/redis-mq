@@ -14,6 +14,7 @@ import com.redismq.id.WorkIdGenerator;
 import com.redismq.queue.QueueManager;
 import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.QueueRebalanceImpl;
+import com.redismq.rpc.client.RemotingClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.listener.ChannelTopic;
@@ -98,15 +99,19 @@ public class RedisMqClient {
      * 是否订阅消息
      */
     private boolean isSub;
-    
+    private  RemotingClient remotingClient;
+    private  RedisMQProducer redisMQProducer;
     public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
-            QueueRebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator) {
+            QueueRebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator,
+    RemotingClient remotingClient,RedisMQProducer redisMQProducer) {
         this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
         this.rebalance = rebalance;
         this.applicationName = applicationName;
         this.workIdGenerator = workIdGenerator;
+        this.remotingClient=remotingClient;
+        this.redisMQProducer=redisMQProducer;
     }
     
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
@@ -144,8 +149,8 @@ public class RedisMqClient {
         client.setClientId(clientId);
         client.setApplicationName(applicationName);
         client.setWorkId(workId);
+        client.setGroupId(GlobalConfigCache.CONSUMER_CONFIG.getGroupId());
         client.setQueues(QueueManager.getLocalQueues());
-        
         //注册客户端
         redisMQStoreUtil.registerClient(client);
     }
@@ -170,14 +175,22 @@ public class RedisMqClient {
     }
     
     public void destory() {
+        Client client = new Client();
+        client.setClientId(clientId);
+        client.setApplicationName(applicationName);
+        client.setWorkId(workId);
+        client.setGroupId(GlobalConfigCache.CONSUMER_CONFIG.getGroupId());
         //停止任务
-        redisMQStoreUtil.removeClient(clientId);
+        redisMQStoreUtil.removeClient(client);
         redisListenerContainerManager.stopAll();
         publishRebalance();
         log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.getCurrentVirtualQueues());
     }
     
     public void start() {
+        //移除失效客户端
+        removeExpireClients();
+        
         // 清理所有客户端
         removeAllClient();
         // 注册group
@@ -192,10 +205,13 @@ public class RedisMqClient {
         startRegisterClientTask();
         // 20秒自动重平衡
         startRebalanceTask();
+        
         //启动队列监控
         redisListenerContainerManager.startRedisListener();
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
+        // 启动成功
+        log.info("RedisMQ Start Success  \nGroups:{} \nQueues:{}",redisMQStoreUtil.getGroups(),QueueManager.getLocalQueues());
     }
     
     private void serverSubscribe() {
@@ -367,6 +383,8 @@ public class RedisMqClient {
         allQueue.stream().filter(redisQueue -> redisQueue.getQueueName().equals(queue.getQueueName()))
                 .forEach(redisMQStoreUtil::removeQueue);
         redisMQStoreUtil.registerQueue(queue);
+        // 队列也存储group。用来记录offset
+        redisMQStoreUtil.registerQueueGroup(queue.getQueueName());
         return queue;
     }
     

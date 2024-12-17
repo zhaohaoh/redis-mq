@@ -86,12 +86,18 @@ public class RedisMQConstant {
        return PREFIX + NAMESPACE +   SPLITE + "GROUP"  ;
     }
     /**
+     *  Group集合
+     */
+    public static String getOffsetGroupCollection(String group) {
+        return PREFIX + NAMESPACE  + SPLITE + "GROUP_OFFSET:" + group;
+    }
+    /**
      * 获取客户端集合
      *
      * @return {@link String}
      */
-    public static String getClientCollection(String groupId) {
-        return PREFIX + NAMESPACE +   SPLITE + CLIENTS_KEY + SPLITE + groupId;
+    public static String getClientCollection() {
+        return PREFIX + NAMESPACE +   SPLITE + CLIENTS_KEY ;
     }
     
     /**
