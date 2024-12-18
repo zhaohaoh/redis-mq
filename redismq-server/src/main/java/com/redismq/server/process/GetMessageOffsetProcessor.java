@@ -1,7 +1,7 @@
 package com.redismq.server.process;
 
 import com.redismq.common.pojo.Message;
-import com.redismq.common.pojo.QueueGroupOffset;
+import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
 import com.redismq.common.serializer.RedisMQStringMapper;
@@ -31,7 +31,7 @@ public class GetMessageOffsetProcessor extends AbstractMessageProcessor {
         List<RemoteMessage> response = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
             String body = message.getBody();
-            QueueGroupOffset bean = RedisMQStringMapper.toBean(body, QueueGroupOffset.class);
+            GroupOffsetQeueryMessageDTO bean = RedisMQStringMapper.toBean(body, GroupOffsetQeueryMessageDTO.class);
             List<Message> messageList = messageStoreStrategy.getMessageListByQueueAndOffset(bean);
             RemoteMessage responseMessage = RpcMessageUtil.buildResponseMessage(message.getId(), messageList,
                     GET_QUEUE_MESSAGE_BY_OFFSET);

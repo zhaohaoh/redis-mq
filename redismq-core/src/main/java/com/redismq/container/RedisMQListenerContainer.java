@@ -7,7 +7,7 @@ import com.redismq.common.constant.MessageType;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.Queue;
-import com.redismq.common.pojo.QueueGroupOffset;
+import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
@@ -289,12 +289,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
         if (GlobalConfigCache.NETTY_CONFIG.getServer().isEnable() && diff > 0){
             log.info("vQueueName:{} groupId:{} diff:{} doPullMessage",vQueueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),diff);
-            QueueGroupOffset offsetDTO = new QueueGroupOffset();
+            GroupOffsetQeueryMessageDTO offsetDTO = new GroupOffsetQeueryMessageDTO();
             offsetDTO.setOffset(lastGroupOffset);
             offsetDTO.setVQueue(vQueueName);
             offsetDTO.setLastOffset(lastOffset);
             //根据偏移量获取 100条滞后消息 如果全获取 内存不够
             String object = (String) remotingClient.sendSync(offsetDTO, MessageType.GET_QUEUE_MESSAGE_BY_OFFSET);
+            if (object == null){
+                return null;
+            }
             List<Map> list = RedisMQStringMapper.toList(object, Map.class);
             if (list != null) {
                 log.info("Consumer Group Offset Low RetryConsumer  \n queueAndOffset :{}\nqueueAndMessage :{}",

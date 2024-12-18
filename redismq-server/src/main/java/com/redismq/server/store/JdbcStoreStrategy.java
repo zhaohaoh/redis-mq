@@ -3,7 +3,7 @@ package com.redismq.server.store;
 import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.constant.MessageStatus;
 import com.redismq.common.pojo.Message;
-import com.redismq.common.pojo.QueueGroupOffset;
+import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -93,7 +93,7 @@ public class JdbcStoreStrategy implements MessageStoreStrategy {
     }
     
     @Override
-    public List<Message> getMessageListByQueueAndOffset(QueueGroupOffset queueGroupOffset) {
+    public List<Message> getMessageListByQueueAndOffset(GroupOffsetQeueryMessageDTO queueGroupOffset) {
         String vQueue = queueGroupOffset.getVQueue();
         Long offset = queueGroupOffset.getOffset();
         Long lastOffset = queueGroupOffset.getLastOffset();

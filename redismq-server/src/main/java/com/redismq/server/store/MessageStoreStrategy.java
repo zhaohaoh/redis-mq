@@ -1,7 +1,7 @@
 package com.redismq.server.store;
 
 import com.redismq.common.pojo.Message;
-import com.redismq.common.pojo.QueueGroupOffset;
+import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 
 import java.util.List;
 
@@ -13,5 +13,5 @@ public interface MessageStoreStrategy {
     
     void clearExpireMessage();
     
-    List<Message> getMessageListByQueueAndOffset(QueueGroupOffset offset);
+    List<Message> getMessageListByQueueAndOffset(GroupOffsetQeueryMessageDTO offset);
 }

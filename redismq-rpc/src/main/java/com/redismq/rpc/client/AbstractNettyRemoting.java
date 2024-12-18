@@ -7,6 +7,7 @@ import com.redismq.common.pojo.AddressInfo;
 import com.redismq.common.pojo.MergedRemoteMessage;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteMessageFuture;
+import com.redismq.common.pojo.Server;
 import com.redismq.common.rebalance.RandomBalance;
 import com.redismq.common.rebalance.ServerSelectBalance;
 import com.redismq.common.util.NetUtil;
@@ -25,6 +26,7 @@ import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -102,6 +104,8 @@ public class AbstractNettyRemoting implements RemotingClient {
     public Object sendSync(Object msg, int messageType) {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
                 .isEmpty(ServerManager.getLocalAvailServers())) {
+            Set<Server> localAvailServers = ServerManager.getLocalAvailServers();
+            log.warn("RedisMQ Rpc sendSync server empty no sendSync msg:{}",msg);
             return null;
         }
         

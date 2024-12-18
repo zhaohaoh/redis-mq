@@ -40,7 +40,7 @@ public class ProducerController {
 //            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
 //        }
 //        long millis = System.currentTimeMillis()+  Duration.ofSeconds(30).toMillis();
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1000; i++) {
             JavaBean javaBean = new JavaBean();
             javaBean.setA("ff");
             javaBean.setB(222);
