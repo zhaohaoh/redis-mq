@@ -135,7 +135,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     public Set<Long> pull(String vQueueName) {
         Set<Long> delayTimes = new LinkedHashSet<>();
-        List<Future<Boolean>> futures = new ArrayList<>();
+        List<Future<Message>> futures = new ArrayList<>();
         while (isRunning()) {
             try {
                 //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
@@ -147,13 +147,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 
                 //说明消费队列已经满了 等待所有任务消费完成，然后再继续拉取消息.后面优化加个最长等待时间。是针对每个任务的。可以动态控制。如果超时的话任务就取消丢弃。
                 if (pullSize <= 0) {
-                    pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                    pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                    
                 }
                 //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
                 if (delay || ackMode.equals(AckMode.MAUAL)){
                     if (futures.size() >0 ){
-                        pullSize = waitConsume(futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                     }
                 }
                 
@@ -170,7 +170,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                     //如果消费未完成 等待消费完成，然后再继续拉取消息.  只有手动消费模式才需要
                     if (futures.size() > 0 && ackMode.equals(AckMode.MAUAL)) {
-                        waitConsume(futures, GLOBAL_CONFIG.getTaskWaitTime(), false);
+                        waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskWaitTime(), false);
                         continue;
                     }
                     
@@ -182,7 +182,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                     break;
                 }
-                
+                long currentTimeMillis = System.currentTimeMillis();
                 List<RedisListenerCallable> callableInvokes = new ArrayList<>();
                 for (Message message : messages) {
                     if (!isRunning()) {
@@ -197,10 +197,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (AckMode.MAUAL.equals(ackMode)) {
                         
                         } else {
-                            Boolean remove = redisMQClientUtil.ackMessage(vQueueName, message.getId(),message.getOffset());
-                            if (!remove) {
-                                continue;
-                            }
+//                            Boolean remove = redisMQClientUtil.ackMessage(vQueueName, message.getId(),message.getOffset());
+//                            if (!remove) {
+//                                continue;
+//                            }
                         }
                         String id = super.getRunableKey(message.getTag());
                         RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
@@ -233,7 +233,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
                 
                 for (RedisListenerCallable callableInvoke : callableInvokes) {
-                    Future<Boolean> submit = work.submit(callableInvoke);
+                    Future<Message> submit = work.submit(callableInvoke);
                     futures.add(submit);
                 }
             } catch (Throwable e) {
@@ -320,20 +320,29 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      *
      * @return int
      */
-    private int waitConsume(List<Future<Boolean>> futures, long milliseconds, boolean timeoutDrop) {
-        for (Future<Boolean> future : futures) {
+    private int waitConsume(String vQueueName,List<Future<Message>> futures, long milliseconds, boolean timeoutDrop) {
+        List<Message> messageList = new ArrayList<>();
+        for (Future<Message> future : futures) {
             try {
-                Boolean aBoolean = future.get(milliseconds, TimeUnit.MILLISECONDS);
+                Message msg = future.get(milliseconds, TimeUnit.MILLISECONDS);
+                messageList.add(msg);
             } catch (Exception e) {
                 log.error("redisMQ waitConsume error", e);
             }
         }
-      
+        
         if (timeoutDrop) {
             futures.removeIf(Future::isDone);
         }
+        if (!messageList.isEmpty()){
+            Long offset = messageList.stream().map(Message::getOffset).max(Long::compareTo).get();
+            String msgIds = messageList.stream().map(Message::getId).collect(Collectors.joining(","));
+            redisMQClientUtil.ackBatchMessage(vQueueName,msgIds,offset);
+        }
+        
         int pullSize;
         pullSize = super.maxConcurrency;
+        messageList.clear();
         return pullSize;
     }
     

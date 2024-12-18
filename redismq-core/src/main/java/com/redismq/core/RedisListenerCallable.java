@@ -1,7 +1,6 @@
 package com.redismq.core;
 
 import com.redismq.common.connection.RedisMQClientUtil;
-import com.redismq.common.constant.AckMode;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.serializer.RedisMQStringMapper;
@@ -22,7 +21,7 @@ import java.util.concurrent.Callable;
  * @Date: 2022/5/19 11:28
  * 执行器
  */
-public class RedisListenerCallable implements Callable<Boolean> {
+public class RedisListenerCallable implements Callable<Message> {
     protected static final Logger log = LoggerFactory.getLogger(RedisListenerCallable.class);
 
     /**
@@ -127,7 +126,7 @@ public class RedisListenerCallable implements Callable<Boolean> {
     }
 
     @Override
-    public Boolean call()   {
+    public Message call()   {
         state.starting();
         try {
             do {
@@ -139,13 +138,13 @@ public class RedisListenerCallable implements Callable<Boolean> {
                 }
             } while (state.isActive());
         } finally {
-            Message message = (Message) args;
-            //如果是手动确认的话需要手动删除
-            if (AckMode.MAUAL.equals(ackMode)) {
-                redisMQClientUtil.ackMessage(message.getVirtualQueueName(), message.getId(),message.getOffset());
-            }
+//            Message message = (Message) args;
+//            //如果是手动确认的话需要手动删除
+//            if (AckMode.MAUAL.equals(ackMode)) {
+//                redisMQClientUtil.ackMessage(message.getVirtualQueueName(), message.getId(),message.getOffset());
+//            }
         }
-        return true;
+        return (Message) args;
     }
 
     private void run0() {

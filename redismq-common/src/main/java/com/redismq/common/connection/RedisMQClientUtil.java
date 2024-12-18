@@ -234,10 +234,9 @@ public class RedisMQClientUtil {
         keys.add(offsetGroups);
         //key7 除当前队列外所有其他队列的消息id队列
         keys.add(GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax().toString());
-        //key8 = 当前消息偏移量
-        keys.add(String.valueOf(offset));
+     
         
-        Object[] objects = {msgId};
+        Object[] objects = {msgId,offset};
         List list = redisClient.luaList(lua, keys, objects);
         if (!CollectionUtils.isEmpty(list)){
             long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
@@ -245,6 +244,76 @@ public class RedisMQClientUtil {
         }
         if (!success){
             log.error("remove message failed, queueName:{} messageId:{}",queueName,msgId);
+        }
+        return success;
+    }
+    
+    
+    /**
+     * ack消息
+     */
+    public Boolean ackBatchMessage(String queueName, String msgIds,long msgOffset) {
+        boolean success =false;
+        String lua = "local result={};\n" + "local messageIdQueue=KEYS[1];\n" + "local queueGroups= KEYS[3];\n"
+                + "local offsetGroup= KEYS[4];\n" + "local orginalQueueName =KEYS[5];\n"
+                + "local otherMessageIdQueues =KEYS[6];\n" + "local diffMax =KEYS[7];\n" + "\n"
+                + "local msgIds = ARGV[1];\n" + "local msgOffset = ARGV[2];\n" + "\n"
+                + "local currentOffset = redis.call('ZSCORE', offsetGroup,orginalQueueName);\n" + "\n"
+                + "for msgId in msgIds:gmatch(\"([^,]+)\") do\n"
+                + "local r1 = redis.call('zrem', messageIdQueue, msgId);\n" + "table.insert(result,r1);\n" + "\n"
+                + "local groupAck = true;\n" + "for queueGroup in queueGroups:gmatch(\"([^,]+)\") do\n"
+                + "    local res = redis.call('ZSCORE', queueGroup, msgId);\n" + "    if res then\n"
+                + "        groupAck = false;\n" + "    end\n" + "end\n" + "\n" + "if groupAck then\n"
+                + "    local r2  = redis.call('hdel', KEYS[2],  msgId);\n" + "    table.insert(result,r2);\n" + "end\n"
+                + "local size = redis.call('HLEN',KEYS[2]);\n" + "if size>0 then\n"
+                + "    for msgQueue in otherMessageIdQueues:gmatch(\"([^,]+)\") do\n"
+                + "        local  data = redis.call('ZRANGEBYSCORE',msgQueue,0,currentOffset - (tonumber(diffMax)-1));\n"
+                + "        for i, messageId in ipairs(data) do\n"
+                + "            redis.call('zrem',msgQueue,messageId);\n"
+                + "            local r2  = redis.call('hdel', KEYS[2],  messageId);\n"
+                + "            table.insert(result,r2);\n" + "        end\n" + "    end\n" + "end\n" + "end\n" + "\n"
+                + "if currentOffset and msgOffset and  (tonumber(msgOffset) > tonumber(currentOffset)) then\n"
+                + "    redis.call('zadd', offsetGroup, msgOffset,orginalQueueName);\n" + "end\n" + "\n"
+                + "return result;\n";
+        List<String> keys = new ArrayList<>();
+        String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(queueName);
+        
+        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
+        String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
+        Set<String> group =  getGroups();
+        String finalQueueName = queueName;
+        //其他group的Id 判断所有groupId的偏移量都提交后。才删除消息体
+        String queueGroups = group.stream()
+                .filter(a->!a.equals(groupId))
+                .map(g -> finalQueueName + SPLITE + g)
+                .collect(Collectors.joining(","));
+        //1.队列名+groupId  存消息的队列
+        keys.add(queueName + SPLITE + groupId);
+        //2.消息体key
+        keys.add(queueName + ":body");
+        //3.当前的所有groupName
+        keys.add(queueGroups);
+        String offsetGroupName = getOffsetGroupCollection(groupId);
+        //4 维护当前队列偏移量的组名
+        keys.add(offsetGroupName);
+        //5.原始队列名称
+        keys.add(orginalQueueName);
+        //key6 除当前队列外所有其他队列的消息id队列
+        String offsetGroups = group.stream().filter(gId -> !gId.equals(groupId))
+                .map(gId ->  finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
+        keys.add(offsetGroups);
+        //key7 除当前队列外所有其他队列的消息id队列
+        keys.add(GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax().toString());
+        
+        //msgOffset 所有消息最大偏移量
+        Object[] objects = {msgIds,msgOffset};
+        List list = redisClient.luaList(lua, keys, objects);
+        if (!CollectionUtils.isEmpty(list)){
+            long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
+            success = count >= 1;
+        }
+        if (!success){
+            log.error("remove message failed, queueName:{} messageIds:{}",queueName,msgIds);
         }
         return success;
     }
