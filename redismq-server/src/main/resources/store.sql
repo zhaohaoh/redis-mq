@@ -10,6 +10,8 @@ CREATE TABLE `redismq_message` (
                                    `status` tinyint(0) NOT NULL DEFAULT 0 COMMENT '消息状态',
                                    `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
                                    `update_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
+                                   `executor_scope` bigint NOT NULL DEFAULT '0' COMMENT '执行的分数。延时队列为到期时间。普通队列为消息偏移量',
+                                   `execute_time` bigint NOT NULL DEFAULT '0' COMMENT '延时队列为到期时间,普通队列为发送消息的时间',
                                    PRIMARY KEY (`id`),
                                    INDEX `idx_queue`(`queue`) USING BTREE,
                                    INDEX `idx_offset`(`offset`) USING BTREE,

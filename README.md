@@ -33,15 +33,6 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ## 注意事项
 队列名称存储在redis中。如果一个队列无用了。需要去redis控制台中手动删除，否则也没影响，就是占用redis空间。
 
-### 0.5.0-beta1  重磅升级， 支持消费者组偏移量消费 ！！！
-0.5.0-beta1测试版，暂不建议引入生产，欢迎大家一起测试。  代码在分支0.5.0-beta1。  web控制台暂不兼容。
-1.消费者组加入新消费者会从头开始拉取消息。
-2.多个消费者组会各自维护自己的偏移量。具体参考rocketmq的Group机制。
-3.开启消费者组需要开启消息server持久化和客户端通信具体配置如下：
-server
-
-0.4.3严重bug，不可用
-
 ## 快速开始
 
 ### application.peoperties配置
@@ -252,12 +243,32 @@ public class RedisMQInterceptorConfiguration {
 }
 ```
 
+### 0.5.0-beta1  重磅升级， 支持消费者组偏移量消费 ！！！
+0.5.0-beta1测试版，暂不建议引入生产，欢迎大家一起测试。  代码在分支0.5.0-beta1。  web控制台暂不兼容。
+1.消费者组加入新消费者会从头开始拉取消息。
+2.多个消费者组会各自维护自己的偏移量。具体参考rocketmq的Group机制。
+3.开启消费者组需要开启redismq-server和客户端通信具体配置如下：
+server端（详见[redismq-server](redismq-server)  还需配置数据库和store.sql）：
+```properties
+spring.redismq.netty-config.server.port=10520
+spring.redismq.nettyConfig.server.enable=true
+```
+
+client端(即引入start包的你的应用)  增加如下配置：
+```properties
+##server端的端口
+spring.redismq.netty-config.server.port=10520
+#server端的地址
+spring.redismq.netty-config.server.host=XXX
+spring.redismq.netty-config.client.enable=true
+```
+
 ## 作者
 加好友进群聊，问题及时响应！一手更新资料！
 ![img.png](img.png)
 
 ## 可靠性及稳定性测试
-实测下单系统并发20 压测一小时以上。消息稳定处理
+实测下单系统TPS30 压测一小时以上。消息稳定处理
 
 ## 版本更新记录
 0.4.3 1.修复事务提交后发消息
