@@ -244,7 +244,7 @@ public class RedisMQInterceptorConfiguration {
 ```
 
 ### 0.5.0-beta1  重磅升级， 支持消费者组偏移量消费 ！！！
-0.5.0-beta1测试版，暂不建议引入生产，欢迎大家一起测试。  代码在分支0.5.0-beta1。  web控制台暂不兼容。
+0.5.0-beta1测试版，暂不建议引入生产，欢迎大家一起测试。  代码在分支0.5.0-beta1。  web控制台暂不兼容。  redis操作客户端升级为redisson
 1.消费者组加入新消费者会从头开始拉取消息。
 2.多个消费者组会各自维护自己的偏移量。具体参考rocketmq的Group机制。
 3.开启消费者组需要开启redismq-server和客户端通信具体配置如下：
