@@ -19,9 +19,9 @@ public class ConsumserConfig {
     private String groupId ="consumerGroup";
     
     /**
-     * 多个消费者组偏移量最大允许偏差值，  超过偏差值的消息将会被移除
+     * 多个消费者组偏移量最大允许偏差值，  超过偏差值的消息将会被移除. 建议和queueMaxSize保持一致
      */
-    private Integer groupOffsetLowMax = 10000;
+    private Integer groupOffsetLowMax = 100000;
     
     /**
      * 该配置标识当前group重新上线时从哪个偏移量开始消费  latest最新偏移量    current当前偏移量。
