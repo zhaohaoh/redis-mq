@@ -141,35 +141,38 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 //获取已经到时间要执行的任务  本地消息的数量相当于本地偏移量   localMessages.size()是指从这个位置之后开始啦
                 long pullTime = System.currentTimeMillis();
                 
-                futures.removeIf(Future::isDone);
-                
                 int pullSize = super.maxConcurrency - futures.size();
                 
                 //说明消费队列已经满了 等待所有任务消费完成，然后再继续拉取消息.后面优化加个最长等待时间。是针对每个任务的。可以动态控制。如果超时的话任务就取消丢弃。
                 if (pullSize <= 0) {
                     pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
-                   
                 }
                 //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
-                if (delay || ackMode.equals(AckMode.MAUAL)){
-                    if (futures.size() >0 ){
-                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
-                    }
-                }
+//                if (delay || ackMode.equals(AckMode.MAUAL)){
+//                    if (!futures.isEmpty()){
+//                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+//                    }
+//                }
                 
                 // 先获取偏移量落后的group的持久化的message
                 List<Message> messages = getOffsetLowStoreMessage(vQueueName);
+                
                 // 从redis中获取消息
                 if (CollectionUtils.isEmpty(messages)){
-                    messages = redisMQClientUtil.pullMessage(vQueueName, 0,pullTime, 0, pullSize);
+                    long startScore=0;
+                    if (!delay){
+                        startScore=lastGroupOffset;
+                    }
+                    messages = redisMQClientUtil.pullMessage(vQueueName, startScore,pullTime, 0, pullSize);
                 }
+                
                 if (CollectionUtils.isEmpty(messages)) {
                     //响应中断
                     if (!isRunning()) {
                         return delayTimes;
                     }
-                    //如果消费未完成 等待消费完成，然后再继续拉取消息.  只有手动消费模式才需要
-                    if (futures.size() > 0 && ackMode.equals(AckMode.MAUAL)) {
+                    //消息已经拉不到了。如果消费未完成 等待1秒钟消费完成，如果1秒没有消费完。再继续拉取消息，因为有可能有其他新的消息进来。
+                    if (!futures.isEmpty()) {
                         waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskWaitTime(), false);
                         continue;
                     }
@@ -182,7 +185,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                     break;
                 }
-                long currentTimeMillis = System.currentTimeMillis();
+              
                 List<RedisListenerCallable> callableInvokes = new ArrayList<>();
                 for (Message message : messages) {
                     if (!isRunning()) {
@@ -335,18 +338,30 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
         
         if (timeoutDrop) {
+            futures.clear();
+        }
+        
+        int pullSize;
+        pullSize = super.maxConcurrency;
+        if (CollectionUtils.isEmpty(messageList)) {
+            return pullSize;
+        }
+        if (!timeoutDrop) {
             futures.removeIf(Future::isDone);
         }
+        
+        ackMessage(vQueueName, messageList);
+        
+        messageList.clear();
+        return pullSize;
+    }
+    
+    private void ackMessage(String vQueueName, List<Message> messageList) {
         if (!messageList.isEmpty()){
             Long offset = messageList.stream().map(Message::getOffset).max(Long::compareTo).get();
             String msgIds = messageList.stream().map(Message::getId).collect(Collectors.joining(","));
             redisMQClientUtil.ackBatchMessage(vQueueName,msgIds,offset);
         }
-        
-        int pullSize;
-        pullSize = super.maxConcurrency;
-        messageList.clear();
-        return pullSize;
     }
     
     

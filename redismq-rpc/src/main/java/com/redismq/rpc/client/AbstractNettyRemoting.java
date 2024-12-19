@@ -104,7 +104,6 @@ public class AbstractNettyRemoting implements RemotingClient {
     public Object sendSync(Object msg, int messageType) {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
                 .isEmpty(ServerManager.getLocalAvailServers())) {
-            Set<Server> localAvailServers = ServerManager.getLocalAvailServers();
             log.warn("redismq-server not found  no sendSync msg:{}",msg);
             return null;
         }
