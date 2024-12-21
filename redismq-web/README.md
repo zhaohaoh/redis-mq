@@ -1,7 +1,8 @@
-# Vue 3 + Vite
+npm install 安装node_modules环境。他是根据[package.json](package.json)来安装的
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+npm run dev 本地运行
 
-## Recommended IDE Setup
+npm build  打包成dist
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
+dist下的assets复制到springboot项目下就可以集成到redismq-server项目中
+
