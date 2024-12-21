@@ -8,6 +8,9 @@ import "./assets/scss/index.scss";
 import store from "./store";
 import api from "./api/api.js";
 
+import JsonViewer from "vue3-json-viewer";
+import "vue3-json-viewer/dist/index.css"; // 引入样式
+
 import ElementPlus from "element-plus";
 
 // 获取组件的props
@@ -31,5 +34,6 @@ app.config.globalProperties.$api = api;
 // store.commit("user/initMenu", router);
 // app.use(ElementPlus)
 // 要在mount前面否则未渲染
-app.use(router).use(store).use(ElementPlus);
+//
+app.use(router).use(store).use(JsonViewer).use(ElementPlus);
 app.mount("#app");

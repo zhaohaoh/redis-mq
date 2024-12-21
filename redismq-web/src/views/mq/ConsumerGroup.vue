@@ -27,11 +27,8 @@
         :label="item.label"
         :prop="item.prop"
       />
-      <!-- <el-table-column fixed="right" width="150px">
+      <el-table-column fixed="right" width="150px" label="操作">
         <template #default="scope">
-          <el-button size="small" @click="openEdit(scope.$index, scope.row)"
-            >修改</el-button
-          >
           <el-button
             type="danger"
             size="small"
@@ -39,7 +36,7 @@
             >删除</el-button
           >
         </template>
-      </el-table-column> -->
+      </el-table-column>
     </el-table>
   </div>
 </template>
@@ -59,42 +56,13 @@ import elMessage from "../../util/message";
 
 const { proxy } = getCurrentInstance() as any;
 
-// 这里如果用reactive会有问题。reactive好像只能用在对象上
-let roleList = ref([
-  {
-    roleCode: "",
-    roleName: "",
-    id: null,
-  },
-]);
 let tableData = ref([
   {
-    clientId: "",
-    applicationName: "",
     groupId: "",
   },
 ]);
 
-let dialogFormVisible = ref(false);
-
-let action = ref("add");
-
-const formUser = reactive({
-  username: "",
-  email: "",
-  phone: "",
-  nickName: "",
-  roleIds: [],
-});
 const tableHeader = reactive([
-  {
-    prop: "applicationName",
-    label: "应用",
-  },
-  {
-    prop: "clientId",
-    label: "消费客户端",
-  },
   {
     prop: "groupId",
     label: "消费者组",
@@ -105,18 +73,36 @@ const pageInfo = reactive({
   page: 1,
   size: 10,
   total: 0,
-  keyword: "",
-  beginTime: null,
-  endTime: null,
 });
 
+const handleDelete = (index, row) => {
+  ElMessageBox.confirm(
+    "<div  >将同时删除组内所有消息 可能导致redis耗时!<div/><div>是否确认删除？</div>",
+    {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      dangerouslyUseHTMLString: true,
+    }
+  )
+    .then(() => {
+      consumerGroupDelete(row);
+      elMessage.success();
+    })
+    .catch(() => {});
+};
+const consumerGroupDelete = async (group) => {
+  // console.log("aa" + group.groupId);
+  let res = await proxy.$api.mq.consumerGroupDelete(group.groupId);
+  getConsumerGroupList();
+};
+
 onMounted(() => {
-  getConsumerList(pageInfo);
+  getConsumerGroupList();
 });
 
 // 获取消费者分页
-const getConsumerList = async (data) => {
-  let res = await proxy.$api.mq.consumerList();
+const getConsumerGroupList = async () => {
+  let res = await proxy.$api.mq.consumerGroupList();
   tableData.value = res;
   //客户端数据赋值 ["abac","qweqwe"] 放到对象{"client"}
   // res.forEach((item, index) => {

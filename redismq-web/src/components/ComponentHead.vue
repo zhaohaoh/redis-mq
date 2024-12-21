@@ -10,6 +10,7 @@
       router
     >
       <el-menu-item index="/consumer">消费者管理</el-menu-item>
+      <el-menu-item index="/consumer/group">消费者组管理</el-menu-item>
       <el-menu-item index="/queue">队列管理</el-menu-item>
       <el-menu-item index="/historyMessage">历史消息管理</el-menu-item>
     </el-menu>

@@ -40,6 +40,21 @@ const mq = {
   deleteQueue(params) {
     return api.deleteParam({ url: "/queue/deleteQueue", data: params });
   },
+
+  //历史消息分页查询
+  historyMessagePage(params) {
+    return api.post({ url: "/history/message/page", data: params });
+  },
+
+  //消费者组列表
+  consumerGroupList(params) {
+    return api.get({ url: "/consumer/group/list", data: params });
+  },
+
+  //消费者组删除
+  consumerGroupDelete(params) {
+    return api.post({ url: "/consumer/group/delete", data: params });
+  },
 };
 
 export default mq;

@@ -40,7 +40,7 @@
       </el-table-column>
     </el-table>
   </div>
-  <el-dialog
+  <!-- <el-dialog
     v-model="messageDetailDiaLog"
     width="80%"
     title="消息详情"
@@ -54,7 +54,7 @@
       sort
       class="w-100%"
     ></json-viewer>
-  </el-dialog>
+  </el-dialog> -->
 </template>
 
 <style>
@@ -64,14 +64,19 @@
 </style>
 <script lang="ts" setup>
 import "../../assets/scss/common.scss";
+import { ElMessageBox } from "element-plus";
 import { getCurrentInstance, onMounted, reactive, ref } from "vue";
 import "element-plus/theme-chalk/el-message-box.css";
+
+import elMessage from "../../util/message";
+
+// import JsonViewer from "vue-json-viewer";
 
 const { proxy } = getCurrentInstance() as any;
 
 const messageDetailDiaLog = ref(false);
 
-let messageBody = ref({});
+let messageBody = {};
 
 const openMessageDetail = (index, row) => {
   messageBody.value = JSON.parse(row.body);
@@ -107,7 +112,10 @@ const tableHeader = reactive([
     prop: "updateTime",
     label: "更新时间",
   },
-
+  {
+    prop: "body",
+    label: "消息内容",
+  },
   {
     prop: "offset",
     label: "偏移量",
@@ -143,6 +151,9 @@ let tableData = ref([
   },
   {
     updateTime: "",
+  },
+  {
+    body: "",
   },
   {
     offset: 1,
