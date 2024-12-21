@@ -302,18 +302,23 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 return null;
             }
             List<Map> list = RedisMQStringMapper.toList(object, Map.class);
-            if (list != null) {
-                log.info("Consumer Group Offset Low RetryConsumer  \n queueAndOffset :{}\nqueueAndMessage :{}",
-                        lastGroupOffset, list);
+            if (!CollectionUtils.isEmpty(list)) {
+                log.info("Consumer Group Offset Low RetryConsumer  \n lastGroupOffset :{} lastOffset:{}  \n Message:{}",
+                        lastGroupOffset,lastOffset, list);
                 for (Map map : list) {
                     String jsonStr = RedisMQStringMapper.toJsonStr(map);
                     Message msg = RedisMQStringMapper.toBean(jsonStr, Message.class);
                     messages.add(msg);
                 }
+            }else{
+                // 根据偏移量拉不到消息，注意这部分消息将丢失。 数据库里也被删除了
+                log.error("Consumer Set lastOffset to lastGroupOffset Because persistence"
+                        + " message isEmpty lastGroupOffset :{} lastOffset:{}",lastGroupOffset,lastOffset);
+                log.error("Message Loss !!!! vQueueName  lastGroupOffset:{} lastOffset:{}",lastGroupOffset,lastOffset);
             }
         }
         if (!CollectionUtils.isEmpty(messages)) {
-            log.info("Group offset Low groupId :{} offset :{} messageIds:{}",
+            log.info("Group offset Low groupId :{} lastGroupOffset :{} messageIds:{}",
                     GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), lastGroupOffset,
                     messages.stream().map(Message::getId).collect(Collectors.toList()));
         }

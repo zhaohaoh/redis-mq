@@ -13,9 +13,9 @@ public class GlobalStoreConfig {
     private StoreEnum storeType = StoreEnum.MYSQL;
     
     /**
-     * 过期时间
+     * 消息过期时间 默认3个月
      */
-    private Duration expireTime = Duration.ofDays(30);
+    private Duration expireTime = Duration.ofDays(90);
 //    /**
 //     * 单条消息最大值
 //     */

@@ -19,7 +19,7 @@ public class SamplesConsumer  {
     /**
      * delaytest1消费延时队列
      */
-    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 64,concurrency = 64)
+    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 200,concurrency = 200)
     public void delaytest1(Message message) {
         Long executeTime = message.getExecuteTime();
         Long offset = message.getOffset();
@@ -67,7 +67,7 @@ public class SamplesConsumer  {
 //        redisMQTemplate.sendMessage(test,"test2");
 //    }
 //
-    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5,virtual = 2)
     public void test2(JavaBean test) {
         System.out.println(test);
     }

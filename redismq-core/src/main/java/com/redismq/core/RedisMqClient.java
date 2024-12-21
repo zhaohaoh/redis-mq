@@ -205,7 +205,7 @@ public class RedisMqClient {
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
         // 启动成功
-        log.info("RedisMQ Start Success  \nGroups:{} \nQueues:{}",redisMQStoreUtil.getGroups(),QueueManager.getLocalQueues());
+        log.info("RedisMQ Start Success  \nGroupId:{} \nQueues:{}",GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),QueueManager.getLocalQueues());
     }
     
     private void serverSubscribe() {

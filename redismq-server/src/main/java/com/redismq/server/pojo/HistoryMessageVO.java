@@ -11,7 +11,7 @@ import java.util.Map;
  * @date 2023/11/20
  */
 @Data
-public class MessageVO {
+public class HistoryMessageVO {
     
     /**
      * 消息主体  消息都会转为字符串存储
@@ -56,4 +56,26 @@ public class MessageVO {
      */
     private Long offset;
     
+    
+    /**
+     * 创建时间
+     */
+    private String createTime;
+    /**
+     * 更新时间
+     */
+    private String updateTime;
+    
+    /**
+     * 执行时间redis分数
+     */
+    private Long executeScope;
+    /**
+     * 执行时间
+     */
+    private Long executeTime;
+    /**
+     * 执行时间
+     */
+    private Integer status;
 }

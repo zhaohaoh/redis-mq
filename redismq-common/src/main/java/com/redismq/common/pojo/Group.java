@@ -7,7 +7,7 @@ public class Group {
     /**
      * 分组名
      */
-    private String groupName;
+    private String groupId;
     
     /**
      * 最近注册时间

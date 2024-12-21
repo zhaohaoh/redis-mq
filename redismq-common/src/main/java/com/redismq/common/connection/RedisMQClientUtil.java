@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
 import static com.redismq.common.constant.RedisMQConstant.NAMESPACE;
 import static com.redismq.common.constant.RedisMQConstant.PREFIX;
 import static com.redismq.common.constant.RedisMQConstant.getClientCollection;
@@ -467,5 +468,22 @@ public class RedisMQClientUtil {
             return 0L;
         }
         return offset.longValue();
+    }
+    
+    public void deleteGroup(String groupId) {
+        redisClient.zRemove(getGroupCollection(),groupId);
+        String offsetGroupCollection = getOffsetGroupCollection(groupId);
+        redisClient.delete(offsetGroupCollection);
+        //查找所有队列的虚拟队列。删除队列内的消息
+        Set<Queue> queueList = getQueueList();
+        for (Queue queue : queueList) {
+            Integer virtual = queue.getVirtual();
+            for (Integer i = 0; i < virtual; i++) {
+                String vQueueName = queue.getQueueName() + V_QUEUE_SPLITE + i;
+                //队列的分组
+                redisClient.delete(vQueueName + groupId);
+            }
+        }
+        
     }
 }
