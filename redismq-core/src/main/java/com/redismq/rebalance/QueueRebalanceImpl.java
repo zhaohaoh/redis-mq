@@ -1,6 +1,7 @@
 package com.redismq.rebalance;
 
 
+import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.pojo.Client;
 import com.redismq.queue.QueueManager;
 import org.slf4j.Logger;
@@ -19,11 +20,11 @@ import static com.redismq.queue.QueueManager.putCurrentVirtualQueues;
  * @Date: 2022/4/25 18:18
  * 队列负载均衡相关
  */
-public class RebalanceImpl {
-    protected static final Logger log = LoggerFactory.getLogger(RebalanceImpl.class);
+public class QueueRebalanceImpl {
+    protected static final Logger log = LoggerFactory.getLogger(QueueRebalanceImpl.class);
     private final AllocateMessageQueueStrategy allocateMessageQueueStrategy;
 
-    public RebalanceImpl(AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
+    public QueueRebalanceImpl(AllocateMessageQueueStrategy allocateMessageQueueStrategy) {
         this.allocateMessageQueueStrategy = allocateMessageQueueStrategy;
     }
 
@@ -40,13 +41,17 @@ public class RebalanceImpl {
         for (String queue : allQueues) {
             //获取每个客户端各自维护的队列列表 获得存在订阅该队列的有效客户端
             List<String> clientIds = clients.stream().filter(c -> c.getQueues() != null && c.getQueues().contains(queue))
-                    .map(Client::getClientId).collect(Collectors.toList());
+                    .filter(a->a.getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
+                    .map(Client::getClientId)
+                    .collect(Collectors.toList());
             List<String> virtualQueues = QueueManager.getLocalVirtualQueues(queue);
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, clientIds);
             putCurrentVirtualQueues(queue, vQueues);
         }
         String vQueues = getCurrentVirtualQueues().entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
-        log.info("RebalanceImpl rebalance clientId:{} \n clients:{} \n VirtualQueues:\n{}", clientId, clients,vQueues);
+        log.info("RebalanceImpl rebalance GroupId:{} clientId:{} \n clients:{} \n VirtualQueues:\n{}",
+                GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),
+                clientId, clients,vQueues);
     }
     
     public static void main(String[] args) {

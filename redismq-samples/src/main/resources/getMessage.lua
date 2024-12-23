@@ -1,4 +1,4 @@
-local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);
+local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);
 
 local result = {}
 for i=1, #data, 2 do
@@ -7,7 +7,7 @@ for i=1, #data, 2 do
         table.insert(result,message);
         table.insert(result,data[i+1]);
     else
-        redis.call('zrem', KEYS[1],  data[i]);
+        redis.call('zrem', KEYS[2],  data[i]);
     end
 end
 return result;

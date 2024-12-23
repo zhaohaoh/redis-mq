@@ -80,12 +80,24 @@ public class RedisMQConstant {
     }
     
     /**
+     *  Group集合
+     */
+    public static String getGroupCollection() {
+       return PREFIX + NAMESPACE +   SPLITE + "GROUP"  ;
+    }
+    /**
+     *  Group集合
+     */
+    public static String getOffsetGroupCollection(String group) {
+        return PREFIX + NAMESPACE  + SPLITE + "GROUP_OFFSET:" + group;
+    }
+    /**
      * 获取客户端集合
      *
      * @return {@link String}
      */
     public static String getClientCollection() {
-        return PREFIX + NAMESPACE + SPLITE + CLIENTS_KEY;
+        return PREFIX + NAMESPACE +   SPLITE + CLIENTS_KEY ;
     }
     
     /**
@@ -119,8 +131,8 @@ public class RedisMQConstant {
         return PREFIX + NAMESPACE + SPLITE + SERVERS;
     }
     
-    public static String getRebalanceTopic() {
-        return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC;
+    public static String getRebalanceTopic(String groupId) {
+        return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC +SPLITE+groupId;
     }
     
     /**

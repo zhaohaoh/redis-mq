@@ -107,6 +107,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
         return aBoolean;
     }
     
+    @Override
+    public Object get(String key) {
+        return null;
+    }
+    
     
     /**
      * set添加元素
@@ -152,6 +157,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
         return stringRedisTemplate.opsForZSet().add(key, RedisMQStringMapper.toJsonStr(value), score);
     }
     
+    @Override
+    public Boolean zAddIfAbsent(String key, Object value, double score) {
+        return null;
+    }
+    
     /**
      * @param key
      * @param values
@@ -166,9 +176,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
     
     
     @Override
-    public Long hashRemove(String key, String hashKey) {
+    public Long mapCacheRemove(String key, String hashKey) {
         return stringRedisTemplate.opsForHash().delete(key, hashKey);
     }
+    
+   
     
     
     /**
@@ -191,7 +203,14 @@ public class StringRedisTemplateAdapter implements RedisClient {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
         }
+        
+ 
         return newMap;
+    }
+    
+    @Override
+    public Double zScore(String key, String member) {
+        return null;
     }
     
     
@@ -224,7 +243,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
      * 范围查找消息
      */
     @Override
-    public Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end) {
+    public Map<Message, Double> zrangeMessage(String key,String group, double min, double max, long start, long end) {
         String lua =
                 "local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
@@ -261,6 +280,23 @@ public class StringRedisTemplateAdapter implements RedisClient {
     @Override
     public Boolean exists(String key) {
        return stringRedisTemplate.hasKey(key);
+    }
+    
+    @Override
+    public Boolean lock(String key, String s, Duration duration) {
+        Boolean aBoolean = stringRedisTemplate.opsForValue()
+                .setIfAbsent(key, RedisMQStringMapper.toJsonStr(s), duration);
+        return aBoolean;
+    }
+    
+    @Override
+    public Boolean unlock(String key) {
+        return stringRedisTemplate.delete(key);
+    }
+    
+    @Override
+    public Boolean isLock(String key) {
+        return stringRedisTemplate.hasKey(key);
     }
     
 }

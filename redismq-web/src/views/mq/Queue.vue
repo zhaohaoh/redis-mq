@@ -303,6 +303,9 @@ const messageList = ref([
   {
     consumeTime: "",
   },
+  {
+    offset: "",
+  },
 ]);
 const messageHeader = reactive([
   {
@@ -320,6 +323,10 @@ const messageHeader = reactive([
   {
     prop: "consumeTime",
     label: "消费时间",
+  },
+  {
+    prop: "offset",
+    label: "偏移量",
   },
 ]);
 

@@ -14,6 +14,11 @@ const routes = [
         component: () => import("../views/mq/Queue.vue"),
       },
       {
+        path: "/consumer/group",
+        name: "consumerGroup",
+        component: () => import("../views/mq/ConsumerGroup.vue"),
+      },
+      {
         path: "/consumer",
         name: "consumer",
         component: () => import("../views/mq/Consumer.vue"),

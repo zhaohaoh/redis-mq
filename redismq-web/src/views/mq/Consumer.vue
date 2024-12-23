@@ -71,6 +71,7 @@ let tableData = ref([
   {
     clientId: "",
     applicationName: "",
+    groupId: "",
   },
 ]);
 
@@ -93,6 +94,10 @@ const tableHeader = reactive([
   {
     prop: "clientId",
     label: "消费客户端",
+  },
+  {
+    prop: "groupId",
+    label: "消费者组",
   },
 ]);
 

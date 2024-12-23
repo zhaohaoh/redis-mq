@@ -35,6 +35,8 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         JsonNode queue = jsonNode.has("queue") ? jsonNode.get("queue") : MissingNode.getInstance();
         JsonNode tag = jsonNode.has("tag") ? jsonNode.get("tag") : MissingNode.getInstance();
         JsonNode offset = jsonNode.has("offset") ? jsonNode.get("offset") : MissingNode.getInstance();
+        JsonNode executeTime = jsonNode.has("executeTime") ? jsonNode.get("executeTime") : MissingNode.getInstance();
+        JsonNode executorScope = jsonNode.has("executorScope") ? jsonNode.get("executorScope") : MissingNode.getInstance();
         JsonNode virtualQueueName =
                 jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
         JsonNode header = jsonNode.has("header") ? jsonNode.get("header") : MissingNode.getInstance();
@@ -94,10 +96,16 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         message.setQueue(queue.asText());
         message.setTag(tag.asText());
         message.setOffset(offset.asLong());
+        message.setExecuteTime(executeTime.asLong());
         message.setVirtualQueueName(virtualQueueName.asText());
+        message.setExecuteScope(executorScope.asLong());
         if (!header.isMissingNode()) {
-            Map<String, Object> map = mapper.readValue(header.traverse(), Map.class);
-            message.setHeader(map);
+            JsonParser traverse = header.traverse();
+            String valueAsString = traverse.getValueAsString();
+            if (valueAsString!=null) {
+                Map<String, Object> map = mapper.readValue(traverse, Map.class);
+                message.setHeader(map);
+            }
         }
         
         return message;

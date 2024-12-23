@@ -9,6 +9,8 @@ import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.redisson.api.RedissonClient;
+import org.redisson.spring.data.connection.RedissonConnectionFactory;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisNode;
@@ -40,9 +42,11 @@ public class RedisConnectionFactoryUtil {
 
     private final RedisProperties properties;
     private volatile RedisConnectionFactory redisConnectionFactory;
+    private RedissonClient redissonClient;
 
-    public RedisConnectionFactoryUtil(RedisProperties properties) {
+    public RedisConnectionFactoryUtil(RedisProperties properties,RedissonClient redissonClient) {
         this.properties = properties;
+        this.redissonClient=redissonClient;
     }
 
     public RedisConnectionFactory getSingleConnectionFactory() {
@@ -54,29 +58,23 @@ public class RedisConnectionFactoryUtil {
                         jedisConnectionFactory.afterPropertiesSet();
                         redisConnectionFactory = jedisConnectionFactory;
                         return redisConnectionFactory;
-                    } else {
+                    }
+                    else if(properties.getClientType().equals(RedisProperties.ClientType.LETTUCE)){
                         LettuceConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
                         lettuceConnectionFactory.afterPropertiesSet();
                         redisConnectionFactory = lettuceConnectionFactory;
                         return redisConnectionFactory;
+                    }else if (properties.getClientType().equals(RedisProperties.ClientType.REDISSON)){
+                        return new RedissonConnectionFactory(redissonClient);
+                    }else {
+                        throw new RedisMqException("ClientType Not supported.");
                     }
                 }
             }
         }
         return this.redisConnectionFactory;
     }
-
-    public RedisConnectionFactory createConnectionFactory() {
-        if (properties.getClientType().equals(RedisProperties.ClientType.JEDIS)) {
-            JedisConnectionFactory jedisConnectionFactory = createJedisConnectionFactory();
-            jedisConnectionFactory.afterPropertiesSet();
-            return jedisConnectionFactory;
-        } else {
-            LettuceConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
-            lettuceConnectionFactory.afterPropertiesSet();
-            return lettuceConnectionFactory;
-        }
-    }
+ 
 
     public JedisConnectionFactory createJedisConnectionFactory() {
         JedisClientConfiguration clientConfiguration = getJedisClientConfiguration();

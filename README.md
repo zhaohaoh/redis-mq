@@ -22,16 +22,20 @@ Redis-MQ 是利用redis实现mq的功能的中间件
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>0.4.4</version>
+            <version>0.5.0-beta1</version>
         </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot3-starter</artifactId>
-            <version>0.4.4</version>
+            <version>0.5.0-beta1</version>
         </dependency>
 ```
 ## 注意事项
 队列名称存储在redis中。如果一个队列无用了。需要去redis控制台中手动删除，否则也没影响，就是占用redis空间。
+
+### 0.2.0以下版本不支持使使用控制台！！！
+如需升级，需等所有消息消费完成后升级版本。因为对于redis底层存储数据机制改变。消息序列化会不兼容
+0.4.3严重bug，不可用
 
 ## 快速开始
 
@@ -40,6 +44,9 @@ Redis-MQ 是利用redis实现mq的功能的中间件
 ```properties
 #指定环境隔离的分组
 spring.redismq.namespace=default
+# 指定redismq应用名
+#spring.redismq.application-name=${spring.application.name}
+spring.redismq.application-name=redisMQ-cliet
 spring.redismq.client.host=localhost
 #默认的database
 spring.redismq.client.database=6
@@ -66,12 +73,15 @@ spring.application.name=redismq-admin
 spring.mvc.pathmatch.matching-strategy=ant_path_matcher
 spring.jackson.date-format=yyyy-MM-dd HH:mm:ss
 spring.jackson.time-zone=GMT+8
-//你的端口
+##你的端口
 server.port=8088
 #指定环境隔离的分组
 spring.redismq.namespace=你的分组
 spring.redismq.client.host=你的redis地址
 spring.web.resources.static-locations=classpath:/static/
+#此配置代表是否启用tcp服务端
+spring.redismq.netty-config.server.port=10520
+spring.redismq.nettyConfig.server.enable=false
 ```
 本地启动项目或者部署到服务器均可
 # 运行管理界面
@@ -242,6 +252,7 @@ public class RedisMQInterceptorConfiguration {
     }
 }
 ```
+
 
 ### 0.5.0-beta1  重磅升级， 支持消费者组偏移量消费 ！！！
 0.5.0-beta1测试版，暂不建议引入生产，欢迎大家一起测试。  代码在分支0.5.0-beta1。  web控制台暂不兼容。  redis操作客户端升级为redisson

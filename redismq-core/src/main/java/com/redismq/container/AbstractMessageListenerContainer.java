@@ -76,6 +76,8 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected volatile int state = RUNNING;
     
+
+    
     /**
      * 延时任务管理器
      */
@@ -89,7 +91,8 @@ public abstract class AbstractMessageListenerContainer {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
     }
 
-    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,List<ConsumeInterceptor> consumeInterceptorList) {
+    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,List<ConsumeInterceptor> consumeInterceptorList
+     ) {
         this.queueName = queue.getQueueName();
         this.redisMQClientUtil = redisMQClientUtil;
         this.concurrency = queue.getConcurrency();

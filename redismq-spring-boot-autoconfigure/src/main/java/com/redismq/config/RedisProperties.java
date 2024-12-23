@@ -42,7 +42,8 @@ public class RedisProperties {
         /**
          * Use the Jedis redis client.
          */
-        JEDIS
+        JEDIS,
+        REDISSON
 
     }
 

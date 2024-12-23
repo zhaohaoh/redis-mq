@@ -23,7 +23,7 @@ public class ConsumerController {
      */
     @GetMapping("list")
     public ResponseEntity<List<Client>> list() {
-        List<Client> clientsWithTime = redisMQClientUtil.getClients();
+        List<Client> clientsWithTime = redisMQClientUtil.getAllClients();
         
         return ResponseEntity.ok(clientsWithTime);
     }
@@ -32,15 +32,15 @@ public class ConsumerController {
      * 强制下线客户端 还没做拉黑,就算下线了该客户端还会自动注册
      */
     @GetMapping("down")
-    public void down(String clientId) {
-        redisMQClientUtil.removeClient(clientId);
+    public void down(Client client) {
+        redisMQClientUtil.removeClient(client);
     }
     
     /**
      * 强制所有消费者重平衡 TODO前端未接入
      */
     @PutMapping("rebalance")
-    public void rebalance() {
-        redisMQClientUtil.publishRebalance("redisMQAdminClient");
+    public void rebalance(String groupId) {
+        redisMQClientUtil.publishRebalance(groupId,"redisMQAdminClient");
     }
 }

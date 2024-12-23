@@ -78,11 +78,15 @@ public class Message implements Serializable {
     private String virtualQueueName;
     
     /**
-     * 消息偏移量&消费时间
+     * 消息偏移量
      */
     private Long offset;
     
     
+    /**
+     * 执行时间redis分数
+     */
+    private Long executeScope;
     /**
      * 执行时间
      */

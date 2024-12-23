@@ -37,6 +37,7 @@ public interface RedisClient {
      * @param key
      */
     Boolean delete(String key);
+
     
     /**
      * 阻塞redis获取set集合中所有的元素
@@ -53,6 +54,11 @@ public interface RedisClient {
      * @return 之前已经存在返回false, 不存在返回true
      */
     Boolean setIfAbsent(String key, Object value, Duration duration);
+    
+    /**
+     * string get
+     */
+    Object get(String key);
  
     /**
      * set添加元素
@@ -72,8 +78,26 @@ public interface RedisClient {
      */
     Long sRemove(String key, Object... values);
     
-    Long hashRemove(String key, String hashKey);
     
+    /**
+     *  MapCache 删除
+     */
+    Long mapCacheRemove(String key, String hashKey);
+    
+//
+//    /**
+//     *  MapCache  add
+//     */
+//    boolean mapCachePut(String key, String hashKey,Object val,Duration duration);
+    
+//    /**
+//     *  MapCache  add
+//     */
+//    Map<Object, Object> mapCacheList(String key, String hashKey);
+//    /**
+//     *  MapCache  add
+//     */
+//    Map<Object, Object> mapCacheList(String key);
     
     /**------------------zSet相关操作--------------------------------*/
 
@@ -86,7 +110,7 @@ public interface RedisClient {
      * @return
      */
     Boolean zAdd(String key, Object value, double score);
-
+    Boolean zAddIfAbsent(String key, Object value, double score);
     
 
     /**
@@ -108,9 +132,10 @@ public interface RedisClient {
      */
     <T> Map<T,Double> zRangeWithScores(String key, long start,
                                                             long end,Class<T> tClass);
- 
+    
     
  
+    Double zScore(String key,String member);
  
 
    
@@ -144,7 +169,7 @@ public interface RedisClient {
      * @param end   终止
      * @return {@link Map}<{@link Message}, {@link Double}>
      */
-    Map<Message, Double> zrangeMessage(String key, double min, double max, long start, long end);
+    Map<Message, Double> zrangeMessage(String key,String group, double min, double max, long start, long end);
     
     
     /**
@@ -155,4 +180,15 @@ public interface RedisClient {
     List luaList(String lua, List<String> keys, Object[] args);
     
     Boolean exists(String key);
+    
+    Boolean lock(String key, String s, Duration duration);
+    
+    /**
+     * 解锁
+     *
+     * @param key
+     */
+    Boolean unlock(String key);
+    
+    Boolean isLock(String key);
 }

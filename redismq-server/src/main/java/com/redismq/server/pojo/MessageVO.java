@@ -51,4 +51,9 @@ public class MessageVO {
      * 消费时间
      */
     private String consumeTime;
+    /**
+     * 消息偏移量
+     */
+    private Long offset;
+    
 }

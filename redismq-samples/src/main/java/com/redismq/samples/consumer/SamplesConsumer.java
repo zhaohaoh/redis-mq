@@ -1,6 +1,7 @@
 package com.redismq.samples.consumer;
 
 import com.redismq.RedisListener;
+import com.redismq.common.pojo.Message;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -15,14 +16,17 @@ public class SamplesConsumer  {
     @Autowired
     private RedisMQTemplate redisMQTemplate;
 
-//    /**
-//     * delaytest1消费延时队列
-//     */
-//    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 64,concurrency = 8,retryMax = 5)
-//    public void delaytest1(JavaBean test) {
-//        System.out.println(test);
-//        throw new RuntimeException();
-//    }
+    /**
+     * delaytest1消费延时队列
+     */
+    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 200,concurrency = 200)
+    public void delaytest1(Message message) {
+        Long executeTime = message.getExecuteTime();
+        Long offset = message.getOffset();
+        long l = System.currentTimeMillis();
+        long diff = l - executeTime;
+        System.out.println("偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+    }
 //
 //    /**
 //     * 普通消息消费
@@ -63,7 +67,7 @@ public class SamplesConsumer  {
 //        redisMQTemplate.sendMessage(test,"test2");
 //    }
 //
-    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
+    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5,virtual = 2)
     public void test2(JavaBean test) {
         System.out.println(test);
     }

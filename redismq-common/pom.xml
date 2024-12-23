@@ -5,7 +5,7 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>0.4.4</version>
+        <version>0.5.0-beta1</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     
@@ -40,6 +40,18 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <scope>provided</scope>
         </dependency>
-     
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.20.1</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-data-30</artifactId>
+            <version>3.20.1</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

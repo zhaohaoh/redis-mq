@@ -3,6 +3,7 @@ package com.redismq;
 
 import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.constant.OffsetEnum;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Queue;
 import com.redismq.common.serializer.RedisMQStringMapper;
@@ -13,6 +14,7 @@ import com.redismq.core.RedisListenerEndpoint;
 import com.redismq.core.RedisMqClient;
 import com.redismq.interceptor.ConsumeInterceptor;
 import com.redismq.queue.QueueManager;
+import com.redismq.rpc.client.RemotingClient;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,6 +22,7 @@ import org.springframework.aop.framework.AopProxyUtils;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -47,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollection;
 
 
 //Bean的后置处理器切入点
@@ -204,9 +208,35 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                 return;
             }
             create.set(true);
-
-            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisMQClientUtil, queue, CollectionUtils.isEmpty(consumeInterceptorMap) ?
-                    new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values()));
+            ObjectProvider<RemotingClient> beanProvider = applicationContext.getBeanProvider(RemotingClient.class);
+            
+            RemotingClient remotingClient = beanProvider.getIfAvailable();
+            
+            String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
+            //消费者组偏移量
+            Long queueGroupOffset = redisMQClientUtil.getQueueGroupOffset(getOffsetGroupCollection(groupId),
+                    queue.getQueueName());
+            //队列偏移量
+            Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(queue.getQueueName());
+            
+            // 第一次上线的消费者组，从哪里开始消费
+            OffsetEnum newGroupOffset = GlobalConfigCache.CONSUMER_CONFIG.getNewGroupOffset();
+            if (newGroupOffset.equals(OffsetEnum.LATEST) && queueGroupOffset==0L){
+                queueGroupOffset = queueMaxOffset;
+            }
+            
+            // 中断了很久，重新上线的消费者组从哪里开始消费
+            OffsetEnum autoOffsetConsume = GlobalConfigCache.CONSUMER_CONFIG.getAutoOffsetConsume();
+            if (autoOffsetConsume.equals(OffsetEnum.LATEST)){
+                queueGroupOffset = queueMaxOffset;
+            }
+            
+            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisMQClientUtil, queue,
+                    CollectionUtils.isEmpty(consumeInterceptorMap) ?
+                    new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values())
+                    ,remotingClient
+            , queueGroupOffset,queueMaxOffset);
+            
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
         });

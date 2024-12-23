@@ -3,6 +3,8 @@ package com.redismq.common.pojo;
 import io.netty.channel.ChannelHandlerContext;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  *  返回体
  *
@@ -18,5 +20,5 @@ public class RemoteResponse {
     /**
      * 返回的rpc消息
      */
-    private RemoteMessage rpcMessage;
+    private List<RemoteMessage> rpcMessage;
 }
