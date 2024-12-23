@@ -271,6 +271,7 @@ spring.redismq.netty-config.client.enable=true
 实测下单系统TPS30 压测一小时以上。消息稳定处理
 
 ## 版本更新记录
+0.4.4 修复0.4.3的重大bug
 0.4.3 1.修复事务提交后发消息
       2.修复消息异步入库索引失效问题
       3.修复和spring框架部分冲突问题
