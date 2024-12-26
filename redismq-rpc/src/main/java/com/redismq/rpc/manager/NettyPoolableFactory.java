@@ -1,10 +1,12 @@
 package com.redismq.rpc.manager;
 
+import com.redismq.common.pojo.AddressInfo;
 import com.redismq.common.util.NetUtil;
 import com.redismq.rpc.client.NettyClientBootstrap;
-import com.redismq.common.pojo.AddressInfo;
 import io.netty.channel.Channel;
-import org.apache.commons.pool.KeyedPoolableObjectFactory;
+import org.apache.commons.pool2.KeyedPooledObjectFactory;
+import org.apache.commons.pool2.PooledObject;
+import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +16,7 @@ import java.net.InetSocketAddress;
  * The type Netty key poolable factory.
  *
  */
-public class NettyPoolableFactory implements KeyedPoolableObjectFactory<AddressInfo, Channel> {
+public class NettyPoolableFactory implements KeyedPooledObjectFactory<AddressInfo, Channel> {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyPoolableFactory.class);
     
@@ -30,16 +32,13 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<AddressI
     }
     
     @Override
-    public Channel makeObject(AddressInfo key) {
-        InetSocketAddress address = NetUtil.toInetSocketAddress(key.getTargetAddress());
-        if (LOGGER.isInfoEnabled()) {
-            LOGGER.info("NettyPool create channel to " + key);
-        }
-        return clientBootstrap.getNewChannel(address);
+    public void activateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
+    
     }
     
     @Override
-    public void destroyObject(AddressInfo key, Channel channel) throws Exception {
+    public void destroyObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
+        Channel channel = pooledObject.getObject();
         if (channel != null) {
             LOGGER.info("will destroy channel:" + channel);
             channel.disconnect();
@@ -48,7 +47,23 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<AddressI
     }
     
     @Override
-    public boolean validateObject(AddressInfo key, Channel obj) {
+    public PooledObject<Channel> makeObject(AddressInfo key) {
+        InetSocketAddress address = NetUtil.toInetSocketAddress(key.getTargetAddress());
+        if (LOGGER.isInfoEnabled()) {
+            LOGGER.info("NettyPool create channel to " + key);
+        }
+        Channel newChannel = clientBootstrap.getNewChannel(address);
+        return new DefaultPooledObject<>(newChannel);
+    }
+    
+    @Override
+    public void passivateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
+    
+    }
+    
+    @Override
+    public boolean validateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) {
+        Channel obj = pooledObject.getObject();
         if (obj != null && obj.isActive()) {
             return true;
         }
@@ -58,13 +73,7 @@ public class NettyPoolableFactory implements KeyedPoolableObjectFactory<AddressI
         return false;
     }
     
-    @Override
-    public void activateObject(AddressInfo key, Channel obj) throws Exception {
+ 
     
-    }
     
-    @Override
-    public void passivateObject(AddressInfo key, Channel obj) throws Exception {
-    
-    }
 }

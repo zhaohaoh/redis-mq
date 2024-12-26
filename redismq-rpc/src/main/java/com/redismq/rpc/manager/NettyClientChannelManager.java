@@ -6,11 +6,13 @@ import com.redismq.common.util.NetUtil;
 import com.redismq.common.util.ServerManager;
 import com.redismq.rpc.util.ServerUtil;
 import io.netty.channel.Channel;
-import org.apache.commons.pool.impl.GenericKeyedObjectPool;
+import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
+import org.apache.commons.pool2.impl.GenericKeyedObjectPoolConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,16 +40,18 @@ public class NettyClientChannelManager {
         nettyClientKeyPool = new GenericKeyedObjectPool<>(keyPoolableFactory);
         nettyClientKeyPool.setConfig(getNettyPoolConfig());
     }
-    private GenericKeyedObjectPool.Config getNettyPoolConfig() {
-        GenericKeyedObjectPool.Config poolConfig = new GenericKeyedObjectPool.Config();
-        poolConfig.maxActive = 1;
-        poolConfig.minIdle = 0;
-        poolConfig.maxWait = 60 * 1000L;
+    private GenericKeyedObjectPoolConfig  getNettyPoolConfig() {
+        GenericKeyedObjectPoolConfig poolConfig = new GenericKeyedObjectPoolConfig<>();
+        poolConfig.setMaxTotal(8);
+        // 最多的空闲连接数
+        poolConfig.setMaxIdlePerKey(8);
+        poolConfig.setMinIdlePerKey(0);
+        poolConfig.setMaxWait(Duration.ofSeconds(60));
         //校验有效性
-        poolConfig.testOnBorrow =true;
+        poolConfig.setTestOnBorrow(true);
         //归还时校验有效性
-        poolConfig.testOnReturn = true;
-        poolConfig.lifo = true;
+        poolConfig.setTestOnCreate(true);
+        poolConfig.setLifo(true);
         return poolConfig;
     }
     

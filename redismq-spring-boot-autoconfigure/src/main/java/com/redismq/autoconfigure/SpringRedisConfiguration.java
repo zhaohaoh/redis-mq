@@ -1,10 +1,8 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.config.RedisConnectionFactoryUtil;
-import com.redismq.config.RedisProperties;
-import org.redisson.api.RedissonClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -38,9 +36,9 @@ public class SpringRedisConfiguration {
      */
     @Bean(REDISMQ_MESSAGE_LISTENERCONTAINER)
     public RedisMessageListenerContainer redisMQMessageListenerContainer(
-            RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
+            RedisConnectionFactory redisConnectionFactory) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
-        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactoryUtil.getSingleConnectionFactory());
+        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 设置核心线程数
         executor.setCorePoolSize(8);
@@ -61,22 +59,11 @@ public class SpringRedisConfiguration {
         return redisMessageListenerContainer;
     }
     
- 
-    /**
-     * 连接工厂工具类,上面用的都是构造方法注入,这里的redisProperties也得用构造方法注入.spring早构造方法注入的时候还没有解析@Autowired, 此时Autowired是对象都是null
-     *
-     * @return {@link RedisConnectionFactoryUtil}
-     */
-    @Bean
-    public RedisConnectionFactoryUtil redisConnectionFactoryUtil(RedisProperties redisProperties, RedissonClient redissonClient) {
-        return new RedisConnectionFactoryUtil(redisProperties,redissonClient);
-    }
-    
     @Bean(REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer(
-            RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
+            RedisConnectionFactory redisConnectionFactory) {
         RedisMessageListenerContainer redisMessageListenerContainer = new RedisMessageListenerContainer();
-        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactoryUtil.getSingleConnectionFactory());
+        redisMessageListenerContainer.setConnectionFactory(redisConnectionFactory);
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         // 设置核心线程数
         executor.setCorePoolSize(5);

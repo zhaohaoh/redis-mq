@@ -3,7 +3,7 @@
 // (powered by FernFlower decompiler)
 //
 
-package com.enable;
+package com.redismq.autoconfigure;
 
 import com.redismq.config.RedisProperties;
 import org.redisson.Redisson;
@@ -15,7 +15,6 @@ import org.redisson.config.ClusterServersConfig;
 import org.redisson.config.Config;
 import org.redisson.config.SentinelServersConfig;
 import org.redisson.config.SingleServerConfig;
-import org.redisson.spring.data.connection.RedissonConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -24,7 +23,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.util.ReflectionUtils;
 
 import java.io.IOException;
@@ -39,20 +37,13 @@ import java.util.List;
 @AutoConfigureBefore({RedisAutoConfiguration.class})
 @EnableConfigurationProperties({ RedisProperties.class})
 public class RedissonAutoConfiguration {
- 
- 
+    
     @Autowired
     private RedisProperties redisProperties;
 
     public RedissonAutoConfiguration() {
     }
- 
-
-    @Bean
-    @ConditionalOnMissingBean({RedisConnectionFactory.class})
-    public RedissonConnectionFactory redissonConnectionFactory(RedissonClient redisson) {
-        return new RedissonConnectionFactory(redisson);
-    }
+    
 
     @Bean
     @Lazy

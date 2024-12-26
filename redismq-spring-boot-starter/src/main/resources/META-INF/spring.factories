@@ -1,5 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.enable.EnableRedisMQConfiguration,\
   com.enable.NettyClientAutoConfigration,\
-  com.enable.RedissonAutoConfiguration
+  com.enable.RedissonFactoryAutoConfiguration
 

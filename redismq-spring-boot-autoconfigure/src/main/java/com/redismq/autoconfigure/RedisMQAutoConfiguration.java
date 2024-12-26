@@ -8,7 +8,6 @@ import com.redismq.common.connection.RedisMQServerUtil;
 import com.redismq.common.connection.RedissonAdapter;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.util.ServerManager;
-import com.redismq.config.RedisConnectionFactoryUtil;
 import com.redismq.config.RedisProperties;
 import com.redismq.core.RedisMQProducer;
 import com.redismq.id.WorkIdGenerator;
@@ -59,7 +58,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
        * @return {@link RedisMQProducer}
      */
     @Bean
-    public RedisClient redisClient(RedisConnectionFactoryUtil redisConnectionFactoryUtil) {
+    public RedisClient redisClient() {
 //        StringRedisTemplate template = new StringRedisTemplate();
 //        // 配置连接工厂
 //        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();

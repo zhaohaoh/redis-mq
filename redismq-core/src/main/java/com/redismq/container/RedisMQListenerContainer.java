@@ -147,12 +147,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 if (pullSize <= 0) {
                     pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                 }
-                //延时队列的offset可能是一样的，必须等待执行完成后才能获取下一次的消息
-//                if (delay || ackMode.equals(AckMode.MAUAL)){
-//                    if (!futures.isEmpty()){
-//                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
-//                    }
-//                }
+                //延时队列 必须等待执行完成后才能获取下一次的消息
+                if (delay){
+                    if (!futures.isEmpty()){
+                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                    }
+                }
                 
                 // 先获取偏移量落后的group的持久化的message
                 List<Message> messages = getOffsetLowStoreMessage(vQueueName);
