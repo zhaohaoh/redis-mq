@@ -3,7 +3,7 @@
 // (powered by FernFlower decompiler)
 //
 
-package com.redismq.autoconfigure;
+package com.enable;
 
 import com.redismq.config.RedisProperties;
 import org.redisson.Redisson;

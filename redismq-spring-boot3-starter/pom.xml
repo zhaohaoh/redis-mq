@@ -60,6 +60,11 @@
             <artifactId>jsr250-api</artifactId>
             <version>1.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-data-32</artifactId>
+            <version>3.27.2</version>
+        </dependency>
     </dependencies>
     
     <build>
