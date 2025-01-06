@@ -365,7 +365,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         if (!messageList.isEmpty()){
             Long offset = messageList.stream().map(Message::getOffset).max(Long::compareTo).get();
             String msgIds = messageList.stream().map(Message::getId).collect(Collectors.joining(","));
-            redisMQClientUtil.ackBatchMessage(vQueueName,msgIds,offset);
+             redisMQClientUtil.ackBatchMessage(vQueueName,msgIds,offset);
         }
     }
     

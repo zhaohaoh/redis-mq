@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @Author: hzh
@@ -40,12 +41,12 @@ public class ProducerController {
 //            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
 //        }
 //        long millis = System.currentTimeMillis()+  Duration.ofSeconds(30).toMillis();
-        for (int i = 0; i < 1000; i++) {
+         for (int i = 0; i < 5; i++) {
             JavaBean javaBean = new JavaBean();
             javaBean.setA("ff");
             javaBean.setB(222);
            
-            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", 1734591820000L);
+            redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", 0L, TimeUnit.MICROSECONDS);
         }
       
     }

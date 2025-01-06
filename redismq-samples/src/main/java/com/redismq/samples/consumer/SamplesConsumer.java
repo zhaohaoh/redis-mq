@@ -3,6 +3,7 @@ package com.redismq.samples.consumer;
 import com.redismq.RedisListener;
 import com.redismq.common.pojo.Message;
 import com.redismq.utils.RedisMQTemplate;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -19,13 +20,15 @@ public class SamplesConsumer  {
     /**
      * delaytest1消费延时队列
      */
-    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 200,concurrency = 200)
+    @SneakyThrows
+    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 200,concurrency = 200,retryMax = 16)
     public void delaytest1(Message message) {
         Long executeTime = message.getExecuteTime();
         Long offset = message.getOffset();
         long l = System.currentTimeMillis();
         long diff = l - executeTime;
-        System.out.println("偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        Thread.sleep(1000L);
+        System.out.println(message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
     }
 //
 //    /**

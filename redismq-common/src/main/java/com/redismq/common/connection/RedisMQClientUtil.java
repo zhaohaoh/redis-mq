@@ -275,7 +275,7 @@ public class RedisMQClientUtil {
                 + "            table.insert(result,r2);\n" + "        end\n" + "    end\n" + "end\n" + "end\n" + "\n"
                 + "if currentOffset and msgOffset and  (tonumber(msgOffset) > tonumber(currentOffset)) then\n"
                 + "    redis.call('zadd', offsetGroup, msgOffset,orginalQueueName);\n" + "end\n" + "\n"
-                + "return result;\n";
+                + "return result;";
         List<String> keys = new ArrayList<>();
         String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(queueName);
         
