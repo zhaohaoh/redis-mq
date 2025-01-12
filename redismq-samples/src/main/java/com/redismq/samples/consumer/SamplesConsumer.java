@@ -7,6 +7,9 @@ import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * @Author: hzh
  * @Date: 2022/12/26 17:54
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class SamplesConsumer  {
     @Autowired
     private RedisMQTemplate redisMQTemplate;
+    Map<String,Object> map =new ConcurrentHashMap<>();
 
     /**
      * delaytest1消费延时队列
@@ -27,7 +31,11 @@ public class SamplesConsumer  {
         Long offset = message.getOffset();
         long l = System.currentTimeMillis();
         long diff = l - executeTime;
-        Thread.sleep(1000L);
+        Object object = map.get(message.getId());
+        if (object!=null){
+            System.out.println("重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        }
+        map.put(message.getId(), "fff");
         System.out.println(message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
     }
 //
