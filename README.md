@@ -24,17 +24,17 @@ web控制台内置消费者组和队列的管理功能，目前已经完善。
 0.5.0开始redis操作客户端升级为redisson   该版本设置beta欢迎有需求的伙伴来测试
 
 ## 引入
-0.4.4是没有加入消费者组前最后一个稳定可靠的版本.  如果你希望使用消费者组功能。0.5.0-beta3是已经经过测试的一个相对稳定的版本
+0.4.4是没有加入消费者组前最后一个稳定可靠的版本.  如果你希望使用消费者组功能。0.5.0-beta是已经经过测试的一个相对稳定的版本
 ``` xml
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>0.5.0-beta4</version>
+            <version>0.5.0-beta5</version>
         </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot3-starter</artifactId>
-            <version>0.5.0-beta4</version>
+            <version>0.5.0-beta5</version>
         </dependency>
 ```
 
