@@ -26,6 +26,7 @@ public class Message implements Serializable {
         this.queue = builder.queue;
         this.tag = builder.tag;
         this.virtualQueueName = builder.virtualQueueName;
+        this.header = builder.header;
     }
     
     private static final long serialVersionUID = 1L;
@@ -129,6 +130,12 @@ public class Message implements Serializable {
          * 虚拟队列名称 内部生成 外部设置无效
          */
         private String virtualQueueName;
+        
+        
+        /**
+         * 消息头部
+         */
+        private Map<String,Object> header;
     
     
         public Builder() {
@@ -136,6 +143,10 @@ public class Message implements Serializable {
         
         public Builder body(Object body) {
             this.body = body;
+            return this;
+        }
+        public Builder header(Map<String,Object> header) {
+            this.header = header;
             return this;
         }
     

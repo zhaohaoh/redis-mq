@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.Message;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 
 
@@ -52,6 +53,14 @@ public class RedisPullListener extends AbstractRedisPushListener {
             if (delayState) {
                 LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisMqClient.getRedisListenerContainerManager()
                         .getDelayBlockingQueue();
+                // 延时的时间小于当前时间，并且消息中已经存在比当前时间小的延时消息
+                Optional<PushMessage> first = delayBlockingQueue.stream()
+                        .filter(a -> a.getTimestamp() <= System.currentTimeMillis()).findFirst();
+                if (first.isPresent()){
+                    if (pushMessage.getTimestamp()<=System.currentTimeMillis()){
+                        return;
+                    }
+                }
                 if (!delayBlockingQueue.contains(pushMessage)) {
                     delayBlockingQueue.add(pushMessage);
                 }

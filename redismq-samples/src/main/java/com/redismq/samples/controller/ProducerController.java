@@ -1,6 +1,7 @@
 package com.redismq.samples.controller;
 
 import com.redismq.common.connection.RedisClient;
+import com.redismq.common.pojo.Message;
 import com.redismq.samples.consumer.JavaBean;
 import com.redismq.utils.RedisMQTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,12 +46,22 @@ public class ProducerController {
 //            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
 //        }
 //        long millis = System.currentTimeMillis()+  Duration.ofSeconds(30).toMillis();
-         for (int i = 0; i < 5; i++) {
-            JavaBean javaBean = new JavaBean();
-            javaBean.setA("ff");
-            javaBean.setB(222);
-           
-            redisMQTemplate.sendDelayMessage(javaBean, "delaytest1", 0L, TimeUnit.MICROSECONDS);
+        ExecutorService executorService = Executors.newFixedThreadPool(20);
+      
+        for (int i = 0; i < 10000; i++) {
+            executorService.submit(new Runnable() {
+                @Override
+                public void run() {
+                    JavaBean javaBean = new JavaBean();
+                    javaBean.setA("ff");
+                    javaBean.setB(222);
+                    Map<String,Object> map=new HashMap<>();
+                    map.put("duplicateId","id");
+                    Message build = Message.builder().body(javaBean).queue("delaytest1").header(map).build();
+                    
+                    redisMQTemplate.sendDelayMessage(build,  0L, TimeUnit.MICROSECONDS);
+                }
+            });
         }
       
     }
@@ -70,10 +85,12 @@ public class ProducerController {
      */
     @PostMapping("sendMessage")
     public void sendMessage() {
-        JavaBean javaBean = new JavaBean();
-        javaBean.setA("ff");
-        javaBean.setB(222);
-        redisMQTemplate.sendMessage(javaBean, "test1");
+        for (int i = 0; i < 10000; i++) {
+            JavaBean javaBean = new JavaBean();
+            javaBean.setA("ff");
+            javaBean.setB(222);
+            redisMQTemplate.sendMessage(javaBean, "test1");
+        }
     }
     /**
      * 发送顺序消息

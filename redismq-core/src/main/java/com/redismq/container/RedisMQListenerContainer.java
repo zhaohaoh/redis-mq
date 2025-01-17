@@ -24,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
@@ -126,6 +127,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         pullOffsetLow =  lastOffset - lastGroupOffset > GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax();
         this.remotingClient=remotingClient;
     }
+    Map<String,String> map =new ConcurrentHashMap<>();
     
     /**
      * 拉取队列消息
@@ -148,11 +150,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                 }
                 //延时队列 必须等待执行完成后才能获取下一次的消息
-                if (delay){
-                    if (!futures.isEmpty()){
-                        pullSize = waitConsume(vQueueName,futures, GLOBAL_CONFIG.getTaskTimeout(), true);
-                    }
+                
+                if (!futures.isEmpty()) {
+                    pullSize = waitConsume(vQueueName, futures, GLOBAL_CONFIG.getTaskTimeout(), true);
                 }
+           
+                
                 
                 // 先获取偏移量落后的group的持久化的message
                 List<Message> messages = getOffsetLowStoreMessage(vQueueName);
@@ -160,9 +163,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 // 从redis中获取消息
                 if (CollectionUtils.isEmpty(messages)){
                     long startScore=0;
-                    if (!delay){
-                        startScore=lastGroupOffset;
-                    }
+//                    if (!delay){
+//                        startScore=lastGroupOffset;
+//                    }
                     messages = redisMQClientUtil.pullMessage(vQueueName, startScore,pullTime, 0, pullSize);
                 }
                 
@@ -220,7 +223,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                         if (!delay){
                             Message lastMsg = messages.get(messages.size() - 1);
                             // 获取最后一个消息的偏移量的下一个值
-                            lastGroupOffset = lastMsg.getOffset() +1 ;
+                            lastGroupOffset = Math.max(lastGroupOffset,lastMsg.getOffset() +1) ;
                         }
                     } catch (Throwable e) {
                         if (isRunning()) {

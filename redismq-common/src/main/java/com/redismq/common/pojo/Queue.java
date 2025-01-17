@@ -52,7 +52,7 @@ public class Queue {
     private Integer virtual;
 
     /**
-     * 虚拟队列数量
+     * 队列最大长度
      */
     private Integer queueMaxSize;
 }

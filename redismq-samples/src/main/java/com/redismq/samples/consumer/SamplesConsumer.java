@@ -32,8 +32,9 @@ public class SamplesConsumer  {
         long l = System.currentTimeMillis();
         long diff = l - executeTime;
         Object object = map.get(message.getId());
+        Thread.sleep(1000);
         if (object!=null){
-            System.out.println("重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+            System.out.println(Thread.currentThread().getName()+" 重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
         }
         map.put(message.getId(), "fff");
         System.out.println(message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
@@ -79,8 +80,18 @@ public class SamplesConsumer  {
 //    }
 //
     @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5,virtual = 2)
-    public void test2(JavaBean test) {
-        System.out.println(test);
+    public void test2(Message message) throws InterruptedException {
+        Long executeTime = message.getExecuteTime();
+        Long offset = message.getOffset();
+        long l = System.currentTimeMillis();
+        long diff = l - executeTime;
+        String id = message.getId();
+        Thread.sleep(1000);
+        Object object = map.get(id);
+        if (object!=null){
+            System.out.println(Thread.currentThread().getName()+" 重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        }
+        System.out.println(message);
     }
     
 //

@@ -2,7 +2,7 @@ package com.redismq.common.connection;
 
 import com.redismq.common.pojo.Message;
 import com.redismq.common.serializer.RedisMQStringMapper;
-import org.redisson.api.RBucket;
+import org.redisson.api.RLock;
 import org.redisson.api.RScoredSortedSet;
 import org.redisson.api.RScript;
 import org.redisson.api.RSet;
@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class RedissonAdapter implements RedisClient {
@@ -307,23 +308,31 @@ public class RedissonAdapter implements RedisClient {
     //redisson是可重入锁。这边获取锁是同一个线程。不能用可重入锁
     @Override
     public Boolean lock(String key, String s, Duration duration) {
-        RBucket<Object> bucket = redissonClient.getBucket(key);
+        RLock lock = redissonClient.getLock(key);
+        //实现不可重入锁
+        boolean heldByCurrentThread = lock.isHeldByCurrentThread();
+        if (lock.isLocked() && heldByCurrentThread){
+            return false;
+        }
         long millis = duration.toMillis();
-        boolean b = bucket.setIfAbsent(millis, duration);
-        return b;
+        try {
+            return  lock.tryLock(0,millis, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+           Thread.currentThread().interrupt();
+           return false;
+        }
     }
     
     @Override
     public Boolean unlock(String key) {
-        RBucket<Object> bucket = redissonClient.getBucket(key);
-        boolean b = bucket.delete();
+        RLock lock = redissonClient.getLock(key);
+        boolean b = lock.forceUnlock();
         return b;
     }
     
     @Override
     public Boolean isLock(String key) {
-        RBucket<Object> bucket = redissonClient.getBucket(key);
-        Object object = bucket.get();
-        return object!=null;
+        RLock lock = redissonClient.getLock(key);
+        return lock.isLocked();
     }
 }

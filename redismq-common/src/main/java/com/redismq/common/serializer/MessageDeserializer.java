@@ -100,12 +100,8 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         message.setVirtualQueueName(virtualQueueName.asText());
         message.setExecuteScope(executorScope.asLong());
         if (!header.isMissingNode()) {
-            JsonParser traverse = header.traverse();
-            String valueAsString = traverse.getValueAsString();
-            if (valueAsString!=null) {
-                Map<String, Object> map = mapper.readValue(traverse, Map.class);
-                message.setHeader(map);
-            }
+            Map map = mapper.treeToValue(header, Map.class);
+            message.setHeader(map);
         }
         
         return message;

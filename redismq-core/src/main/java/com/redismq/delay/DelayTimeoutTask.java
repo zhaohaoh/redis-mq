@@ -19,7 +19,6 @@ import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.common.constant.StateConstant.RUNNING;
 import static com.redismq.common.constant.StateConstant.STOP;
-import static com.redismq.delay.DelayTimeoutTaskManager.EXECUTOR;
 
 /**
  * @Author: hzh
@@ -44,6 +43,7 @@ public abstract class DelayTimeoutTask {
     public DelayTimeoutTask(String virtualQueue, RedisMQClientUtil redisMQClientUtil) {
         this.virtualQueue = virtualQueue;
         this.redisMQClientUtil = redisMQClientUtil;
+   
     }
     
     public static class TimeoutTask {
@@ -125,7 +125,7 @@ public abstract class DelayTimeoutTask {
         // 虚拟队列锁定执行任务默认时长,有看门狗机制
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
         
-        //如果是强制锁直接执行方法
+     
         if (!forceLock){
             // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
             Boolean success = lockQueue(virtualQueueLock);
@@ -148,7 +148,7 @@ public abstract class DelayTimeoutTask {
                         //重复调用
                         for (Long nextTime : nextTimes) {
                             if (isRunning()) {
-                                scheduleTask(nextTime,true);
+                                scheduleTask(nextTime,false);
                             }
                         }
                     }
@@ -158,7 +158,7 @@ public abstract class DelayTimeoutTask {
             }
         };
         try {
-            EXECUTOR.execute(runnable);
+            DelayTimeoutTaskManager.computeIfAbsent(virtualQueue).execute(runnable);
         } catch (Exception e) {
             log.info("execute task unLockQueue error: ", e);
             unLockQueue(virtualQueueLock);
@@ -173,14 +173,16 @@ public abstract class DelayTimeoutTask {
     
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     public Boolean lockQueue(String virtualQueueLock) {
+     
         int i = 0;
         Boolean lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
+       
         while (!lock && i < 2) {
             i++;
             try {
-                Thread.sleep(200L);
+                Thread.sleep(300L);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+               Thread.currentThread().interrupt();
             }
             lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         }
