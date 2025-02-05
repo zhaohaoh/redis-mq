@@ -60,10 +60,9 @@ public class RedissonAutoConfiguration {
     }
 
     @Bean(
-        destroyMethod = "shutdown"
+        destroyMethod = "shutdown",value = "redisMQRedisson"
     )
-    @ConditionalOnMissingBean({RedissonClient.class})
-    public RedissonClient redisson() throws IOException {
+    public RedissonClient redisMQRedisson() throws IOException {
         Method clusterMethod = ReflectionUtils.findMethod(RedisProperties.class, "getCluster");
         Method usernameMethod = ReflectionUtils.findMethod(RedisProperties.class, "getUsername");
         Method timeoutMethod = ReflectionUtils.findMethod(RedisProperties.class, "getTimeout");

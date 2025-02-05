@@ -5,9 +5,9 @@ import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.AckMode;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.exception.RedisMqException;
+import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.Queue;
-import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.core.RedisListenerCallable;
 import com.redismq.delay.DelayTimeoutTask;
@@ -24,7 +24,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledFuture;
@@ -127,7 +126,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         pullOffsetLow =  lastOffset - lastGroupOffset > GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax();
         this.remotingClient=remotingClient;
     }
-    Map<String,String> map =new ConcurrentHashMap<>();
+    
     
     /**
      * 拉取队列消息

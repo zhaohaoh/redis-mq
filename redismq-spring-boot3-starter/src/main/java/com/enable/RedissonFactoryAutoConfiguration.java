@@ -7,6 +7,8 @@ package com.enable;
 
 import org.redisson.api.RedissonClient;
 import org.redisson.spring.data.connection.RedissonConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +21,8 @@ public class RedissonFactoryAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean({RedisConnectionFactory.class})
     @ConditionalOnProperty(name = "spring.redismq.client.client-type", havingValue = "redisson", matchIfMissing = false)
-    public RedissonConnectionFactory redissonConnectionFactory(RedissonClient redisson) {
+    public RedissonConnectionFactory redissonConnectionFactory(@Autowired
+    @Qualifier(value = "redisMQRedisson") RedissonClient redisson) {
         return new RedissonConnectionFactory(redisson);
     }
  

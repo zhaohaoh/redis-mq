@@ -18,6 +18,7 @@ import com.redismq.utils.RedisMQTemplate;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +40,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
     @Autowired
+    @Qualifier(value = "redisMQRedisson")
     private RedissonClient redissonClient;
     
     
