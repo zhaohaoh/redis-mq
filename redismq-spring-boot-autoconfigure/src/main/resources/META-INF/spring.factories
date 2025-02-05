@@ -4,5 +4,4 @@ org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
    com.redismq.autoconfigure.RedisMQInterceptorAutoConfiguration,\
 com.redismq.config.JedisConnectionFactoryAutoConfig,\
 com.redismq.config.LettuceConnectionFactoryAutoConfig,\
-   com.redismq.autoconfigure.RedisMQClientAutoConfiguration,\
-#springboot3�����Աߵ��ļ�����Ҫ���˼���
+   com.redismq.autoconfigure.RedisMQClientAutoConfiguration
