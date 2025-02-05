@@ -18,7 +18,6 @@ import com.redismq.utils.RedisMQTemplate;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,14 +34,12 @@ import java.util.List;
 public class RedisMQAutoConfiguration implements InitializingBean {
     @Autowired
     private RedisMQProperties redisMqProperties;
-    
+    @Autowired
+    private RedisProperties redisProperties;
 
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
-    @Autowired
-    @Qualifier(value = "redisMQRedisson")
-    private RedissonClient redissonClient;
-    
+ 
     
     @Bean
     public RedisMQClientUtil redisMQClientUtil(RedisClient redisClient) {
@@ -61,11 +58,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
      */
     @Bean
     public RedisClient redisClient() {
-//        StringRedisTemplate template = new StringRedisTemplate();
-//        // 配置连接工厂
-//        RedisConnectionFactory connectionFactory = redisConnectionFactoryUtil.getSingleConnectionFactory();
-//        template.setConnectionFactory(connectionFactory);
-//        template.afterPropertiesSet();
+        RedissonClient redissonClient = RedissonMQClient.redisMQRedisson(redisProperties);
         RedisClient redisClient = new RedissonAdapter(redissonClient);
         return redisClient;
     }

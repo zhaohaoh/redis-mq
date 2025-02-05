@@ -4,4 +4,3 @@ com.redismq.autoconfigure.RedisMQInterceptorAutoConfiguration
 com.redismq.autoconfigure.RedisMQClientAutoConfiguration
 com.redismq.config.JedisConnectionFactoryAutoConfig
 com.redismq.config.LettuceConnectionFactoryAutoConfig
-com.redismq.autoconfigure.RedissonAutoConfiguration
