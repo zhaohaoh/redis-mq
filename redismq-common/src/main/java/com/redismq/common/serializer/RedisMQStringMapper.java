@@ -90,7 +90,7 @@ public class RedisMQStringMapper {
     // 将对象转换成json字符串
     public static String toJsonStr(Object obj) {
         if (obj instanceof String){
-            return obj.toString();
+            return (String)obj;
         }
         try {
             return STRING_MAPPER.writeValueAsString(obj);
