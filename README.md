@@ -29,12 +29,12 @@ web控制台内置消费者组和队列的管理功能，目前已经完善。
       <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>0.5.0-beta6</version>
+            <version>0.5.0-beta7</version>
         </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-spring-boot3-starter</artifactId>
-            <version>0.5.0-beta6</version>
+            <version>0.5.0-beta7</version>
         </dependency>
 ```
 
