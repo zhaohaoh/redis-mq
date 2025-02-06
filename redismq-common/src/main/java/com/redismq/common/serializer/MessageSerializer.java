@@ -31,7 +31,7 @@ public class MessageSerializer extends StdSerializer<Message> {
         if (message.getBody() instanceof String) {
             String bodyStr = message.getBody().toString();
             if (JsonSerializerUtil.isJson(bodyStr)) {
-                bodyStr = removeAll(bodyStr, '\r', '\n', ' ');
+                bodyStr = removeWhitespacesExceptInQuotes(bodyStr);
                 jsonGenerator.writeFieldName("body");
                 jsonGenerator.writeRawValue(bodyStr);
             } else {
@@ -79,4 +79,51 @@ public class MessageSerializer extends StdSerializer<Message> {
     public static String str(CharSequence cs) {
         return null == cs ? null : cs.toString();
     }
+    
+    public static void main(String[] args) {
+        String string = "{\n"
+                + "    \"className\": \"com.sjaco.floweryhy.api.controller.agentApp.sku.SkuInfoAgentAppController\",\n"
+                + "    \"ctime\": \"2025-02-05 17:10:56\",\n" + "    \"groupName\": \"AgentSku\",\n"
+                + "    \"id\": \"2824973\",\n" + "    \"key\": \"skuId\",\n" + "    \"keyValue\": \"99340\",\n"
+                + "    \"logName\": \"修改商品价格库存\",\n" + "    \"logType\": \"业务日志\",\n"
+                + "    \"method\": \"updateStockPrice\",\n"
+                + "    \"msg\": \"[{\\\"skuId\\\":\\\"99340\\\",\\\"stock\\\":5}]\",\n" + "    \"name\": \"木龙\",\n"
+                + "    \"phoneBrand\": \"oppo\",\n" + "    \"phoneDeviceId\": \"17289872285985797647\",\n"
+                + "    \"phoneModel\": \"PHQ110\",\n" + "    \"succeed\": \"成功\",\n"
+                + "    \"userId\": \"10018013\"\n" + "}";
+        
+        String s1 = removeWhitespacesExceptInQuotes(string);
+        System.out.println(s1);
+    }
+    
+    
+    public static String removeWhitespacesExceptInQuotes(String input) {
+        // Use a StringBuilder to build the result
+        StringBuilder result = new StringBuilder();
+        int length = input.length();
+        int i = 0;
+        boolean inQuotes = false;
+        
+        while (i < length) {
+            char currentChar = input.charAt(i);
+            
+            if (currentChar == '"') {
+                // Toggle the inQuotes flag
+                inQuotes = !inQuotes;
+                result.append(currentChar);
+            } else if (!inQuotes && Character.isWhitespace(currentChar)) {
+                // Skip whitespace characters outside of quotes
+            } else {
+                result.append(currentChar);
+            }
+            
+            i++;
+        }
+        
+        return result.toString();
+    }
+    
+   
 }
+
+
