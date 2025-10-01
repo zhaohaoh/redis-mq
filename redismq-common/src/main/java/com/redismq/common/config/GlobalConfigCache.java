@@ -15,7 +15,7 @@ public class GlobalConfigCache {
     /**
      * 消费者配置
      */
-    public static ConsumserConfig CONSUMER_CONFIG;
+    public static ConsumerConfig CONSUMER_CONFIG;
     /**
      * 配置
      */

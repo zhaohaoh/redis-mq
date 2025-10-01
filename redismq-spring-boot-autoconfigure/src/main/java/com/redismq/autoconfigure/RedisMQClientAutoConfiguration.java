@@ -32,7 +32,7 @@ public class RedisMQClientAutoConfiguration {
         RedisListenerContainerManager redisListenerContainerManager = new RedisListenerContainerManager();
         QueueRebalanceImpl rebalance = new QueueRebalanceImpl(new AllocateMessageQueueAveragely());
         RedisMqClient redisMqClient = new RedisMqClient(redisMQClientUtil, redisListenerContainerManager, rebalance,
-                redisMqProperties.getConsumserConfig().getApplicationName(),workIdGenerator);
+                redisMqProperties.getConsumerConfig().getApplicationName(),workIdGenerator);
         redisMqClient.setRedisMessageListenerContainer(redismqInnerRedisMessageListenerContainer);
         return redisMqClient;
     }

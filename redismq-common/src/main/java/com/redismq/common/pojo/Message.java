@@ -3,6 +3,8 @@ package com.redismq.common.pojo;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 
 import java.io.Serializable;
@@ -16,6 +18,9 @@ import java.util.Map;
 @Data
 @AllArgsConstructor
 public class Message implements Serializable {
+
+    private static final Logger log = LoggerFactory.getLogger(Message.class);
+
     public Message() {
     }
     // Person 的构造函数私有化
@@ -28,7 +33,7 @@ public class Message implements Serializable {
         this.virtualQueueName = builder.virtualQueueName;
         this.header = builder.header;
     }
-    
+
     private static final long serialVersionUID = 1L;
 
     public Message deepClone() {
@@ -36,7 +41,7 @@ public class Message implements Serializable {
         try { // 将该对象序列化成流,因为写在流里的是对象的一个拷贝，而原对象仍然存在于JVM里面。所以利用这个特性可以实现对象的深拷贝
             BeanUtils.copyProperties(this,outer);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to deep clone message", e);
         }
         return outer;
     }

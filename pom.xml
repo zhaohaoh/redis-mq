@@ -15,7 +15,6 @@
         <module>redismq-spring-boot-autoconfigure</module>
         <module>redismq-spring-boot-starter</module>
         <module>redismq-spring-boot3-starter</module>
-<!--        <module>redismq-spring-boot3-starter</module>-->
         <module>redismq-samples</module>
         <module>redismq-server</module>
         <module>redismq-rpc</module>
@@ -26,6 +25,7 @@
         <spring-boot.version>2.6.3</spring-boot.version>
         <commons-lang3.version>3.9</commons-lang3.version>
         <seata.version>1.5.1</seata.version>
+        <redisson.version>3.30.0</redisson.version>
         <java.version>1.8</java.version>
         <maven-javadoc-plugin.version>3.7.0</maven-javadoc-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -86,7 +86,7 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
-                <version>4.1.42.Final</version>
+                <version>4.1.108.Final</version>
             </dependency>
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -141,6 +141,22 @@
                 <version>2.11.1</version>
                 <scope>compile</scope>
                 <optional>true</optional>
+            </dependency>
+            <!--        Redisson统一版本管理-->
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-data-26</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-data-32</artifactId>
+                <version>${redisson.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

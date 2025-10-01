@@ -19,7 +19,6 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.42.Final</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -43,7 +42,6 @@
         <dependency>
             <groupId>org.redisson</groupId>
             <artifactId>redisson</artifactId>
-            <version>3.20.1</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

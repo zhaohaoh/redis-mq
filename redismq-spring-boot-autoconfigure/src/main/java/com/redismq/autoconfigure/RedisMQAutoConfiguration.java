@@ -108,6 +108,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         NettyConfig nettyConfig = redisMqProperties.getNettyConfig();
         nettyConfig.init();
         GlobalConfigCache.NETTY_CONFIG = nettyConfig;
-        GlobalConfigCache.CONSUMER_CONFIG=redisMqProperties.getConsumserConfig();
+        GlobalConfigCache.CONSUMER_CONFIG=redisMqProperties.getConsumerConfig();
     }
 }

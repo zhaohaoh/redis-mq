@@ -16,6 +16,7 @@ import com.redismq.rebalance.ClientConfig;
 import com.redismq.rebalance.QueueRebalanceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.util.CollectionUtils;
@@ -43,7 +44,7 @@ import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
  * @Author: hzh
  * @Date: 2022/11/4 16:44 RedisMQ客户端  实现负载均衡
  */
-public class RedisMqClient {
+public class RedisMqClient implements DisposableBean {
     
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
     
@@ -56,7 +57,12 @@ public class RedisMqClient {
      * 负载均衡心跳线程
      */
     private final ScheduledThreadPoolExecutor rebalanceThread = new ScheduledThreadPoolExecutor(1);
-    
+
+    /**
+     * 延迟repush线程池，用于重平衡后延迟重新拉取消息
+     */
+    private final ScheduledThreadPoolExecutor repushThread = new ScheduledThreadPoolExecutor(1);
+
     /**
      * 容器管理者
      */
@@ -225,8 +231,7 @@ public class RedisMqClient {
                 rebalance();
                 // 消费锁是30秒 这个值和消费所相关联
                 // 延时指定消费锁锁定的时间再去重新拉取一次消息,防止服务下线重启导致的消息没有被其他队列消费的问题
-                new ScheduledThreadPoolExecutor(1)
-                        .schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
+                repushThread.schedule(this::repush, GLOBAL_CONFIG.virtualLockTime, TimeUnit.SECONDS);
             }
         }
     }
@@ -390,5 +395,28 @@ public class RedisMqClient {
     public Set<Queue> getAllQueue() {
         Set<Queue> queueList = redisMQStoreUtil.getQueueList();
         return queueList;
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        shutdownThreadPool(registerThread, "registerThread");
+        shutdownThreadPool(rebalanceThread, "rebalanceThread");
+        shutdownThreadPool(repushThread, "repushThread");
+    }
+
+    private void shutdownThreadPool(ScheduledThreadPoolExecutor executor, String name) {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    executor.shutdownNow();
+                    log.warn("redis-mq {} force shutdown", name);
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+                log.error("redis-mq {} shutdown interrupted", name, e);
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ import lombok.Data;
  * 消费者配置
  */
 @Data
-public class ConsumserConfig {
+public class ConsumerConfig {
     
     /**
      * 应用名

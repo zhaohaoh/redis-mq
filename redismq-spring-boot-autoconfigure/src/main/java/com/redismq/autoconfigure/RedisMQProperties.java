@@ -1,6 +1,6 @@
 package com.redismq.autoconfigure;
 
-import com.redismq.common.config.ConsumserConfig;
+import com.redismq.common.config.ConsumerConfig;
 import com.redismq.common.config.GlobalConfig;
 import com.redismq.common.config.GlobalStoreConfig;
 import com.redismq.common.config.NettyConfig;
@@ -33,7 +33,7 @@ public class RedisMQProperties {
     private RedisProperties redisProperties;
     
     @NestedConfigurationProperty
-    private ConsumserConfig consumserConfig = new ConsumserConfig();
+    private ConsumerConfig consumerConfig = new ConsumerConfig();
     
     @NestedConfigurationProperty
     private GlobalConfig globalConfig = new GlobalConfig();
