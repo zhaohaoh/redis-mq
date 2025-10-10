@@ -30,8 +30,10 @@ public class RedisPullListener extends AbstractRedisPushListener {
     
     @Override
     public void onMessage(Message message, byte[] pattern) {
+        boolean acquired = false;
         try {
             semaphore.acquire();
+            acquired = true;
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
@@ -48,7 +50,7 @@ public class RedisPullListener extends AbstractRedisPushListener {
                 return;
             }
             boolean delayState = queue.isDelayState();
-            
+
             //延时队列和普通队列分开处理
             if (delayState) {
                 LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisMqClient.getRedisListenerContainerManager()
@@ -74,7 +76,9 @@ public class RedisPullListener extends AbstractRedisPushListener {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            semaphore.release();
+            if (acquired) {
+                semaphore.release();
+            }
         }
     }
     
