@@ -53,6 +53,8 @@ import static com.redismq.common.constant.MessageType.SEND_MESSAGE_FAIL;
 import static com.redismq.common.constant.MessageType.SEND_MESSAGE_SUCCESS;
 import static com.redismq.common.constant.RedisMQConstant.NAMESPACE;
 import static com.redismq.common.constant.RedisMQConstant.PREFIX;
+import static com.redismq.common.constant.RedisMQConstant.getQueueOffsetKey;
+import static com.redismq.common.constant.RedisMQConstant.getVqueueOffsetKey;
 import static com.redismq.rpc.cache.RpcGlobalCache.FUTURES;
 
 /**
@@ -177,7 +179,7 @@ public class RedisMQProducer {
         return sendSingleMessage(queue, message, executorTime);
     }
     
- 
+    
     /**
      * 延迟消息
      */
@@ -229,7 +231,9 @@ public class RedisMQProducer {
             String virtualQueue = queue.getQueueName() + V_QUEUE_SPLITE + num;
             message.setVirtualQueueName(virtualQueue);
         }
-        message.setOffset(increment);
+        
+        Long offset = incrementVqueue(message.getVirtualQueueName());
+        message.setOffset(offset);
         message.setExecuteScope(executorScope);
         message.setExecuteTime(executorTime==null ? System.currentTimeMillis() : executorTime);
         
@@ -307,7 +311,7 @@ public class RedisMQProducer {
         List<Message> messages = mergedWarpMessage.getMessages();
         beforeSend(messages);
         
-      
+        
         try {
             // 如果是异步确认
             if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
@@ -414,8 +418,8 @@ public class RedisMQProducer {
             for (Message message : messages) {
                 if (remotingClient != null) {
                     try {
-                    String messageId = message.getId();
-                    remotingClient.sendAsync(messageId, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
+                        String messageId = message.getId();
+                        remotingClient.sendAsync(messageId, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
                     } catch (Exception exx) {
                         boolean ignoreRpcError = PRODUCER_CONFIG.ignoreRpcError;
                         if (ignoreRpcError) {
@@ -466,7 +470,15 @@ public class RedisMQProducer {
     }
     
     private Long increment(Queue queue) {
-        String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queue.getQueueName();
+        String queueOffset = getQueueOffsetKey(queue.getQueueName());
+        String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
+                + "redis.call('set',KEYS[1],0) " + "count = redis.call('incrBy',KEYS[1],1)" + "end " + "return count;";
+        Long num = redisMQClientUtil.executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
+        return num;
+    }
+    
+    private Long incrementVqueue(String vqueue) {
+        String queueOffset = getVqueueOffsetKey(vqueue);
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
                 + "redis.call('set',KEYS[1],0) " + "count = redis.call('incrBy',KEYS[1],1)" + "end " + "return count;";
         Long num = redisMQClientUtil.executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());

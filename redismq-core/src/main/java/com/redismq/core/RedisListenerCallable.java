@@ -5,6 +5,7 @@ import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.interceptor.ConsumeInterceptor;
+import lombok.Data;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ import java.util.concurrent.Callable;
  * @Date: 2022/5/19 11:28
  * 执行器
  */
+@Data
 public class RedisListenerCallable implements Callable<Message> {
     protected static final Logger log = LoggerFactory.getLogger(RedisListenerCallable.class);
 

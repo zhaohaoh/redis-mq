@@ -47,10 +47,12 @@ public class RedisMQConstant {
      * 客户端
      */
     public static final String CLIENTS_KEY = "CLIENTS";
+    
     /**
      * 服务端
      */
     public static final String SERVER = "SERVER";
+    
     /**
      * 内部发消息自增的key
      */
@@ -70,6 +72,7 @@ public class RedisMQConstant {
      * 机器id集合
      */
     private static final String WORK_ID_ZSET = "WORK_ID_ZSET";
+    
     /**
      * 获取队列集合
      *
@@ -80,24 +83,34 @@ public class RedisMQConstant {
     }
     
     /**
-     *  Group集合
+     * Group集合
      */
     public static String getGroupCollection() {
-       return PREFIX + NAMESPACE +   SPLITE + "GROUP"  ;
+        return PREFIX + NAMESPACE + SPLITE + "GROUP";
     }
+    
     /**
-     *  Group集合
+     * Group集合
      */
     public static String getOffsetGroupCollection(String group) {
-        return PREFIX + NAMESPACE  + SPLITE + "GROUP_OFFSET:" + group;
+        return PREFIX + NAMESPACE + SPLITE + "OFFSET" + SPLITE + "GROUP" + SPLITE + group;
     }
+    
+    public static String getQueueOffsetKey(String queue) {
+        return PREFIX + NAMESPACE + SPLITE + "OFFSET" + SPLITE + "QUEUE" + SPLITE+queue;
+    }
+    
+    public static String getVqueueOffsetKey(String vqueue) {
+        return PREFIX + NAMESPACE + SPLITE + "OFFSET" + SPLITE + "VQUEUE" + SPLITE+vqueue;
+    }
+    
     /**
      * 获取客户端集合
      *
      * @return {@link String}
      */
     public static String getClientCollection() {
-        return PREFIX + NAMESPACE +   SPLITE + CLIENTS_KEY ;
+        return PREFIX + NAMESPACE + SPLITE + CLIENTS_KEY;
     }
     
     /**
@@ -132,7 +145,7 @@ public class RedisMQConstant {
     }
     
     public static String getRebalanceTopic(String groupId) {
-        return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC +SPLITE+groupId;
+        return PREFIX + NAMESPACE + SPLITE + REBALANCE_TOPIC + SPLITE + groupId;
     }
     
     /**

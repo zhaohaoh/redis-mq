@@ -30,6 +30,7 @@ import static com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollecti
 import static com.redismq.common.constant.RedisMQConstant.getQueueCollection;
 import static com.redismq.common.constant.RedisMQConstant.getRebalanceTopic;
 import static com.redismq.common.constant.RedisMQConstant.getTopic;
+import static com.redismq.common.constant.RedisMQConstant.getVqueueOffsetKey;
 
 @Slf4j
 public class RedisMQClientUtil {
@@ -423,8 +424,8 @@ public class RedisMQClientUtil {
         return redisClient.executeLua(lua, keys, args);
     }
     
-    public Long getQueueMaxOffset(String queueName){
-        String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queueName;
+    public Long getQueueMaxOffset(String vQueueName){
+        String queueOffset = getVqueueOffsetKey(vQueueName);
         Object obj = redisClient.get(queueOffset);
         if (obj==null){
             return 0L;
