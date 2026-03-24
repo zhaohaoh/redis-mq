@@ -22,7 +22,6 @@ import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,10 +30,13 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -146,6 +148,24 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private volatile ScheduledFuture<?> scheduledFuture;
     
     private final ThreadPoolExecutor work;
+    /**
+     * 全局消费槽位。
+     *
+     * 设计目的：
+     * 1. 拉取线程只有拿到槽位后才允许把消息提交到业务线程池，防止“先拉一堆、再慢慢消费”把内存打满。
+     * 2. 槽位在任务真正执行结束后才归还，因此空闲线程一旦出现，下一轮 pull 很快就能再次拉消息。
+     * 3. 这样就不再需要对 Future 做串行 get(timeout) 等待，拉取线程不会因为某条慢消息而整体卡住。
+     */
+    private final Semaphore consumeSlots;
+    /**
+     * 正在渐进下线的虚拟队列集合。
+     *
+     * rebalance 释放分片时，不再像旧实现那样立刻 pause + unlock，而是先把虚拟队列标记成 quiescing：
+     * 1. 禁止继续为该虚拟队列拉取新消息；
+     * 2. 允许已提交的任务把手头工作做完；
+     * 3. 等 offsetWindow / inFlight 排空后，pull 循环自然退出，锁再由新 owner 抢占。
+     */
+    private final Set<String> quiescingVirtualQueues = ConcurrentHashMap.newKeySet();
     private RemotingClient remotingClient;
     
     /**
@@ -160,6 +180,21 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         final Set<String> pullingMessageIds = ConcurrentHashMap.newKeySet();
         /** 是否需要从持久化存储追赶offset */
         volatile boolean pullOffsetLow = false;
+        /**
+         * 当前虚拟队列正在执行或已提交但尚未结束的任务数。
+         *
+         * 普通队列和延时队列都要依赖这个值：
+         * 1. 延时队列要求“上一批完全结束后再拉下一批”；
+         * 2. quiesce 时要靠它判断当前虚拟队列是否已经彻底排空。
+         */
+        final AtomicInteger inFlight = new AtomicInteger();
+        /**
+         * 延时队列已完成但尚未统一 ACK 的消息。
+         *
+         * 延时队列没有普通队列那种 offsetWindow 连续提交逻辑，因此任务线程只负责把完成结果回传到这里，
+         * 真正的 ACK 仍然放回 pull 线程统一批量提交，避免业务线程直接和 ACK 时序纠缠在一起。
+         */
+        final ConcurrentLinkedQueue<Message> completedMessages = new ConcurrentLinkedQueue<>();
     }
     
     /**
@@ -190,7 +225,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         final String messageId;
         final Message message;
         volatile boolean finished;
+        /** 进入窗口的时间，用来判断极端超时 */
         final long pullTime;
+        /** 真实提交到线程池后的 Future，仅用于极端超时场景尝试 cancel */
+        volatile Future<Message> future;
         
         MessageStatus(String messageId, Message message) {
             this.messageId = messageId;
@@ -211,6 +249,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public void doStop() {
         work.shutdown();
         delayTimeoutTaskManager.stop();
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
+        lifeExtensionThread.shutdownNow();
         try {
             if (!work.awaitTermination(WORK_THREAD_STOP_WAIT, TimeUnit.SECONDS)) {
                 log.warn("redismq workThreadPool shutdown timeout");
@@ -226,10 +268,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             List<ConsumeInterceptor> consumeInterceptorList, RemotingClient remotingClient) {
         super(redisMQClientUtil, queue, consumeInterceptorList);
         lifeExtension();
+        consumeSlots = new Semaphore(getMaxConcurrency());
+        // 线程池本身负责真正的业务消费。
+        // 这里把阻塞队列容量也压到 maxConcurrency，语义是“最多再缓存一批与最大并发等量的待执行任务”。
+        // 当线程和队列都满时，AbortPolicy 会立刻把背压抛回拉取线程，而不是像 CallerRunsPolicy 那样
+        // 让拉取线程反向去执行业务逻辑，导致调度线程被业务消费拖住。
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(), 60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(getConcurrency() << 3),
+                new LinkedBlockingQueue<>(getMaxConcurrency()),
                 createThreadFactory(queue.getQueueName()),
-                new ThreadPoolExecutor.CallerRunsPolicy());
+                new ThreadPoolExecutor.AbortPolicy());
         this.remotingClient = remotingClient;
         // 注意：不在构造函数中初始化offset，改为在getOrCreateVQManager中动态获取
     }
@@ -334,49 +381,59 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     public Set<Long> pull(String vQueueName) {
         Set<Long> delayTimes = new LinkedHashSet<>();
-        List<Future<Message>> futures = new ArrayList<>();
         
         while (isRunning()) {
             try {
                 long pullTime = System.currentTimeMillis();
                 
-                // 0. 清理已完成的Future并标记消息状态（非延时队列）
+                // 先处理“已经完成但还没提交”的结果，再决定本轮还能不能继续拉。
+                // 普通队列走连续 offset 提交；延时队列走 completedMessages 批量 ACK。
                 if (!delay) {
-                    processCompletedFutures(vQueueName, futures);
-                    // 全局提交连续偏移量（跨所有虚拟队列）
                     commitContinuousOffset(vQueueName);
+                } else {
+                    drainDelayCompletedMessages(vQueueName);
+                }
+
+                // rebalance 释放分片时进入 quiesce，只排空、不拉新。
+                if (isQuiescing(vQueueName)) {
+                    if (!hasPendingWork(vQueueName)) {
+                        break;
+                    }
+                    sleepForNextCheck();
+                    continue;
                 }
                 
-                // 1. 计算可用槽位（处理队列满、延时队列等待、窗口限制）
-                int availableSlots = calculateAvailableSlots(vQueueName, futures);
+                int availableSlots = calculateAvailableSlots(vQueueName);
+                if (availableSlots <= 0) {
+                    sleepForNextCheck();
+                    continue;
+                }
                 
-                // 2. 拉取消息（先从持久化存储，再从Redis）
                 List<Message> messages = pullMessages(vQueueName, pullTime, availableSlots);
-                
-                // 3. 过滤重复消息（防止重复消费）
                 messages = filterDuplicateMessages(vQueueName, messages);
                 
-                // 4. 处理空消息场景
                 if (CollectionUtils.isEmpty(messages)) {
-                    if (!handleEmptyMessages(vQueueName, futures, delayTimes, pullTime)) {
+                    if (!handleEmptyMessages(vQueueName, delayTimes, pullTime)) {
                         break;
                     }
                     continue;
                 }
                 
-                // 5. 构建Callable列表
+                // 这里仍然按“先构造任务、再统一提交”的方式推进，但是否能真正提交由 consumeSlots 决定。
+                // 因此即使某一轮拉到了多条消息，也只会在当前可承受的并发范围内入池。
                 List<RedisListenerCallable> callables = buildCallables(vQueueName, messages);
-                
-                // 6. 提交到线程池
-                if (!submitToThreadPool(vQueueName, callables, futures)) {
-                    continue;
-                }
+                submitToThreadPool(vQueueName, callables);
                 
             } catch (Throwable e) {
                 handlePullError(e);
             }
         }
         
+        if (!delay) {
+            commitContinuousOffset(vQueueName);
+        } else {
+            drainDelayCompletedMessages(vQueueName);
+        }
         return delayTimes;
     }
     
@@ -385,42 +442,37 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      *
      * <p>该方法处理以下场景：</p>
      * <ul>
-     *   <li>队列满：等待所有任务完成</li>
-     *   <li>延时队列：必须等待所有任务完成</li>
-     *   <li>窗口满：达到MAX_OFFSET_WINDOW_SIZE时等待</li>
+     *   <li>全局槽位不足：直接返回0，由 pull 主循环短暂 sleep 后重试</li>
+     *   <li>延时队列：必须等待当前批次全部完成后才能继续拉</li>
+     *   <li>窗口满：达到MAX_OFFSET_WINDOW_SIZE时不再拉新消息</li>
      *   <li>窗口告警：达到80%时记录告警日志</li>
      * </ul>
      *
      * @param vQueueName 虚拟队列名称
-     * @param futures 待完成的Future列表
      * @return 可用的拉取槽位数量
      */
-    private int calculateAvailableSlots(String vQueueName, List<Future<Message>> futures) {
-        int availableSlots = super.maxConcurrency - futures.size();
-        
-        // 场景1：消费队列已满，等待所有任务消费完成
+    private int calculateAvailableSlots(String vQueueName) {
+        int availableSlots = consumeSlots.availablePermits();
         if (availableSlots <= 0) {
-            return waitConsumeAndCommit(vQueueName, futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+            return 0;
         }
         
-        // 场景2：延时队列必须等待执行完成后才能获取下一次的消息
-        if (delay && !futures.isEmpty()) {
-            return waitConsumeAndCommit(vQueueName, futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        if (delay && vqManager.inFlight.get() > 0) {
+            return 0;
         }
         
-        // 场景3：检查偏移量窗口是否已满（仅普通队列）
         if (!delay) {
-            VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
             int windowSize = vqManager.offsetWindow.size();
             if (windowSize >= MAX_OFFSET_WINDOW_SIZE) {
                 log.warn("redis-mq Offset window is FULL, waiting for completion. vQueue: {}, size: {}",
                         vQueueName, windowSize);
-                return waitConsumeAndCommit(vQueueName, futures, GLOBAL_CONFIG.getTaskTimeout(), true);
+                return 0;
             } else if (windowSize >= OFFSET_WINDOW_WARN_SIZE) {
-                // 达到告警阈值，记录warn日志
                 log.warn("redis-mq Offset window size approaching limit. vQueue: {}, size: {}, limit: {}",
                         vQueueName, windowSize, MAX_OFFSET_WINDOW_SIZE);
             }
+            availableSlots = Math.min(availableSlots, MAX_OFFSET_WINDOW_SIZE - windowSize);
         }
         
         return availableSlots;
@@ -478,58 +530,38 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * 处理没有消息的情况
      *
      * @param vQueueName 虚拟队列名称
-     * @param futures 待完成的Future列表
      * @param delayTimes 延时时间集合（延时队列使用）
      * @param pullTime 拉取时间戳
      * @return true表示继续循环，false表示退出循环
      */
-    private boolean handleEmptyMessages(String vQueueName, List<Future<Message>> futures,
-            Set<Long> delayTimes, long pullTime) {
-        // 响应中断
+    private boolean handleEmptyMessages(String vQueueName, Set<Long> delayTimes, long pullTime) {
         if (!isRunning()) {
             return false;
         }
         
-        // 消息已经拉不到了。如果消费未完成 等待1秒钟消费完成，如果1秒没有消费完。
-        // 再继续拉取消息，因为有可能有其他新的消息进来。
-        if (!futures.isEmpty()) {
-            waitConsumeAndCommit(vQueueName, futures, GLOBAL_CONFIG.getTaskWaitTime(), false);
-            return true;
-        }
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
         
-        // 延时队列：获取头部数据的延时时间，加入时间轮
         if (delay) {
+            // 延时队列要求“当前批次完全结束后再继续拉下一批”，否则 ACK 与调度时间会互相穿插。
+            if (vqManager.inFlight.get() > 0 || !vqManager.completedMessages.isEmpty()) {
+                drainDelayCompletedMessages(vQueueName);
+                sleepForNextCheck();
+                return true;
+            }
+            if (isQuiescing(vQueueName)) {
+                return false;
+            }
             List<Pair<Message, Double>> pairs = redisMQClientUtil
                     .pullMessageByTimeWithScope(vQueueName, pullTime, 0, GLOBAL_CONFIG.delayQueuePullSize);
             pairs.forEach(pair -> delayTimes.add(pair.getValue().longValue()));
+            return false;
         }
         
-        // ✅ 修复: 如果offsetWindow不为空,说明还有消息未提交offset,需要继续循环等待
-        // 场景: 消息已经拉取并处理中,但还没提交offset,此时不能退出循环
-        // 否则会导致消息消费完但offset未提交,下次重启会重复消费
-        if (!delay) {
-            VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-            if (!vqManager.offsetWindow.isEmpty()) {
-                // ✅ 关键修复: 即使futures为空,也要尝试处理已完成的消息
-                // 因为futures可能在其他地方被清空了,但消息实际已经执行完成
-                // 这里传入空列表只是为了触发检查,实际我们需要检查offsetWindow中的消息状态
-                processCompletedFutures(vQueueName, futures);
-                
-                // 尝试提交offset
-                commitContinuousOffset(vQueueName);
-                
-                // 如果提交后offsetWindow还不为空,继续等待
-                if (!vqManager.offsetWindow.isEmpty()) {
-                    log.info("redis-mq No new messages, but offsetWindow not empty. vQueue: {}, window size: {}, waiting for completion...",
-                            vQueueName, vqManager.offsetWindow.size());
-                    try {
-                        Thread.sleep(GLOBAL_CONFIG.getTaskWaitTime());  // 等待1秒后继续检查
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    return true;  // 继续循环
-                }
-            }
+        if (hasPendingWork(vQueueName)) {
+            // 普通队列没有新消息时，仍要继续盯住窗口里的存量任务，直到连续 offset 被推进完。
+            commitContinuousOffset(vQueueName);
+            sleepForNextCheck();
+            return true;
         }
         
         return false;
@@ -571,9 +603,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 
                 callableInvokes.add(callable);
                 
-                // 将消息添加到偏移量窗口和正在拉取集合（仅普通队列）
-                trackMessageInWindow(vQueueName, message);
-                
             } catch (Throwable e) {
                 if (isRunning()) {
                     log.error("redisMQ listener container error", e);
@@ -590,12 +619,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @param vQueueName 虚拟队列名称
      * @param message 消息对象
      */
-    private void trackMessageInWindow(String vQueueName, Message message) {
-        if (!delay) {
-            VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-            vqManager.pullingMessageIds.add(message.getId());
-            vqManager.offsetWindow.put(message.getOffset(), new MessageStatus(message.getId(), message));
-        }
+    private MessageStatus trackMessageInWindow(String vQueueName, Message message) {
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        // 一定要先把消息登记到窗口，再把任务交给线程池。
+        // 这样即使任务刚提交就极速完成，commit 线程也能看到这条 offset 的完整状态，不会出现“消息已经跑完，
+        // 但窗口里根本没有记录，导致提交链路断档”的问题。
+        MessageStatus status = new MessageStatus(message.getId(), message);
+        vqManager.pullingMessageIds.add(message.getId());
+        vqManager.offsetWindow.put(message.getOffset(), status);
+        return status;
     }
     
     /**
@@ -603,11 +635,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      *
      * @param vQueueName 虚拟队列名称
      * @param callables Callable列表
-     * @param futures Future列表（用于收集返回的Future）
      * @return true表示提交成功，false表示列表为空
      */
-    private boolean submitToThreadPool(String vQueueName, List<RedisListenerCallable> callables,
-            List<Future<Message>> futures) {
+    private boolean submitToThreadPool(String vQueueName, List<RedisListenerCallable> callables) {
         if (CollectionUtils.isEmpty(callables)) {
             if (isRunning()) {
                 log.error("redisMQ callableInvokes isEmpty queueName:{}", vQueueName);
@@ -616,35 +646,54 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
         
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        boolean submitted = false;
         
         for (RedisListenerCallable callable : callables) {
-            // ✅ 包装Callable,在执行完成后自动标记finished
-            Callable<Message> wrappedCallable = () -> {
-                Message result = null;
-                try {
-                    result = callable.call();
-                    return result;
-                } finally {
-                    // 无论成功或失败,都标记finished,避免阻塞offset提交
-                    if (!delay && result != null) {
-                        vqManager.pullingMessageIds.remove(result.getId());
-                        MessageStatus status = vqManager.offsetWindow.get(result.getOffset());
-                        if (status != null) {
-                            status.finished = true;
-                            if (log.isDebugEnabled()) {
-                                log.debug("redis-mq Message marked as finished. vQueue: {}, offset: {}, messageId: {}",
-                                        vQueueName, result.getOffset(), result.getId());
-                            }
-                        }
-                    }
+            Message message = (Message) callable.getArgs();
+            if (message == null) {
+                continue;
+            }
+            // 先占用槽位，再尝试真正 submit。
+            // 这样可以保证“系统里正在飞行的消息数”永远不超过 consumeSlots 允许的上限。
+            if (!consumeSlots.tryAcquire()) {
+                break;
+            }
+            vqManager.inFlight.incrementAndGet();
+            MessageStatus status = null;
+            try {
+                if (!delay) {
+                    status = trackMessageInWindow(vQueueName, message);
                 }
-            };
-            
-            Future<Message> submit = work.submit(wrappedCallable);
-            futures.add(submit);
+                MessageStatus finalStatus = status;
+                Callable<Message> wrappedCallable = () -> {
+                    Message result = message;
+                    try {
+                        result = callable.call();
+                        return result;
+                    } finally {
+                        onMessageFinished(vQueueName, result != null ? result : message);
+                    }
+                };
+                Future<Message> future = work.submit(wrappedCallable);
+                if (finalStatus != null) {
+                    // Future 只用于极端超时时尝试 cancel，正常调度流程不再对它做 get(timeout)。
+                    finalStatus.future = future;
+                }
+                submitted = true;
+            } catch (RejectedExecutionException e) {
+                // 线程池瞬时满载时，必须把“窗口占位 + 槽位 + inFlight”全部回滚干净，
+                // 否则后续会看到虚假的窗口膨胀或并发占满。
+                rollbackSubmission(vQueueName, message, status);
+                log.warn("redisMQ work thread pool is full, submission rejected. queueName:{}, messageId:{}",
+                        vQueueName, message.getId(), e);
+                break;
+            } catch (RuntimeException e) {
+                rollbackSubmission(vQueueName, message, status);
+                throw e;
+            }
         }
         
-        return true;
+        return submitted;
     }
     
     /**
@@ -673,72 +722,77 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             Thread.currentThread().interrupt();
         }
     }
-    
-    /**
-     * 处理已完成的Future，标记消息状态并提交偏移量
-     *
-     * 该方法在每次pull循环中被调用，确保已完成的消息能够及时标记为finished
-     * 并触发偏移量提交，避免消息消费了但没有ACK的问题
-     *
-     * @param vQueueName 虚拟队列名称
-     * @param futures Future列表
-     */
-    private void processCompletedFutures(String vQueueName, List<Future<Message>> futures) {
-        if (futures.isEmpty()) {
+
+    private void rollbackSubmission(String vQueueName, Message message, MessageStatus status) {
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        if (status != null) {
+            vqManager.offsetWindow.remove(message.getOffset());
+            vqManager.pullingMessageIds.remove(message.getId());
+        }
+        // 只有“已经占掉的资源”才需要在这里对称归还。
+        vqManager.inFlight.decrementAndGet();
+        consumeSlots.release();
+    }
+
+    private void onMessageFinished(String vQueueName, Message message) {
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        try {
+            if (delay) {
+                // 延时队列不在业务线程中直接 ACK，而是先转回 pull 线程统一批量处理。
+                vqManager.completedMessages.add(message);
+                return;
+            }
+            // 普通队列只做“完成标记”，真正的 offset 推进仍由 commitContinuousOffset 保证连续性。
+            vqManager.pullingMessageIds.remove(message.getId());
+            MessageStatus status = vqManager.offsetWindow.get(message.getOffset());
+            if (status != null) {
+                status.finished = true;
+            }
+        } finally {
+            vqManager.inFlight.decrementAndGet();
+            consumeSlots.release();
+        }
+    }
+
+    private void drainDelayCompletedMessages(String vQueueName) {
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        if (vqManager.completedMessages.isEmpty()) {
             return;
         }
-        
-        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-        Iterator<Future<Message>> iterator = futures.iterator();
-        boolean hasCompleted = false;
-        int completedCount = 0;
-        
-        while (iterator.hasNext()) {
-            Future<Message> future = iterator.next();
-            
-            // 检查Future是否已完成
-            if (future.isDone()) {
-                try {
-                    // 获取已完成的消息（不会阻塞）
-                    Message msg = future.get();
-                    
-                    // 标记消息为已完成
-                    vqManager.pullingMessageIds.remove(msg.getId());
-                    MessageStatus status = vqManager.offsetWindow.get(msg.getOffset());
-                    if (status != null) {
-                        status.finished = true;
-                        hasCompleted = true;
-                        completedCount++;
-                        
-                        if (log.isDebugEnabled()) {
-                            log.debug("redis-mq Message completed. vQueue: {}, messageId: {}, offset: {}",
-                                    vQueueName, msg.getId(), msg.getOffset());
-                        }
-                    } else {
-                        log.warn("redis-mq Message completed but not found in offsetWindow. " +
-                                        "vQueue: {}, messageId: {}, offset: {}",
-                                vQueueName, msg.getId(), msg.getOffset());
-                    }
-                    
-                    // 从futures列表中移除
-                    iterator.remove();
-                    
-                } catch (Exception e) {
-                    // 任务执行异常，需要清理状态并标记为完成，避免阻塞后续消息
-                    log.error("redis-mq Failed to get completed message result", e);
-                    log.warn("redis-mq Unable to retrieve message from failed future, " +
-                            "this may cause offset window blockage. Exception: {}", e.getMessage());
-                    
-                    // 从futures列表中移除
-                    iterator.remove();
-                }
-            }
+        // completedMessages 是并发队列，这里把当前已完成结果尽量一次性捞出做批量 ACK，
+        // 让延时队列的 pull 线程只承担轻量协调角色，不把 ACK 压力散落到每个业务线程。
+        List<Message> completedMessages = new ArrayList<>();
+        Message message;
+        while ((message = vqManager.completedMessages.poll()) != null) {
+            completedMessages.add(message);
         }
-        
-        // 记录完成情况（偏移量提交将在主循环中全局执行）
-        if (hasCompleted) {
-            log.info("redis-mq processCompletedFutures: vQueue: {}, completed: {}, remaining futures: {}, offsetWindow size: {}",
-                    vQueueName, completedCount, futures.size(), vqManager.offsetWindow.size());
+        ackMessage(vQueueName, completedMessages);
+    }
+
+    private boolean hasPendingWork(String vQueueName) {
+        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
+        if (vqManager.inFlight.get() > 0) {
+            return true;
+        }
+        if (delay) {
+            return !vqManager.completedMessages.isEmpty();
+        }
+        return !vqManager.offsetWindow.isEmpty();
+    }
+
+    private boolean isQuiescing(String vQueueName) {
+        return quiescingVirtualQueues.contains(vQueueName);
+    }
+
+    private void sleepForNextCheck() {
+        // 这里故意只 sleep 一个很短的时间片。
+        // 目标不是“长时间阻塞等待”，而是给已完成任务一点提交/归还槽位的机会，
+        // 随后立即回来继续尝试拉取，让空闲线程尽快重新吃到消息。
+        long sleepMillis = Math.min(GLOBAL_CONFIG.getTaskWaitTime(), 50L);
+        try {
+            Thread.sleep(sleepMillis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
     
@@ -769,7 +823,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             vqManager.pullOffsetLow = false;
             return null;
         } else {
-            Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(queueName);
+            Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(vQueueName);
             // 计算需要追赶的范围
             long diff = queueMaxOffset - vqManager.committedOffset;
             
@@ -828,69 +882,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
     }
     
-    /**
-     * 等待消费任务完成并提交偏移量
-     *
-     * @param vQueueName 虚拟队列名称
-     * @param futures 待完成的Future列表
-     * @param milliseconds 等待超时时间（毫秒）
-     * @param timeoutDrop 是否在超时后丢弃所有未完成的Future
-     * @return 可用的拉取槽位数量
-     */
-    private int waitConsumeAndCommit(String vQueueName, List<Future<Message>> futures, long milliseconds, boolean timeoutDrop) {
-        VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-        List<Message> completedMessages = new ArrayList<>();
-        
-        for (Future<Message> future : futures) {
-            try {
-                Message msg = future.get(milliseconds, TimeUnit.MILLISECONDS);
-                completedMessages.add(msg);
-                
-                // 对于非延时队列，标记消息为已完成
-                if (!delay) {
-                    vqManager.pullingMessageIds.remove(msg.getId());
-                    MessageStatus status = vqManager.offsetWindow.get(msg.getOffset());
-                    if (status != null) {
-                        status.finished = true;
-                    }
-                }
-            } catch (java.util.concurrent.TimeoutException e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("redisMQ message consume timeout, will continue in background. timeout: {}ms", milliseconds);
-                }
-            } catch (java.util.concurrent.CancellationException e) {
-                // 任务被取消
-                log.warn("redisMQ message consume task cancelled", e);
-            } catch (java.util.concurrent.ExecutionException e) {
-                // 任务执行过程中抛出异常
-                log.error("redisMQ message consume execution error", e.getCause() != null ? e.getCause() : e);
-            } catch (InterruptedException e) {
-                // 线程被中断
-                Thread.currentThread().interrupt();
-                log.error("redisMQ message consume interrupted", e);
-                break;
-            }
-        }
-        
-        // 根据timeoutDrop决定是否清空futures
-        if (timeoutDrop) {
-            futures.clear();
-        } else {
-            futures.removeIf(Future::isDone);
-        }
-        
-        // 尝试提交偏移量（即使没有完成的消息，也可能有超时需要处理）
-        if (!delay) {
-            commitContinuousOffset(vQueueName);
-        } else if (!completedMessages.isEmpty()) {
-            // 延时队列：正常ACK已完成的消息
-            ackMessage(vQueueName, completedMessages);
-        }
-        
-        completedMessages.clear();
-        return super.maxConcurrency;
-    }
-    
     private void ackMessage(String vQueueName, List<Message> messageList) {
         if (!messageList.isEmpty()){
             Long offset = messageList.stream().map(Message::getOffset).max(Long::compareTo).get();
@@ -903,7 +894,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * 提交连续的偏移量，处理超时消息
      *
      * 该方法负责：
-     * 1. 检查并处理极端超时的消息（移到死信队列）
+     * 1. 检查并处理极端超时的消息（先尝试 cancel，再决定是否移到死信队列）
      * 2. 查找连续完成的偏移量（虚拟队列级别）
      * 3. 批量ACK并更新committedOffset
      * 4. 清理已完成的消息状态
@@ -930,7 +921,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         
         // 使用单一同步块处理所有offsetWindow操作，避免并发问题
         synchronized (vqManager.offsetWindow) {
-            // 1. 检查并处理极端超时的消息
             for (Map.Entry<Long, MessageStatus> entry : vqManager.offsetWindow.entrySet()) {
                 MessageStatus status = entry.getValue();
                 if (status == null || status.messageId == null) {
@@ -939,50 +929,51 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
                 
                 if (status.isExtremeTimeout(EXTREME_TIMEOUT)) {
-                    extremeTimeoutCount++;
-                    log.error("redis-mq EXTREME TIMEOUT DETECTED!!! Message will be moved to DLQ. " +
-                                    "vQueue: {}, messageId: {}, offset: {}, timeout: {}ms",
-                            vQueueName, status.messageId, entry.getKey(), EXTREME_TIMEOUT);
-                    
-                    // 加入死信队列列表
-                    dlqMessages.add(status.message);
-                    
-                    // 标记为已完成，允许偏移量前进
-                    status.finished = true;
-                    
-                    // 从正在拉取集合中移除
-                    vqManager.pullingMessageIds.remove(status.messageId);
+                    Future<Message> future = status.future;
+                    // 极端超时不再直接强推 offset。
+                    // 只有任务已经结束、已经取消，或者 cancel(true) 成功时，才允许把这条消息当成“可安全推进”。
+                    boolean safeToMove = future == null || future.isDone() || future.isCancelled();
+                    if (!safeToMove && future != null) {
+                        safeToMove = future.cancel(true);
+                    }
+                    if (safeToMove) {
+                        extremeTimeoutCount++;
+                        log.error("redis-mq EXTREME TIMEOUT DETECTED!!! Message will be moved to DLQ. " +
+                                        "vQueue: {}, messageId: {}, offset: {}, timeout: {}ms",
+                                vQueueName, status.messageId, entry.getKey(), EXTREME_TIMEOUT);
+                        dlqMessages.add(status.message);
+                        status.finished = true;
+                        vqManager.pullingMessageIds.remove(status.messageId);
+                    } else {
+                        log.error("redis-mq EXTREME TIMEOUT DETECTED but task could not be cancelled. " +
+                                        "Keep waiting. vQueue: {}, messageId: {}, offset: {}",
+                                vQueueName, status.messageId, entry.getKey());
+                    }
                 }
             }
             
-            // 2. 查找连续完成的偏移量（现在offsetWindow已经是虚拟队列级别，无需过滤）
             for (Map.Entry<Long, MessageStatus> entry : vqManager.offsetWindow.entrySet()) {
                 Long offset = entry.getKey();
                 MessageStatus status = entry.getValue();
                 
                 if (status.finished) {
-                    // 已完成的消息可以ACK
                     toRemoveOffsets.add(offset);
                     toAckMsgIds.add(status.messageId);
-                    // 记录最大的offset
                     if (offset > newCommittedOffset) {
                         newCommittedOffset = offset;
                     }
                 } else {
-                    // 遇到未完成消息就停止（虚拟队列内保证顺序消费）
                     log.info("redis-mq commitContinuousOffset BREAK: vQueue={}, found unfinished message at offset: {}",
                             vQueueName, offset);
                     break;
                 }
             }
             
-            // 3. 清理已提交的偏移量（在同步块内完成）
             for (Long offset : toRemoveOffsets) {
                 vqManager.offsetWindow.remove(offset);
             }
         }
         
-        // 4. 将极端超时消息移到死信队列（不需要同步，已经从window中移除）
         if (!dlqMessages.isEmpty()) {
             log.error("redis-mq Extreme timeout summary: vQueue: {}, count: {}, offsets: {}",
                     vQueueName, extremeTimeoutCount,
@@ -1004,7 +995,6 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
         }
         
-        // 5. 批量ACK连续完成的消息
         if (newCommittedOffset > vqManager.committedOffset && !toAckMsgIds.isEmpty()) {
             try {
                 String msgIdStr = String.join(",", toAckMsgIds);
@@ -1029,7 +1019,21 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         throw new RedisMqException("延时队列不存在的方法  repush()");
     }
     
-    
+    public void quiesceVirtualQueue(String virtualQueue) {
+        // quiesce 的语义是“停止接新活，但不要粗暴中断正在执行的活”。
+        quiescingVirtualQueues.add(virtualQueue);
+        delayTimeoutTaskManager.quiesce(virtualQueue);
+    }
+
+    public void activateVirtualQueue(String virtualQueue) {
+        // 重新获得分片时恢复拉取资格。
+        quiescingVirtualQueues.remove(virtualQueue);
+    }
+
+    public boolean isVirtualQueueDrained(String virtualQueue) {
+        return !hasPendingWork(virtualQueue);
+    }
+
     /**
      * 开始拉取消息的任务。同一个时间一个虚拟队列只允许一个服务的一个线程进行拉取操作
      *
@@ -1039,6 +1043,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     public void start(String virtualQueue, Long startTime) {
         
         running();
+        // 同一个虚拟队列重新分配到当前节点时，需要先清掉 quiesce 标记，
+        // 否则新的 DelayTimeoutTask 即使被推入，也会在 pull 主循环里立刻退出。
+        activateVirtualQueue(virtualQueue);
         
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager
