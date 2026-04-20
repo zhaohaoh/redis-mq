@@ -1,7 +1,7 @@
 package com.redismq.server.process;
 
-import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.GroupOffsetQeueryMessageDTO;
+import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
 import com.redismq.common.serializer.RedisMQStringMapper;
@@ -21,13 +21,13 @@ import static com.redismq.common.constant.MessageType.GET_QUEUE_MESSAGE_BY_OFFSE
  */
 @Component
 public class GetMessageOffsetProcessor extends AbstractMessageProcessor {
-    
+
     @Autowired
     private MessageStoreStrategy messageStoreStrategy;
-    
+
     @Override
     public boolean doProcess(RemoteResponse remoteResponse, List<RemoteMessage> remoteMessages) {
-       
+
         List<RemoteMessage> response = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
             String body = message.getBody();
@@ -40,7 +40,7 @@ public class GetMessageOffsetProcessor extends AbstractMessageProcessor {
         remoteResponse.setRpcMessage(response);
         return true;
     }
-    
+
     @Override
     public Integer getType() {
         return GET_QUEUE_MESSAGE_BY_OFFSET;

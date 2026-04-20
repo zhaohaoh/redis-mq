@@ -7,6 +7,7 @@ public class MsgIDGenerator {
 
     /**
      * generate UUID using snowflake algorithm
+     *
      * @return UUID
      */
     public static long generateId() {
@@ -19,6 +20,7 @@ public class MsgIDGenerator {
         }
         return defaultIdWorker.nextId();
     }
+
     public static String generateIdStr() {
         if (defaultIdWorker == null) {
             synchronized (MsgIDGenerator.class) {
@@ -29,9 +31,9 @@ public class MsgIDGenerator {
         }
         return String.valueOf(defaultIdWorker.nextId());
     }
-    
+
     public static void init(Integer workId) {
         defaultIdWorker = new DefaultIdWorker(workId);
     }
-  
+
 }

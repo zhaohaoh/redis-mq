@@ -15,10 +15,10 @@ import java.util.Date;
  */
 @Getter
 @Setter
-public class MakeMappingFile   {
+public class MakeMappingFile {
 
     private static final long serialVersionUID = 1L;
- 
+
     private Long id;
 
     /**

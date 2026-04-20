@@ -14,11 +14,11 @@ import java.util.Map;
  * @date 2020/11/18 18:21 自定义刷新令牌json解析器
  */
 public class MessageSerializer extends StdSerializer<Message> {
-    
+
     protected MessageSerializer(Class<Message> vc) {
         super(vc);
     }
-    
+
     /**
      * 序列化逻辑
      */
@@ -46,16 +46,16 @@ public class MessageSerializer extends StdSerializer<Message> {
         jsonGenerator.writeStringField("queue", message.getQueue());
         jsonGenerator.writeStringField("tag", message.getTag());
         jsonGenerator.writeStringField("virtualQueueName", message.getVirtualQueueName());
-        jsonGenerator.writeObjectField("executeTime",message.getExecuteTime());
-        jsonGenerator.writeObjectField("executorScope",message.getExecuteScope());
-        
+        jsonGenerator.writeObjectField("executeTime", message.getExecuteTime());
+        jsonGenerator.writeObjectField("executorScope", message.getExecuteScope());
+
         Map<String, Object> header = message.getHeader();
         if (header != null) {
             jsonGenerator.writeObjectField("header", header);
         }
         jsonGenerator.writeEndObject();
     }
-    
+
     //移除字符
     public static String removeAll(CharSequence str, char... chars) {
         if (null == str || ArrayUtils.isEmpty(chars)) {
@@ -75,11 +75,11 @@ public class MessageSerializer extends StdSerializer<Message> {
         }
         return builder.toString();
     }
-    
+
     public static String str(CharSequence cs) {
         return null == cs ? null : cs.toString();
     }
-    
+
     public static void main(String[] args) {
         String string = "{\n"
                 + "    \"className\": \"com.sjaco.floweryhy.api.controller.agentApp.sku.SkuInfoAgentAppController\",\n"
@@ -91,22 +91,22 @@ public class MessageSerializer extends StdSerializer<Message> {
                 + "    \"phoneBrand\": \"oppo\",\n" + "    \"phoneDeviceId\": \"17289872285985797647\",\n"
                 + "    \"phoneModel\": \"PHQ110\",\n" + "    \"succeed\": \"成功\",\n"
                 + "    \"userId\": \"10018013\"\n" + "}";
-        
+
         String s1 = removeWhitespacesExceptInQuotes(string);
         System.out.println(s1);
     }
-    
-    
+
+
     public static String removeWhitespacesExceptInQuotes(String input) {
         // Use a StringBuilder to build the result
         StringBuilder result = new StringBuilder();
         int length = input.length();
         int i = 0;
         boolean inQuotes = false;
-        
+
         while (i < length) {
             char currentChar = input.charAt(i);
-            
+
             if (currentChar == '"') {
                 // Toggle the inQuotes flag
                 inQuotes = !inQuotes;
@@ -116,14 +116,14 @@ public class MessageSerializer extends StdSerializer<Message> {
             } else {
                 result.append(currentChar);
             }
-            
+
             i++;
         }
-        
+
         return result.toString();
     }
-    
-   
+
+
 }
 
 

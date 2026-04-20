@@ -24,5 +24,5 @@ public class RedissonFactoryAutoConfiguration {
     public RedissonConnectionFactory redissonConnectionFactory(RedissonClient redisson) {
         return new RedissonConnectionFactory(redisson);
     }
- 
+
 }

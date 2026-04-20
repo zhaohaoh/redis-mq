@@ -25,7 +25,7 @@ public class GlobalConfig {
      * 单个虚拟队列消费看门狗的续期时间
      */
     public int virtualLockWatchDogTime = 8;
- 
+
     /**
      * 队列最大大小
      */
@@ -51,9 +51,9 @@ public class GlobalConfig {
      * 任务阻塞等待轮询时间 ms
      */
     public Long taskWaitTime = 1000L;
-   /**
+    /**
      * 最大机器数量
-    */
+     */
     public Integer maxWorkerIdBits = 8;
 
 }

@@ -1,27 +1,22 @@
 package com.redismq.server.controller;
 
 import com.alibaba.fastjson.JSONValidator;
-import com.redismq.server.pojo.MQMessageDTO;
-import com.redismq.server.pojo.PageResult;
-import com.redismq.server.pojo.QueuePageSelect;
-import com.redismq.server.pojo.VQueue;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.PushMessage;
 import com.redismq.common.pojo.Queue;
 import com.redismq.common.serializer.JsonSerializerUtil;
+import com.redismq.server.pojo.MQMessageDTO;
+import com.redismq.server.pojo.PageResult;
+import com.redismq.server.pojo.QueuePageSelect;
+import com.redismq.server.pojo.VQueue;
 import com.redismq.utils.RedisMQTemplate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,26 +30,26 @@ import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
 @RequestMapping("/queue")
 @Slf4j
 public class QueueController {
-    
+
     @Autowired
     private RedisMQTemplate redisMQTemplate;
-    
+
     @Autowired
     private RedisMQClientUtil redisMQClientUtil;
-    
+
     @GetMapping("page")
     public ResponseEntity<PageResult<Queue>> page(QueuePageSelect queuePageSelect) {
         //队列名就是topic名
-       Set<Queue> allQueue = redisMQClientUtil.getQueueList();
-       
-        allQueue=allQueue.stream().filter(a->a.isDelayState()==queuePageSelect.isDelayState()).collect(Collectors.toSet());
-    
+        Set<Queue> allQueue = redisMQClientUtil.getQueueList();
+
+        allQueue = allQueue.stream().filter(a -> a.isDelayState() == queuePageSelect.isDelayState()).collect(Collectors.toSet());
+
         int start = (queuePageSelect.getPage() - 1) * queuePageSelect.getSize();
         int end = queuePageSelect.getPage() * queuePageSelect.getSize();
         List<Queue> page = limitPage(new ArrayList<>(allQueue), start, end);
-        return ResponseEntity.ok(PageResult.success(allQueue.size(),page));
+        return ResponseEntity.ok(PageResult.success(allQueue.size(), page));
     }
-    
+
     //根据队列名称查询虚拟队列
     @GetMapping("vQueueList")
     public ResponseEntity<List<VQueue>> vQueueList(String queueName, Integer virtual) {
@@ -69,7 +64,7 @@ public class QueueController {
         }
         return ResponseEntity.ok(virtualQueues);
     }
-    
+
     /**
      * 指定队列重新拉取消息 TODO前端未接入
      *
@@ -82,45 +77,45 @@ public class QueueController {
         }
         String vQueueNameByVQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
         Boolean lock = redisMQClientUtil.isLock(RedisMQConstant.getVirtualQueueLock(vQueue));
-        if (lock){
-            throw  new RuntimeException("队列正在被锁定");
+        if (lock) {
+            throw new RuntimeException("队列正在被锁定");
         }
         PushMessage pushMessage = new PushMessage();
         pushMessage.setTimestamp(System.currentTimeMillis());
         pushMessage.setQueue(vQueueNameByVQueue);
         redisMQClientUtil.publishPullMessage(pushMessage);
-        log.info("publishPullMessage :{}",vQueue);
+        log.info("publishPullMessage :{}", vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     @PostMapping("sendMessage")
     public ResponseEntity<Boolean> sendMessage(@RequestBody MQMessageDTO message) {
         Object body = message.getBody();
-        if (body instanceof String){
+        if (body instanceof String) {
             String str = (String) body;
-            if (JsonSerializerUtil.isJson(str)){
+            if (JsonSerializerUtil.isJson(str)) {
                 boolean validate = JSONValidator.from(str).validate();
                 if (!validate) {
-                    return  ResponseEntity.ok(false);
+                    return ResponseEntity.ok(false);
                 }
             }
         }
-        
+
         Message build = Message.builder().body(message.getBody()).queue(RedisMQConstant.getQueueNameByVirtual(message.getQueue()))
                 .tag(message.getTag()).virtualQueueName(message.getQueue()).build();
         redisMQTemplate.sendMessage(build);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     @PostMapping("sendTimingMessage")
     public ResponseEntity<Boolean> sendTimingMessage(@RequestBody MQMessageDTO message) {
         Object body = message.getBody();
-        if (body instanceof String){
+        if (body instanceof String) {
             String str = (String) body;
-            if (JsonSerializerUtil.isJson(str)){
+            if (JsonSerializerUtil.isJson(str)) {
                 boolean validate = JSONValidator.from(str).validate();
                 if (!validate) {
-                    return  ResponseEntity.ok(false);
+                    return ResponseEntity.ok(false);
                 }
             }
         }
@@ -130,8 +125,8 @@ public class QueueController {
         redisMQTemplate.sendTimingMessage(build, message.getConsumeTime());
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
-    
+
+
     /**
      * 新增队列 暂时先不接前端
      */
@@ -139,10 +134,10 @@ public class QueueController {
     public ResponseEntity<Void> addQueue(@RequestBody Queue queue) {
         //队列名就是topic名
         Queue queue1 = redisMQClientUtil.registerQueue(queue);
-        
+
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     /**
      * 删除队列 暂时先不接前端
      */
@@ -153,7 +148,7 @@ public class QueueController {
         redisMQClientUtil.removeQueue(removeQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
+
     public static <T> List<T> limitPage(List<T> list, int start, int end) {
         if (list.size() < end) {
             list = list.subList(start, list.size());
@@ -162,6 +157,6 @@ public class QueueController {
         }
         return list;
     }
-    
-    
+
+
 }

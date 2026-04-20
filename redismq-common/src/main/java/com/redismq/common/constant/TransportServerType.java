@@ -1,4 +1,3 @@
-
 package com.redismq.common.constant;
 
 /**

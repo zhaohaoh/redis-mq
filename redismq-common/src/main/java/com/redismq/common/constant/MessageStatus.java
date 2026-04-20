@@ -11,7 +11,7 @@ public enum MessageStatus {
     //消息失败状态
     FAIL(2);
     private final int code;
-    
+
     MessageStatus(int code) {
         this.code = code;
     }

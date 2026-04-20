@@ -1,13 +1,12 @@
 package com.redismq.server.process;
 
-import com.redismq.server.store.MessageStoreStrategy;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteResponse;
 import com.redismq.common.serializer.RedisMQStringMapper;
-
 import com.redismq.rpc.proccess.AbstractMessageProcessor;
+import com.redismq.server.store.MessageStoreStrategy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -22,22 +21,22 @@ import java.util.List;
  */
 @Component
 public class MQMessageProcessor extends AbstractMessageProcessor {
-    
+
     @Autowired
     private MessageStoreStrategy messageStoreStrategy;
-    
+
     @Override
     public boolean doProcess(RemoteResponse ctx, List<RemoteMessage> remoteMessages) {
-        
+
         List<Message> list = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
             Message msg = RedisMQStringMapper.toBean(message.getBody(), Message.class);
             list.add(msg);
         }
 
-       return  messageStoreStrategy.saveMessages(list);
+        return messageStoreStrategy.saveMessages(list);
     }
-    
+
     @Override
     public Integer getType() {
         return MessageType.CREATE_MESSAGE;

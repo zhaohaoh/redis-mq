@@ -22,7 +22,7 @@ public interface RedisClient {
      * @param args arg游戏
      * @return {@link Long}
      */
-    Long executeLua(String lua,List<String> keys,Object... args);
+    Long executeLua(String lua, List<String> keys, Object... args);
 
     /**
      * 发布订阅
@@ -30,7 +30,8 @@ public interface RedisClient {
      * @param topic 主题
      * @param obj   obj
      */
-    void convertAndSend(String topic,Object obj);
+    void convertAndSend(String topic, Object obj);
+
     /**
      * 删除key
      *
@@ -38,28 +39,29 @@ public interface RedisClient {
      */
     Boolean delete(String key);
 
-    
+
     /**
      * 阻塞redis获取set集合中所有的元素
      */
-    <T> Set<T> sMembers(String key,Class<T> tClass) ;
+    <T> Set<T> sMembers(String key, Class<T> tClass);
+
     /**
      * 批量删除key
      */
     Long delete(Collection<String> keys);
-    
+
     /**
      * 只有在 key 不存在时设置 key 的值
      *
      * @return 之前已经存在返回false, 不存在返回true
      */
     Boolean setIfAbsent(String key, Object value, Duration duration);
-    
+
     /**
      * string get
      */
     Object get(String key);
- 
+
     /**
      * set添加元素
      *
@@ -68,7 +70,7 @@ public interface RedisClient {
      * @return
      */
     Long sAdd(String key, Object... values);
- 
+
     /**
      * set移除元素
      *
@@ -77,19 +79,19 @@ public interface RedisClient {
      * @return
      */
     Long sRemove(String key, Object... values);
-    
-    
+
+
     /**
-     *  MapCache 删除
+     * MapCache 删除
      */
     Long mapCacheRemove(String key, String hashKey);
-    
+
 //
 //    /**
 //     *  MapCache  add
 //     */
 //    boolean mapCachePut(String key, String hashKey,Object val,Duration duration);
-    
+
 //    /**
 //     *  MapCache  add
 //     */
@@ -98,7 +100,7 @@ public interface RedisClient {
 //     *  MapCache  add
 //     */
 //    Map<Object, Object> mapCacheList(String key);
-    
+
     /**------------------zSet相关操作--------------------------------*/
 
     /**
@@ -110,8 +112,9 @@ public interface RedisClient {
      * @return
      */
     Boolean zAdd(String key, Object value, double score);
+
     Boolean zAddIfAbsent(String key, Object value, double score);
-    
+
 
     /**
      * @param key
@@ -120,7 +123,6 @@ public interface RedisClient {
      */
     Long zRemove(String key, Object... values);
 
-   
 
     /**
      * 获取集合元素, 并且把score值也获取
@@ -130,15 +132,13 @@ public interface RedisClient {
      * @param end
      * @return
      */
-    <T> Map<T,Double> zRangeWithScores(String key, long start,
-                                                            long end,Class<T> tClass);
-    
-    
- 
-    Double zScore(String key,String member);
- 
+    <T> Map<T, Double> zRangeWithScores(String key, long start,
+                                        long end, Class<T> tClass);
 
-   
+
+    Double zScore(String key, String member);
+
+
     /**
      * 获取集合大小
      *
@@ -147,7 +147,6 @@ public interface RedisClient {
      */
     Long zSize(String key);
 
-    
 
     /**
      * 根据指定的score值的范围来移除成员
@@ -158,7 +157,7 @@ public interface RedisClient {
      * @return
      */
     Long zRemoveRangeByScore(String key, double min, double max);
-    
+
     /**
      * 拉取消息
      *
@@ -169,26 +168,26 @@ public interface RedisClient {
      * @param end   终止
      * @return {@link Map}<{@link Message}, {@link Double}>
      */
-    Map<Message, Double> zrangeMessage(String key,String group, double min, double max, long start, long end);
-    
-    
+    Map<Message, Double> zrangeMessage(String key, String group, double min, double max, long start, long end);
+
+
     /**
      * lua列表
-     *
+     * <p>
      * 返回list的lua
      */
     List luaList(String lua, List<String> keys, Object[] args);
-    
+
     Boolean exists(String key);
-    
+
     Boolean lock(String key, String s, Duration duration);
-    
+
     /**
      * 解锁
      *
      * @param key
      */
     Boolean unlock(String key);
-    
+
     Boolean isLock(String key);
 }

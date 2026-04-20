@@ -22,7 +22,7 @@ public class RedisMQInterceptorAutoConfiguration {
     /**
      * 默认的死信队列拦截器
      *
-     * @param redisMQClientUtil  客户端工具类
+     * @param redisMQClientUtil 客户端工具类
      * @return {@link RedisDeadQueueHandleInterceptor}
      */
     @Bean

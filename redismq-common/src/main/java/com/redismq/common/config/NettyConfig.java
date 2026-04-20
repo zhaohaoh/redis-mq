@@ -33,32 +33,32 @@ public class NettyConfig {
      * The constant TRANSPORT_SERVER_TYPE.
      */
     protected TransportServerType transportServerType = TransportServerType.NIO;
-    
+
     /**
      * The constant SERVER_CHANNEL_CLAZZ.
      */
     protected Class<? extends ServerChannel> serverChannelClazz = NioServerSocketChannel.class;
-    
+
     /**
      * The constant CLIENT_CHANNEL_CLAZZ.
      */
     protected Class<? extends Channel> clientChannelClazz = NioSocketChannel.class;
-    
+
     /**
      * The constant TRANSPORT_PROTOCOL_TYPE.
      */
     protected TransportProtocolType transportProtocolType = TransportProtocolType.TCP;
-    
+
     /**
      * 心跳读间隔
      */
     protected int heartbeatReadSeconds = 15;
-    
+
     /**
      * 心跳写间隔
      */
     protected int heartbeatWriteSeconds = 5;
-    
+
     /**
      * 服务端配置
      */
@@ -67,11 +67,11 @@ public class NettyConfig {
      * 客户端配置
      */
     protected Client client;
-    
- 
+
+
     public void init() {
         switch (transportServerType) {
-            case  NIO:
+            case NIO:
                 if (transportProtocolType == TransportProtocolType.TCP) {
                     serverChannelClazz = NioServerSocketChannel.class;
                     clientChannelClazz = NioSocketChannel.class;
@@ -80,7 +80,7 @@ public class NettyConfig {
                     clientChannelClazz = null;
                 }
                 break;
-            case  NATIVE:
+            case NATIVE:
                 if (PlatformDependent.isWindows()) {
                     throw new IllegalArgumentException("no native supporting for Windows.");
                 } else if (PlatformDependent.isOsx()) {
@@ -111,7 +111,7 @@ public class NettyConfig {
                 throw new IllegalArgumentException("unsupported.");
         }
     }
-    
+
     @Data
     public static class Server {
         /**
@@ -134,7 +134,7 @@ public class NettyConfig {
          * 写缓存区的高低水位线
          */
         private int writeBufferHighWaterMark = 67108864;
-        
+
         private int writeBufferLowWaterMark = 1048576;
         /**
          * 监听的服务地址
@@ -151,10 +151,10 @@ public class NettyConfig {
 //        private int minServerPoolSize = 50;
 //
 //        private int maxServerPoolSize = 500;
-       
+
         private int serverRegisterExpireSeconds = 5;
     }
-    
+
     @Data
     public static class Client {
         /**
@@ -181,11 +181,11 @@ public class NettyConfig {
          * 接受缓存区大小  150 KB
          */
         private int clientSocketRcvBufSize = 153600;
-    
+
         /**
          * The constant WORKER_THREAD_SIZE.
          */
         protected int clientThreadSize;
     }
-    
+
 }

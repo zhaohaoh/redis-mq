@@ -12,7 +12,7 @@ import org.springframework.core.type.AnnotationMetadata;
  * @date 2021/8/10
  * 注册类 @Import引入
  */
-public class RedisListenerConfigurationRegister implements ImportBeanDefinitionRegistrar  {
+public class RedisListenerConfigurationRegister implements ImportBeanDefinitionRegistrar {
 
 
     @Override

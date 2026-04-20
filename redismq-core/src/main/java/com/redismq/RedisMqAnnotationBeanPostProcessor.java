@@ -38,13 +38,7 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -148,8 +142,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.queueMaxSize() > 0) {
             queue.setQueueMaxSize(redisListener.queueMaxSize());
         }
-    
-    
+
+
         redisMqClient.registerQueue(queue);
 
         QueueManager.registerLocalQueue(queue);
@@ -169,7 +163,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         }
     }
 
-    
+
     @Override
     public int getOrder() {
         return LOWEST_PRECEDENCE;
@@ -196,7 +190,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     private boolean createContainer() {
         Map<String, Queue> queues = QueueManager.getLocalQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
-    
+
         RedisMQClientUtil redisMQClientUtil = applicationContext.getBean("redisMQClientUtil", RedisMQClientUtil.class);
         Map<String, ConsumeInterceptor> consumeInterceptorMap = applicationContext.getBeansOfType(ConsumeInterceptor.class);
         //没有配置取全局配置
@@ -209,34 +203,34 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             }
             create.set(true);
             ObjectProvider<RemotingClient> beanProvider = applicationContext.getBeanProvider(RemotingClient.class);
-            
+
             RemotingClient remotingClient = beanProvider.getIfAvailable();
-            
+
             String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
             //消费者组偏移量
             Long queueGroupOffset = redisMQClientUtil.getQueueGroupOffset(getOffsetGroupCollection(groupId),
                     queue.getQueueName());
             //队列偏移量
             Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(queue.getQueueName());
-            
+
             // 第一次上线的消费者组，从哪里开始消费
             OffsetEnum newGroupOffset = GlobalConfigCache.CONSUMER_CONFIG.getNewGroupOffset();
-            if (newGroupOffset.equals(OffsetEnum.LATEST) && queueGroupOffset==0L){
+            if (newGroupOffset.equals(OffsetEnum.LATEST) && queueGroupOffset == 0L) {
                 queueGroupOffset = queueMaxOffset;
             }
-            
+
             // 中断了很久，重新上线的消费者组从哪里开始消费
             OffsetEnum autoOffsetConsume = GlobalConfigCache.CONSUMER_CONFIG.getAutoOffsetConsume();
-            if (autoOffsetConsume.equals(OffsetEnum.LATEST)){
+            if (autoOffsetConsume.equals(OffsetEnum.LATEST)) {
                 queueGroupOffset = queueMaxOffset;
             }
-            
+
             AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisMQClientUtil, queue,
                     CollectionUtils.isEmpty(consumeInterceptorMap) ?
-                    new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values())
-                    ,remotingClient
-            , queueGroupOffset,queueMaxOffset);
-            
+                            new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values())
+                    , remotingClient
+                    , queueGroupOffset, queueMaxOffset);
+
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
         });
@@ -315,9 +309,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         //名称完全对应的topic
         container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));
     }
-    
+
     private void initQueue(Queue queue) {
-        
+
         if (queue.getConcurrency() == null) {
             queue.setConcurrency(GlobalConfigCache.QUEUE_CONFIG.getConcurrency());
         }

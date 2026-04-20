@@ -4,11 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -30,6 +26,7 @@ import java.util.Map;
 public class RedisMQObjectMapper {
     // 定义jackson对象
     public static final ObjectMapper MAPPER = new ObjectMapper();
+
     static {
         //在解析json的时候忽略字段名字不对应的会报错的情况  如usernamexxx字段映射到User实体类
         MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -38,7 +35,7 @@ public class RedisMQObjectMapper {
         // 忽略 transient 修饰的属性
         MAPPER.configure(MapperFeature.PROPAGATE_TRANSIENT_MARKER, true);
         //解决jackson2无法反序列化LocalDateTime的问题
-         MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
         //只序列化字段，
         MAPPER.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
@@ -64,8 +61,8 @@ public class RedisMQObjectMapper {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
-    
-    public static <T,K,V> List<T> mapsToBeans(List<Map<K,V>> source, Class<T> targetType) {
+
+    public static <T, K, V> List<T> mapsToBeans(List<Map<K, V>> source, Class<T> targetType) {
         try {
             String json = toJsonStr(source);
             List<T> ts = toList(json, targetType);
@@ -93,6 +90,7 @@ public class RedisMQObjectMapper {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
+
     public static <T> T toBean(byte[] bytes, Class<T> beanType) {
         try {
             T t = MAPPER.readValue(bytes, beanType);

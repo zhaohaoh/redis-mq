@@ -31,9 +31,10 @@ public class ProducerController {
     private RedisMQTemplate redisMQTemplate;
     @Autowired
     private RedisClient redisClient;
-  
+
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
+
     /**
      * 发送延迟消息
      */
@@ -47,7 +48,7 @@ public class ProducerController {
 //        }
 //        long millis = System.currentTimeMillis()+  Duration.ofSeconds(30).toMillis();
         ExecutorService executorService = Executors.newFixedThreadPool(20);
-      
+
         for (int i = 0; i < 10000; i++) {
             executorService.submit(new Runnable() {
                 @Override
@@ -55,17 +56,17 @@ public class ProducerController {
                     JavaBean javaBean = new JavaBean();
                     javaBean.setA("ff");
                     javaBean.setB(222);
-                    Map<String,Object> map=new HashMap<>();
-                    map.put("duplicateId","id");
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("duplicateId", "id");
                     Message build = Message.builder().body(javaBean).queue("delaytest1").header(map).build();
-                    
-                    redisMQTemplate.sendDelayMessage(build,  0L, TimeUnit.MICROSECONDS);
+
+                    redisMQTemplate.sendDelayMessage(build, 0L, TimeUnit.MICROSECONDS);
                 }
             });
         }
-      
+
     }
-    
+
     @PostMapping("sendDelayMessage2")
     public void sendDelayMessage2() {
         //        for (int i = 0; i < 100; i++) {
@@ -77,9 +78,9 @@ public class ProducerController {
         JavaBean javaBean = new JavaBean();
         javaBean.setA("ff");
         javaBean.setB(222);
-        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+ Duration.ofSeconds(1).toMillis());
+        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis() + Duration.ofSeconds(1).toMillis());
     }
-    
+
     /**
      * 发送普通消息
      */
@@ -92,6 +93,7 @@ public class ProducerController {
             redisMQTemplate.sendMessage(javaBean, "test1");
         }
     }
+
     /**
      * 发送顺序消息
      */
@@ -130,5 +132,5 @@ public class ProducerController {
             redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
         }
     }
- 
+
 }

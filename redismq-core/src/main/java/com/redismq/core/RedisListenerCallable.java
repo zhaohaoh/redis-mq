@@ -25,27 +25,27 @@ public class RedisListenerCallable implements Callable<Message> {
     protected static final Logger log = LoggerFactory.getLogger(RedisListenerCallable.class);
 
     /**
-     *重试最大次数
+     * 重试最大次数
      */
     private final int retryMax;
     /**
-     *目标类
+     * 目标类
      */
     private final Object target;
     /**
-     *参数
+     * 参数
      */
     private Object args;
     /**
-     *方法
+     * 方法
      */
     private final Method method;
     /**
-     *消费状态
+     * 消费状态
      */
     private final PollState state = new PollState();
     /**
-     *redis的客户端
+     * redis的客户端
      */
     private final RedisMQClientUtil redisMQClientUtil;
     /**
@@ -53,22 +53,23 @@ public class RedisListenerCallable implements Callable<Message> {
      */
     private String ackMode;
     /**
-     *重试间隔 睡眠时间
+     * 重试间隔 睡眠时间
      */
     private Integer retryInterval;
     /**
-     *真实队列名
+     * 真实队列名
      */
     private String queueName;
 
     /**
-     *最大重试次数
+     * 最大重试次数
      */
     private int retryCount;
     /**
-     *消息体类型
+     * 消息体类型
      */
-    private  Class<?> messageType ;
+    private Class<?> messageType;
+
     public String getQueueName() {
         return queueName;
     }
@@ -94,7 +95,7 @@ public class RedisListenerCallable implements Callable<Message> {
     public void setArgs(Object args) {
         this.args = args;
     }
-    
+
     public RedisMQClientUtil redisMQClientUtil() {
         return redisMQClientUtil;
     }
@@ -126,7 +127,7 @@ public class RedisListenerCallable implements Callable<Message> {
     }
 
     @Override
-    public Message call()   {
+    public Message call() {
         state.starting();
         try {
             do {
@@ -153,7 +154,7 @@ public class RedisListenerCallable implements Callable<Message> {
             state.running();
             ReflectionUtils.makeAccessible(this.method);
             Message message = (Message) args;
-           
+
             // 拷贝对象.原对象不会发生改变.否则对象改变了无法删除redis中的数据
             Message clone = message.deepClone();
             clone = beforeConsume(clone);
@@ -162,36 +163,35 @@ public class RedisListenerCallable implements Callable<Message> {
             if (messageType.equals(clone.getClass())) {
                 //是内部message消息
                 this.method.invoke(this.target, clone);
-            }else if(messageType.equals(String.class)){
-                if (!(body instanceof String)){
+            } else if (messageType.equals(String.class)) {
+                if (!(body instanceof String)) {
                     this.method.invoke(this.target, body.toString());
-                }else{
+                } else {
                     this.method.invoke(this.target, body);
                 }
-              
+
             }
             //已经是相同的类型 直接可以调用
-            else if (messageType.isAssignableFrom(body.getClass())){
+            else if (messageType.isAssignableFrom(body.getClass())) {
                 this.method.invoke(this.target, body);
-            }
-            else {
+            } else {
                 //监听类的参数不是Message
                 body = RedisMQStringMapper.toBean(body.toString(), messageType);
                 if (messageType.isAssignableFrom(body.getClass())) {
                     //对象相同直接处理
                     this.method.invoke(this.target, body);
-                } else{
-                    throw new RedisMqException("ClassNotConvert paramType: "+messageType +" messageClass: "+clone.getClass());
+                } else {
+                    throw new RedisMqException("ClassNotConvert paramType: " + messageType + " messageClass: " + clone.getClass());
                 }
             }
             state.finsh();
             log.debug("redisMQ consumeMessage success queue:{} tag:{}", message.getQueue(), message.getTag());
             afterConsume(clone);
         } catch (Throwable e) {
-            if (e instanceof InvocationTargetException){
+            if (e instanceof InvocationTargetException) {
                 e = (Exception) e.getCause();
             }
-            if (retryCount > retryMax +1) {
+            if (retryCount > retryMax + 1) {
                 state.cancel();
                 log.error("redisMQ run retryMax:{} Cancel", retryMax);
                 throw new RedisMqException("RedisListenerRunnable retryMax :", e);
@@ -237,7 +237,6 @@ public class RedisListenerCallable implements Callable<Message> {
     public String toString() {
         return this.method.getDeclaringClass().getName() + "." + this.method.getName();
     }
-
 
 
     public static class PollState {

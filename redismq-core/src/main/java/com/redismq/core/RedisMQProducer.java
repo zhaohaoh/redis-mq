@@ -8,10 +8,7 @@ import com.redismq.common.constant.ProducerAck;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.exception.QueueFullException;
 import com.redismq.common.exception.RedisMqException;
-import com.redismq.common.pojo.MergedWarpMessage;
-import com.redismq.common.pojo.Message;
-import com.redismq.common.pojo.MessageFuture;
-import com.redismq.common.pojo.PushMessage;
+import com.redismq.common.pojo.*;
 import com.redismq.common.pojo.Queue;
 import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.id.MsgIDGenerator;
@@ -28,21 +25,8 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.CollectionUtils;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
@@ -60,38 +44,38 @@ import static com.redismq.rpc.cache.RpcGlobalCache.FUTURES;
  * @Date: 2022/5/19 15:46 redismq生产者
  */
 public class RedisMQProducer {
-    
+
     protected final Logger log = LoggerFactory.getLogger(RedisMQProducer.class);
-    
+
     private final RedisMQClientUtil redisMQClientUtil;
-    
+
     private final RemotingClient remotingClient;
-    
+
     private List<ProducerInterceptor> producerInterceptors;
-    
+
     private final BlockingQueue<Message> basket = new LinkedBlockingQueue<>(PRODUCER_CONFIG.getProducerBasketSize());
-    
+
     private SeataUtil seataUtil;
-    
+
     private final Object mergeLock = new Object();
-    
+
     private final int MAX_MERGE_SEND_MILLS = GlobalConfigCache.NETTY_CONFIG.getMaxMergeSendMills();
-    
+
     private boolean isSending = false;
-    
+
     private final ScheduledExecutorService timerExecutor = new ScheduledThreadPoolExecutor(1);
-    
+
     private ExecutorService mergeSendExecutorService;
-    
+
     public List<ProducerInterceptor> getProducerInterceptors() {
         return producerInterceptors;
     }
-    
+
     public void setProducerInterceptors(List<ProducerInterceptor> producerInterceptors) {
         this.producerInterceptors = producerInterceptors;
     }
-    
-    
+
+
     public RedisMQProducer(RedisMQClientUtil redisMQClientUtil, RemotingClient remotingClient) {
         this.redisMQClientUtil = redisMQClientUtil;
         if (GLOBAL_CONFIG.seataState) {
@@ -99,16 +83,15 @@ public class RedisMQProducer {
         }
         this.remotingClient = remotingClient;
     }
-    
+
     /**
      * 初始化
      */
-    @PostConstruct
     public void init() {
         mergeSendExecutorService = new ThreadPoolExecutor(1, 1, 60, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(1000));
         mergeSendExecutorService.submit(new MergedSendRunnable());
-        
+
         // 清理超时任务
         timerExecutor.scheduleAtFixedRate(() -> {
             for (Map.Entry<String, MessageFuture> entry : FUTURES.entrySet()) {
@@ -123,28 +106,27 @@ public class RedisMQProducer {
             }
         }, 5000, 5000, TimeUnit.MILLISECONDS);
     }
-    
-    @PreDestroy
+
     public void destroy() {
         timerExecutor.shutdown();
         mergeSendExecutorService.shutdown();
     }
-    
-    
+
+
     /**
      * 队列消息
      */
     public boolean sendMessage(Object obj, String queue, String key) {
         return sendMessage(obj, queue, "", key);
     }
-    
+
     /**
      * 队列消息
      */
     public boolean sendMessage(Object obj, String queue) {
         return sendMessage(obj, queue, "", "");
     }
-    
+
     /**
      * 队列消息
      */
@@ -160,24 +142,24 @@ public class RedisMQProducer {
         }
         return sendMessage(message);
     }
-    
+
     public boolean sendMessage(Message message) {
         Queue queue = hasQueue(message.getQueue());
         return sendSingleMessage(queue, message, null);
     }
-    
+
     public boolean sendDelayMessage(Message message, Long delayTime) {
         Queue queue = hasDelayQueue(message.getQueue());
         long executorTime = System.currentTimeMillis() + (delayTime);
         return sendSingleMessage(queue, message, executorTime);
     }
-    
+
     public boolean sendTimingMessage(Message message, Long executorTime) {
         Queue queue = hasDelayQueue(message.getQueue());
         return sendSingleMessage(queue, message, executorTime);
     }
-    
- 
+
+
     /**
      * 延迟消息
      */
@@ -189,7 +171,7 @@ public class RedisMQProducer {
         message.setKey(key);
         return sendDelayMessage(message, delayTime);
     }
-    
+
     /**
      * 发送定时消息
      */
@@ -201,12 +183,12 @@ public class RedisMQProducer {
         message.setKey(key);
         return sendTimingMessage(message, executorTime);
     }
-    
+
     /**
      * 单信息
      *
-     * @param queue        队列
-     * @param message      消息
+     * @param queue         队列
+     * @param message       消息
      * @param executorScope 执行时间
      * @return boolean
      */
@@ -217,7 +199,7 @@ public class RedisMQProducer {
         if (executorTime == null) {
             executorScope = increment;
         }
-        
+
         if (StringUtils.isBlank(message.getVirtualQueueName())) {
             long num;
             if (StringUtils.isNotBlank(message.getKey())) {
@@ -231,8 +213,8 @@ public class RedisMQProducer {
         }
         message.setOffset(increment);
         message.setExecuteScope(executorScope);
-        message.setExecuteTime(executorTime==null ? System.currentTimeMillis() : executorTime);
-        
+        message.setExecuteTime(executorTime == null ? System.currentTimeMillis() : executorTime);
+
         if (sendAfterCommit != null ? sendAfterCommit : GLOBAL_CONFIG.sendAfterCommit) {
             if (TransactionSynchronizationManager.isActualTransactionActive()) {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
@@ -244,17 +226,17 @@ public class RedisMQProducer {
             } else if (GLOBAL_CONFIG.seataState && RootContext.inGlobalTransaction()) {
                 seataUtil.registerHook(() -> {
                     sendOffMessage(message);
-                    
+
                 });
             } else {
                 return this.sendOffMessage(message);
             }
         } else {
-            return  this.sendOffMessage(message);
+            return this.sendOffMessage(message);
         }
         return true;
     }
-    
+
     /**
      * 做发送消息
      *
@@ -262,28 +244,28 @@ public class RedisMQProducer {
      */
     public boolean sendOffMessage(Message message) {
         message.setId(MsgIDGenerator.generateIdStr());
-        
+
         long timeoutMillis = PRODUCER_CONFIG.getSendMaxTimeout();
-        
+
         MessageFuture messageFuture = new MessageFuture();
         messageFuture.setMessage(message);
         messageFuture.setTimeout(timeoutMillis);
         FUTURES.put(message.getId(), messageFuture);
-        
+
         //队列满了的话阻塞等待
         try {
             basket.put(message);
         } catch (InterruptedException e) {
         }
-        
+
         if (!isSending) {
             synchronized (mergeLock) {
                 mergeLock.notifyAll();
             }
         }
-        
+
         //同步阻塞等待响应结果
-        
+
         try {
             Object result = messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
             if (result != null && result.equals(true)) {
@@ -298,7 +280,7 @@ public class RedisMQProducer {
             throw new RedisMqException("doSendMessage ", exx);
         }
     }
-    
+
     /**
      * 真实发送消息核心方法
      */
@@ -306,8 +288,8 @@ public class RedisMQProducer {
         //发送前操作
         List<Message> messages = mergedWarpMessage.getMessages();
         beforeSend(messages);
-        
-      
+
+
         try {
             // 如果是异步确认
             if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
@@ -322,16 +304,16 @@ public class RedisMQProducer {
                     remotingClient.sendBatchSync(messages, MessageType.CREATE_MESSAGE);
                 }
             }
-        }catch (Exception e){
-            if (PRODUCER_CONFIG.ignoreRpcError){
+        } catch (Exception e) {
+            if (PRODUCER_CONFIG.ignoreRpcError) {
                 log.error("remotingClient ignoreRpcError sendBatchSync ig error: ", e);
-            }else {
+            } else {
                 throw e;
             }
         }
         doSendMessage(mergedWarpMessage);
     }
-    
+
     private void afterSend(List<Message> messageList, Boolean success) {
         //发送完成回调
         if (success == null) {
@@ -344,15 +326,15 @@ public class RedisMQProducer {
             }
         }
     }
-    
+
     //底层发送redis消息
     private boolean doSendMessage(MergedWarpMessage mergedWarpMessage) {
         List<Message> messages = mergedWarpMessage.getMessages();
-        
+
         PushMessage pushMessage = mergedWarpMessage.getPushMessage();
         Queue queue = QueueManager.getQueueByVirtual(pushMessage.getQueue());
         Integer queueMaxSize = queue.getQueueMaxSize();
-        String lua ="local messageZsets = KEYS[1];\n" + "local queueSize = ARGV[1];\n" + "local size = 0; \n"
+        String lua = "local messageZsets = KEYS[1];\n" + "local queueSize = ARGV[1];\n" + "local size = 0; \n"
                 + "for messageZset in messageZsets:gmatch(\"([^,]+)\") do\n"
                 + "    size = redis.call('zcard', messageZset);\n"
                 + "    if size and tonumber(size) >= tonumber(queueSize) then\n" + "        return -1;\n" + "    end\n"
@@ -368,7 +350,7 @@ public class RedisMQProducer {
         list.add(queueGroups);
         list.add(pushMessage.getQueue() + ":body");
         Long size = -2L;
-        
+
         //第一个参数是发布订阅的消息
         List<Object> paramsList = new ArrayList<>();
         //队列最大值
@@ -382,7 +364,7 @@ public class RedisMQProducer {
             paramsList.add(param);
         }
         Object[] objects = paramsList.toArray();
-        
+
         int count = 0;
         boolean success = false;
         while (size == null || count < PRODUCER_CONFIG.producerRetryCount) {
@@ -404,18 +386,18 @@ public class RedisMQProducer {
                 break;
             }
         }
-        
+
         if (!success) {
             log.error("RedisMQ Producer Queue Full");
         }
-        
+
         // 如果是异步确认
         if (PRODUCER_CONFIG.getProductAck().equals(ProducerAck.ASYNC)) {
             for (Message message : messages) {
                 if (remotingClient != null) {
                     try {
-                    String messageId = message.getId();
-                    remotingClient.sendAsync(messageId, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
+                        String messageId = message.getId();
+                        remotingClient.sendAsync(messageId, success ? SEND_MESSAGE_SUCCESS : SEND_MESSAGE_FAIL);
                     } catch (Exception exx) {
                         boolean ignoreRpcError = PRODUCER_CONFIG.ignoreRpcError;
                         if (ignoreRpcError) {
@@ -444,13 +426,13 @@ public class RedisMQProducer {
             }
             setResults(messages, success ? true : new QueueFullException("RedisMQ Producer Queue Full"));
         }
-        
+
         // 发送后钩子函数
         afterSend(messages, success);
-        
+
         return success;
     }
-    
+
     /**
      * 设置发送结果
      *
@@ -464,7 +446,7 @@ public class RedisMQProducer {
             }
         }
     }
-    
+
     private Long increment(Queue queue) {
         String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queue.getQueueName();
         String lua = "local count = redis.call('incrBy',KEYS[1],1) " + "if tonumber(count) >= tonumber(ARGV[1]) then "
@@ -472,7 +454,7 @@ public class RedisMQProducer {
         Long num = redisMQClientUtil.executeLua(lua, Lists.newArrayList(queueOffset), System.currentTimeMillis());
         return num;
     }
-    
+
     /**
      * 发送成功后
      *
@@ -489,7 +471,7 @@ public class RedisMQProducer {
             }
         }
     }
-    
+
     /**
      * 监听失败
      *
@@ -507,7 +489,7 @@ public class RedisMQProducer {
             }
         }
     }
-    
+
     /**
      * 在发送之前
      *
@@ -524,15 +506,15 @@ public class RedisMQProducer {
             }
         }
     }
-    
+
     /*
      * redis的发布订阅  直接传递实际数据即可
      */
     public void publish(String topic, Object obj) {
         redisMQClientUtil.publish(topic, obj);
     }
-    
-    
+
+
     /**
      * 校验队列是否存在
      *
@@ -549,7 +531,7 @@ public class RedisMQProducer {
         }
         return queue;
     }
-    
+
     /**
      * 校验延迟队列
      *
@@ -566,7 +548,7 @@ public class RedisMQProducer {
         }
         return queue;
     }
-    
+
     /**
      * 试着取消消息
      */
@@ -577,10 +559,10 @@ public class RedisMQProducer {
         Boolean aBoolean = redisMQClientUtil.removeMessage(queueName, msgId);
         return aBoolean;
     }
-    
-    
+
+
     private class MergedSendRunnable implements Runnable {
-        
+
         @Override
         public void run() {
             while (true) {
@@ -590,11 +572,11 @@ public class RedisMQProducer {
                     } catch (InterruptedException e) {
                     }
                 }
-                
+
                 isSending = true;
-                
+
                 Map<String, MergedWarpMessage> map = new HashMap<>();
-                
+
                 while (!basket.isEmpty()) {
                     Message msg = basket.poll();
                     if (msg == null) {
@@ -609,7 +591,7 @@ public class RedisMQProducer {
                         break;
                     }
                 }
-                
+
                 map.forEach((queue, mergeMsg) -> {
                     try {
                         PushMessage pushMessage = new PushMessage();
@@ -638,8 +620,8 @@ public class RedisMQProducer {
             }
         }
     }
-    
-    
+
+
     public static int fnvHash(String data) {
         final int p = 16777619;
         int hash = (int) 2166136261L;
@@ -653,6 +635,6 @@ public class RedisMQProducer {
         hash += hash << 5;
         return Math.abs(hash);
     }
-    
-    
+
+
 }

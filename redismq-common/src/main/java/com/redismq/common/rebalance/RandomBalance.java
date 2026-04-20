@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * @date 2024/05/05
  */
 public class RandomBalance implements ServerSelectBalance {
-    
+
     @Override
     public <T> T select(List<T> invokers, String id) {
         int length = invokers.size();

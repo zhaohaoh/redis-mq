@@ -36,12 +36,12 @@ public class QueueRebalanceImpl {
             log.warn("rebalance get clients is empty");
             return;
         }
-       
+
         List<String> allQueues = QueueManager.getLocalQueues();
         for (String queue : allQueues) {
             //获取每个客户端各自维护的队列列表 获得存在订阅该队列的有效客户端
             List<String> clientIds = clients.stream().filter(c -> c.getQueues() != null && c.getQueues().contains(queue))
-                    .filter(a->a.getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
+                    .filter(a -> a.getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
                     .map(Client::getClientId)
                     .collect(Collectors.toList());
             List<String> virtualQueues = QueueManager.getLocalVirtualQueues(queue);
@@ -51,9 +51,9 @@ public class QueueRebalanceImpl {
         String vQueues = getCurrentVirtualQueues().entrySet().stream().map(a -> a.getKey() + ":" + a.getValue()).collect(Collectors.joining("\n"));
         log.info("RebalanceImpl rebalance GroupId:{} clientId:{} \n clients:{} \n VirtualQueues:\n{}",
                 GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),
-                clientId, clients,vQueues);
+                clientId, clients, vQueues);
     }
-    
+
     public static void main(String[] args) {
         AllocateMessageQueueStrategy allocateMessageQueueStrategy1 = new AllocateMessageQueueAveragely();
         List<String> allocate = allocateMessageQueueStrategy1.allocate("v2", Arrays.asList("mq"),

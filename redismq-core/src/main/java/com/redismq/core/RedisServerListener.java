@@ -16,21 +16,21 @@ import org.springframework.data.redis.connection.MessageListener;
  * 服务端监听
  */
 public class RedisServerListener implements MessageListener {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(RedisServerListener.class);
-    
+
     @Override
     public void onMessage(Message message, byte[] pattern) {
         String registerJson = message.toString();
         ServerRegisterInfo serverRegisterInfo = RedisMQStringMapper.toBean(registerJson, ServerRegisterInfo.class);
         Server server = new Server();
         server.setAddress(serverRegisterInfo.getAddress());
-        if (serverRegisterInfo.isRegister()){
+        if (serverRegisterInfo.isRegister()) {
             ServerManager.addLocalServer(server);
-        }else{
+        } else {
             ServerManager.removeLocalServer(server);
         }
-       
+
     }
-    
+
 }

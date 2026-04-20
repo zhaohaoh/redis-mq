@@ -1,18 +1,12 @@
 package com.redismq.queue;
 
 
-import com.redismq.common.pojo.Queue;
 import com.redismq.common.connection.RedisMQClientUtil;
+import com.redismq.common.pojo.Queue;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
@@ -22,39 +16,39 @@ import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
  * @Author: hzh
  * @Date: 2021/11/25 16:03
  */
- 
+
 public class QueueManager {
-    
+
     /**
      * 正在拉取消息的队列任务
      */
     public static final Set<String> INVOKE_VIRTUAL_QUEUES = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    
+
     //redis队列  用来决定是否能消息
     public static final Map<String, Queue> REDIS_QUEUES = new LinkedHashMap<>();
-    
+
     //本地队列   用来决定是否能消费消息
     private static final Map<String, Queue> LOCAL_QUEUES = new HashMap<>();
-    
+
     //redis虚拟队列
     private static final Map<String, List<String>> REDIS_VIRTUAL_QUEUES = new HashMap<>();
-    
+
     //本地虚拟队列
     private static final Map<String, List<String>> LOCAL_VIRTUAL_QUEUES = new HashMap<>();
-    
+
     //当前客户端的虚拟队列  key是真实队列  负载均衡后
     private static final Map<String, List<String>> CURRENT_VIRTUAL_QUEUES = new ConcurrentHashMap<>();
-    
+
     public static int VIRTUAL_QUEUES_NUM;
-    
+
     private static RedisMQClientUtil redisMQClientUtil;
-    
+
     @Autowired
     public void setRedisMQClientUtil(RedisMQClientUtil redisMQClientUtil) {
         QueueManager.redisMQClientUtil = redisMQClientUtil;
     }
-    
-    
+
+
     /**
      * 注册本地队列
      *
@@ -74,8 +68,8 @@ public class QueueManager {
         LOCAL_VIRTUAL_QUEUES.put(returnQueue.getQueueName(), arrayList);
         return returnQueue;
     }
-    
-    
+
+
     /**
      * 获取当地队列
      *
@@ -84,7 +78,7 @@ public class QueueManager {
     public static List<String> getLocalQueues() {
         return new ArrayList<>(LOCAL_QUEUES.keySet());
     }
-    
+
     /**
      * 获取当地队列
      *
@@ -93,11 +87,11 @@ public class QueueManager {
     public static Map<String, Queue> getLocalQueueMap() {
         return new HashMap<>(LOCAL_QUEUES);
     }
-    
+
     public static boolean hasSubscribe() {
         return CURRENT_VIRTUAL_QUEUES.size() > 0;
     }
-    
+
     /**
      * 获取虚拟队列
      *
@@ -107,7 +101,7 @@ public class QueueManager {
     public static List<String> getLocalVirtualQueues(String queue) {
         return LOCAL_VIRTUAL_QUEUES.get(queue);
     }
-    
+
     /**
      * 获取负载后当前虚拟队列
      *
@@ -116,7 +110,7 @@ public class QueueManager {
     public static Map<String, List<String>> getCurrentVirtualQueues() {
         return CURRENT_VIRTUAL_QUEUES;
     }
-    
+
     /**
      * put当前虚拟队列
      *
@@ -126,7 +120,7 @@ public class QueueManager {
     public static void putCurrentVirtualQueues(String queue, List<String> vQueues) {
         CURRENT_VIRTUAL_QUEUES.put(queue, vQueues);
     }
-    
+
     /**
      * 获取队列
      *
@@ -139,13 +133,13 @@ public class QueueManager {
             queue = REDIS_QUEUES.get(name);
         } else {
             queue = redisMQClientUtil.getQueue(name);
-            if (queue!=null){
+            if (queue != null) {
                 registerRedisQueue(queue);
             }
         }
         return queue;
     }
-    
+
     /**
      * 获取队列根据虚拟
      *
@@ -155,7 +149,7 @@ public class QueueManager {
     public static Queue getQueueByVirtual(String virtual) {
         return getQueue(StringUtils.substringBeforeLast(virtual, V_QUEUE_SPLITE));
     }
-    
+
     /**
      * 注册redis队列
      *

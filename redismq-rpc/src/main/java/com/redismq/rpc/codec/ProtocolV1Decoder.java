@@ -1,4 +1,3 @@
-
 package com.redismq.rpc.codec;
 
 import com.redismq.common.pojo.AddressInfo;
@@ -14,14 +13,14 @@ import org.slf4j.LoggerFactory;
 public class ProtocolV1Decoder extends LengthFieldBasedFrameDecoder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtocolV1Decoder.class);
-    
+
     public ProtocolV1Decoder() {
-      
-      this(64 * 1024 * 1024);
+
+        this(64 * 1024 * 1024);
     }
 
     public ProtocolV1Decoder(int maxFrameLength) {
-    
+
         /**
          * 1.偏移2位魔数，消息总长度从哪个偏移量开始算
          * 2.消息总长度4位
@@ -37,7 +36,7 @@ public class ProtocolV1Decoder extends LengthFieldBasedFrameDecoder {
         try {
             decoded = super.decode(ctx, in);
             if (decoded instanceof ByteBuf) {
-                ByteBuf frame = (ByteBuf)decoded;
+                ByteBuf frame = (ByteBuf) decoded;
                 try {
                     return decodeFrame(frame);
                 } finally {
@@ -59,33 +58,32 @@ public class ProtocolV1Decoder extends LengthFieldBasedFrameDecoder {
 //            throw new IllegalArgumentException("Unknown magic code: " + b0 + ", " + b1);
 //        }
 
-    
 
         int fullLength = frame.readInt();
         int msgType = frame.readInt();
         int msgIdLength = frame.readInt();
         int addressLength = frame.readInt();
         int bodyLength = frame.readInt();
-    
+
         byte[] msgIdB = new byte[msgIdLength];
         frame.readBytes(msgIdB);
         String msgIdStr = new String(msgIdB);
-        
+
         byte[] bs1 = new byte[addressLength];
         frame.readBytes(bs1);
         String addressStr = new String(bs1);
-    
+
         byte[] bs = new byte[bodyLength];
         frame.readBytes(bs);
         String bodyStr = new String(bs);
-    
+
         AddressInfo addressInfo = RedisMQStringMapper.toBean(addressStr, AddressInfo.class);
         RemoteMessage rpcMessage = new RemoteMessage();
         rpcMessage.setAddressInfo(addressInfo);
         rpcMessage.setId(msgIdStr);
         rpcMessage.setBody(bodyStr);
         rpcMessage.setMessageType(msgType);
-        
+
         return rpcMessage;
     }
 }

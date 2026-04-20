@@ -7,7 +7,6 @@ import com.redismq.common.pojo.AddressInfo;
 import com.redismq.common.pojo.MergedRemoteMessage;
 import com.redismq.common.pojo.RemoteMessage;
 import com.redismq.common.pojo.RemoteMessageFuture;
-import com.redismq.common.pojo.Server;
 import com.redismq.common.rebalance.RandomBalance;
 import com.redismq.common.rebalance.ServerSelectBalance;
 import com.redismq.common.util.NetUtil;
@@ -21,60 +20,48 @@ import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.CollectionUtils;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 import static com.redismq.rpc.cache.RpcGlobalCache.REMOTE_FUTURES;
 
 @Slf4j
 public class AbstractNettyRemoting implements RemotingClient {
-    
+
     public static final Object LOCK = new Object();
-    
+
     protected final Object mergeLock = new Object();
-    
+
     protected final int MAX_MERGE_SEND_MILLS = GlobalConfigCache.NETTY_CONFIG.getMaxMergeSendMills();
-    
+
     protected boolean isSending = false;
-    
+
     protected final ConcurrentHashMap<String/*serverAddress*/, BlockingQueue<RemoteMessage>> basketMap = new ConcurrentHashMap<>();
-    
+
     protected NettyClientChannelManager nettyClientChannelManager;
-    
+
     protected final ServerSelectBalance selectBalance = new RandomBalance();
-    
+
     private final ScheduledExecutorService timerExecutor = new ScheduledThreadPoolExecutor(1);
-    
+
     private ExecutorService mergeSendExecutorService;
-    
-    
+
+
     public AbstractNettyRemoting(NettyClientChannelManager nettyClientChannelManager) {
         this.nettyClientChannelManager = nettyClientChannelManager;
     }
-    
+
     /**
      * 初始化
      */
-    @PostConstruct
     public void init() {
         mergeSendExecutorService = new ThreadPoolExecutor(1, 1, 60, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(1000));
         mergeSendExecutorService.submit(new MergedSendRunnable());
-        
+
         // 清理超时任务
         timerExecutor.scheduleAtFixedRate(() -> {
             for (Map.Entry<String, RemoteMessageFuture> entry : REMOTE_FUTURES.entrySet()) {
@@ -89,14 +76,13 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }, 5000, 5000, TimeUnit.MILLISECONDS);
     }
-    
-    @PreDestroy
+
     public void destroy() {
         timerExecutor.shutdown();
         mergeSendExecutorService.shutdown();
     }
-    
-    
+
+
     /**
      * 发送同步消息
      */
@@ -104,23 +90,23 @@ public class AbstractNettyRemoting implements RemotingClient {
     public Object sendSync(Object msg, int messageType) {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
                 .isEmpty(ServerManager.getLocalAvailServers())) {
-            log.warn("redismq-server not found  no sendSync msg:{}",msg);
+            log.warn("redismq-server not found  no sendSync msg:{}", msg);
             return null;
         }
-        
+
         String serverAddress = ServerUtil.loadBalance(null, msg);
-        
+
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
-        
+
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
-        
+
         RemoteMessage remoteMessage = RpcMessageUtil.buildRequestMessage(msg, addressInfo, messageType);
         RemoteMessageFuture messageFuture = new RemoteMessageFuture();
         messageFuture.setRequestMessage(remoteMessage);
         messageFuture.setTimeout(timeoutMillis);
         REMOTE_FUTURES.put(remoteMessage.getId(), messageFuture);
-        
+
         // put message into basketMap
         BlockingQueue<RemoteMessage> basket = basketMap
                 .computeIfAbsent(serverAddress, key -> new LinkedBlockingQueue<>());
@@ -138,7 +124,7 @@ public class AbstractNettyRemoting implements RemotingClient {
                 mergeLock.notifyAll();
             }
         }
-        
+
         //同步阻塞等待响应结果
         try {
             return messageFuture.get(timeoutMillis, TimeUnit.MILLISECONDS);
@@ -152,28 +138,28 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }
     }
-    
-    
+
+
     @Override
     public void sendAsync(Object msg, int messageType) {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isHealth() && CollectionUtils
                 .isEmpty(ServerManager.getLocalAvailServers())) {
             return;
         }
-        
+
         String serverAddress = ServerUtil.loadBalance(null, msg);
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
-        
+
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
-        
+
         RemoteMessage remoteMessage = RpcMessageUtil.buildRequestMessage(msg, addressInfo, messageType);
         //异步发送暂时不用给结果
         //        RemoteMessageFuture messageFuture = new RemoteMessageFuture();
         //        messageFuture.setRequestMessage(remoteMessage);
         //        messageFuture.setTimeout(timeoutMillis);
         //        REMOTE_FUTURES.put(remoteMessage.getId(), messageFuture);
-        
+
         // put message into basketMap
         BlockingQueue<RemoteMessage> basket = basketMap
                 .computeIfAbsent(serverAddress, key -> new LinkedBlockingQueue<>());
@@ -194,8 +180,8 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }
     }
-    
-    
+
+
     private ChannelFuture doSendAsync(String serverAddress, RemoteMessage remoteMessage) {
         Channel channel = nettyClientChannelManager.acquireChannel(serverAddress);
         //提前校验消息是否可写 否则可能会导致内存溢出或者消息丢失
@@ -203,7 +189,7 @@ public class AbstractNettyRemoting implements RemotingClient {
         // 异步消费完成才算消费成功
         return channel.writeAndFlush(remoteMessage);
     }
-    
+
     /**
      * 发送异步消息
      */
@@ -230,7 +216,7 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         });
     }
-    
+
     /**
      * 发送同步消息
      */
@@ -244,34 +230,34 @@ public class AbstractNettyRemoting implements RemotingClient {
         long timeoutMillis = GlobalConfigCache.NETTY_CONFIG.getRpcRequestTimeout();
         AddressInfo addressInfo = new AddressInfo();
         addressInfo.setSourceAddress(serverAddress);
-        
+
         List<RemoteMessage> remoteMessages = msg.stream()
                 .map(o -> RpcMessageUtil.buildRequestMessage(o, addressInfo, messageType)).collect(Collectors.toList());
-        
+
         BlockingQueue<RemoteMessage> basket = basketMap
                 .computeIfAbsent(serverAddress, key -> new LinkedBlockingQueue<>());
-        
+
         List<RemoteMessageFuture> remoteMessageFutures = new ArrayList<>();
         for (RemoteMessage message : remoteMessages) {
             RemoteMessageFuture future = new RemoteMessageFuture();
             future.setRequestMessage(message);
             future.setTimeout(timeoutMillis);
             remoteMessageFutures.add(future);
-            
+
             REMOTE_FUTURES.put(message.getId(), future);
             if (!basket.offer(message)) {
                 log.error("put message into basketMap offer failed, serverAddress:{},remoteMessage:{}", serverAddress,
                         message);
             }
         }
-        
+
         //唤醒异步合并发送线程
         if (!isSending) {
             synchronized (mergeLock) {
                 mergeLock.notifyAll();
             }
         }
-        
+
         //同步阻塞等待响应结果
         try {
             for (RemoteMessageFuture remoteMessageFuture : remoteMessageFutures) {
@@ -292,8 +278,8 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }
     }
-    
-    
+
+
     protected void channelWritableCheck(Channel channel, Object msg) {
         int tryTimes = 0;
         synchronized (LOCK) {
@@ -311,9 +297,9 @@ public class AbstractNettyRemoting implements RemotingClient {
             }
         }
     }
-    
+
     private class MergedSendRunnable implements Runnable {
-        
+
         @Override
         public void run() {
             while (true) {
@@ -328,7 +314,7 @@ public class AbstractNettyRemoting implements RemotingClient {
                     if (basket.isEmpty()) {
                         return;
                     }
-                    
+
                     MergedRemoteMessage mergeMessage = new MergedRemoteMessage();
                     try {
                         while (!basket.isEmpty()) {
@@ -336,7 +322,7 @@ public class AbstractNettyRemoting implements RemotingClient {
                             List<RemoteMessage> messages = mergeMessage.getMessages();
                             messages.add(msg);
                         }
-                        
+
                         sendBatchAsync(address, mergeMessage);
                     } catch (Exception e) {
                         log.error("client merge message rpc call failed: {}", e.getMessage(), e);

@@ -30,7 +30,7 @@ import java.util.Set;
 @ConditionalOnProperty(value = "spring.redismq.netty-config.client.enable", havingValue = "true")
 @AutoConfigureAfter(RedisMQAutoConfiguration.class)
 public class NettyClientAutoConfigration implements CommandLineRunner {
-    
+
     /**
      * netty客户端引导程序
      */
@@ -39,7 +39,7 @@ public class NettyClientAutoConfigration implements CommandLineRunner {
         NettyConfig nettyConfig = GlobalConfigCache.NETTY_CONFIG;
         return new NettyClientBootstrap(channelHandlers, nettyConfig);
     }
-    
+
     /**
      * netty通道管理器
      */
@@ -49,7 +49,7 @@ public class NettyClientAutoConfigration implements CommandLineRunner {
         NettyClientChannelManager nettyClientChannelManager = new NettyClientChannelManager(nettyPoolableFactory);
         return nettyClientChannelManager;
     }
-    
+
     /**
      * 客户端处理程序
      */
@@ -57,17 +57,16 @@ public class NettyClientAutoConfigration implements CommandLineRunner {
     public ChannelHandler clientHandler(NettyClientChannelManager nettyClientChannelManager) {
         return new ClientHandler(nettyClientChannelManager);
     }
-    
+
     /**
      * RPC通信客户端
      */
-    @Bean
-    public RemotingClient remotingClient(NettyClientChannelManager nettyClientChannelManager) {
+    @Bean(initMethod = "init", destroyMethod = "destroy")
+    public NettyRemotingClient remotingClient(NettyClientChannelManager nettyClientChannelManager) {
         return new NettyRemotingClient(nettyClientChannelManager);
     }
-    
- 
-    
+
+
     @Override
     public void run(String... args) throws Exception {
         if (!GlobalConfigCache.NETTY_CONFIG.getClient().isEnable()) {

@@ -12,9 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
-import static com.redismq.common.constant.StateConstant.PAUSE;
-import static com.redismq.common.constant.StateConstant.RUNNING;
-import static com.redismq.common.constant.StateConstant.STOP;
+import static com.redismq.common.constant.StateConstant.*;
 
 /**
  * 容器抽象类
@@ -75,9 +73,8 @@ public abstract class AbstractMessageListenerContainer {
      * 状态描述
      */
     protected volatile int state = RUNNING;
-    
 
-    
+
     /**
      * 延时任务管理器
      */
@@ -91,8 +88,8 @@ public abstract class AbstractMessageListenerContainer {
         this.redisListenerEndpointMap = redisListenerEndpointMap;
     }
 
-    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,List<ConsumeInterceptor> consumeInterceptorList
-     ) {
+    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue, List<ConsumeInterceptor> consumeInterceptorList
+    ) {
         this.queueName = queue.getQueueName();
         this.redisMQClientUtil = redisMQClientUtil;
         this.concurrency = queue.getConcurrency();
@@ -101,19 +98,20 @@ public abstract class AbstractMessageListenerContainer {
         this.retryMax = queue.getRetryMax();
         this.ackMode = queue.getAckMode();
         this.retryInterval = queue.getRetryInterval();
-        this.consumeInterceptorList =  consumeInterceptorList;
+        this.consumeInterceptorList = consumeInterceptorList;
     }
 
     /**
      * 当前容器暂停拉取消息
      */
     public int pause() {
-        if (state!=PAUSE){
+        if (state != PAUSE) {
             state = PAUSE;
         }
         delayTimeoutTaskManager.stop();
         return PAUSE;
     }
+
     /**
      * 当前容器是否暂停了
      */
@@ -122,6 +120,7 @@ public abstract class AbstractMessageListenerContainer {
     }
 
     public abstract void repush();
+
     /**
      * 当前容器是否停止了
      */
@@ -145,7 +144,7 @@ public abstract class AbstractMessageListenerContainer {
     protected RedisListenerCallable getRedisListenerCallable(String id, Object message) {
         RedisListenerEndpoint redisListenerEndpoint = redisListenerEndpointMap.get(id);
         if (redisListenerEndpoint == null) {
-           return null;
+            return null;
         }
         RedisListenerCallable runnable = new RedisListenerCallable(redisListenerEndpoint.getBean(), redisListenerEndpoint.getMethod(),
                 this.getRetryMax(),
@@ -161,10 +160,10 @@ public abstract class AbstractMessageListenerContainer {
     protected String getRunableKey(String tag) {
         return queueName + SPLITE + tag;
     }
-    
+
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     public void unLockQueue(String virtualQueueLock) {
         redisMQClientUtil.unlock(virtualQueueLock);
     }
-    
+
 }

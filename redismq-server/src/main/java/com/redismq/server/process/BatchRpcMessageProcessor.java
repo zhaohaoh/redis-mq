@@ -30,7 +30,7 @@ import static com.redismq.rpc.proccess.RemoteServerProccessManager.PROCESSOR_TAB
 @Component
 @Slf4j
 public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
-    
+
     @Override
     public boolean doProcess(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
         RemoteMessage remoteMessage = messages.get(0);
@@ -39,14 +39,14 @@ public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
         Map<Integer, List<RemoteMessage>> typeMap = mergedRemoteMessage.getMessages().stream()
                 .collect(Collectors.groupingBy(RemoteMessage::getMessageType));
         Collection<List<RemoteMessage>> values = typeMap.values();
-        
+
         for (List<RemoteMessage> value : values) {
             Integer messageType = value.get(0).getMessageType();
             Pair<RemoteMessageProcessor, ExecutorService> servicePair = PROCESSOR_TABLE.get(messageType);
             ExecutorService executorService = servicePair.getValue();
             if (executorService != null) {
                 try {
-                     executorService.submit(() -> {
+                    executorService.submit(() -> {
                         try {
                             servicePair.getKey().process(ctx, value);
                         } catch (Throwable th) {
@@ -63,10 +63,10 @@ public class BatchRpcMessageProcessor extends AbstractMessageProcessor {
                 key.process(ctx, value); // 这里只处理第一个，因为批量消息都是同一个请求
             }
         }
-         return true;
+        return true;
     }
-   
-    
+
+
     @Override
     public Integer getType() {
         return MessageType.BATCH_MESSAGE;

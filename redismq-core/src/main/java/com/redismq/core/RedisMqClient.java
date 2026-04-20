@@ -32,10 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
-import static com.redismq.common.constant.GlobalConstant.CLIENT_EXPIRE;
-import static com.redismq.common.constant.GlobalConstant.CLIENT_RABALANCE_TIME;
-import static com.redismq.common.constant.GlobalConstant.CLIENT_REGISTER_TIME;
-import static com.redismq.common.constant.GlobalConstant.SPLITE;
+import static com.redismq.common.constant.GlobalConstant.*;
 import static com.redismq.common.constant.RedisMQConstant.getRebalanceLock;
 import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
 
@@ -45,14 +42,14 @@ import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
  * @Date: 2022/11/4 16:44 RedisMQ客户端  实现负载均衡
  */
 public class RedisMqClient implements DisposableBean {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(RedisMqClient.class);
-    
+
     /**
      * 注册线程客户端维持心跳线程
      */
     private final ScheduledThreadPoolExecutor registerThread = new ScheduledThreadPoolExecutor(1);
-    
+
     /**
      * 负载均衡心跳线程
      */
@@ -67,12 +64,12 @@ public class RedisMqClient implements DisposableBean {
      * 容器管理者
      */
     private final RedisListenerContainerManager redisListenerContainerManager;
-    
+
     /**
      * redisClient客户端 可以是jedis luccute 和spring
      */
     private final RedisMQClientUtil redisMQStoreUtil;
-    
+
     /**
      * 客户端id
      */
@@ -85,7 +82,7 @@ public class RedisMqClient implements DisposableBean {
      * 机器id
      */
     private Integer workId;
-    
+
     /**
      * 负载均衡机制
      */
@@ -94,18 +91,19 @@ public class RedisMqClient implements DisposableBean {
      * 工作id生成器
      */
     private final WorkIdGenerator workIdGenerator;
-    
+
     /**
      * 容器
      */
     private RedisMessageListenerContainer redisMessageListenerContainer;
-    
+
     /**
      * 是否订阅消息
      */
     private boolean isSub;
+
     public RedisMqClient(RedisMQClientUtil redisMQStoreUtil, RedisListenerContainerManager redisListenerContainerManager,
-            QueueRebalanceImpl rebalance,String applicationName,WorkIdGenerator workIdGenerator) {
+                         QueueRebalanceImpl rebalance, String applicationName, WorkIdGenerator workIdGenerator) {
         this.redisMQStoreUtil = redisMQStoreUtil;
         this.clientId = ClientConfig.getLocalAddress() + SPLITE + NanoIdUtils.randomNanoId();
         this.redisListenerContainerManager = redisListenerContainerManager;
@@ -113,26 +111,26 @@ public class RedisMqClient implements DisposableBean {
         this.applicationName = applicationName;
         this.workIdGenerator = workIdGenerator;
     }
-    
+
     public void setRedisMessageListenerContainer(RedisMessageListenerContainer redisMessageListenerContainer) {
         this.redisMessageListenerContainer = redisMessageListenerContainer;
     }
-    
+
     public String getClientId() {
         return clientId;
     }
-    
+
     public RedisListenerContainerManager getRedisListenerContainerManager() {
         return redisListenerContainerManager;
     }
-    
-    
+
+
     public void registerClient() {
-        if (workId == null){
+        if (workId == null) {
             workId = workIdGenerator.getSnowId();
             List<Client> clients = redisMQStoreUtil.getGroupClients();
             List<Integer> workIds = clients.stream().map(Client::getWorkId).collect(Collectors.toList());
-            while (workIds.contains(workId)){
+            while (workIds.contains(workId)) {
                 log.error("redis-mq registerClient workId duplicate");
                 try {
                     Thread.sleep(1000L);
@@ -143,8 +141,8 @@ public class RedisMqClient implements DisposableBean {
             }
             MsgIDGenerator.init(workId);
         }
-       
-        log.debug("registerClient :{} applicationName:{} workId:{}", clientId, applicationName,workId);
+
+        log.debug("registerClient :{} applicationName:{} workId:{}", clientId, applicationName, workId);
         Client client = new Client();
         client.setClientId(clientId);
         client.setApplicationName(applicationName);
@@ -154,26 +152,28 @@ public class RedisMqClient implements DisposableBean {
         //注册客户端
         redisMQStoreUtil.registerClient(client);
     }
-    
-    public void registerGroup(){
+
+    public void registerGroup() {
         redisMQStoreUtil.registerGroup();
-    };
-    
+    }
+
+    ;
+
     public List<Client> allClient() {
         return redisMQStoreUtil.getGroupClients();
     }
-    
+
     public Long removeExpireClients() {
         // 过期的客户端
         long max = System.currentTimeMillis() - CLIENT_EXPIRE * 1000L;
         return redisMQStoreUtil.removeClient(0, max);
     }
-    
+
     public Long removeAllClient() {
         log.info("redismq removeAllClient");
         return redisMQStoreUtil.removeClient(0, Double.MAX_VALUE);
     }
-    
+
     public void destory() {
         Client client = new Client();
         client.setClientId(clientId);
@@ -186,11 +186,11 @@ public class RedisMqClient implements DisposableBean {
         publishRebalance();
         log.info("redismq client remove currentVirtualQueues:{} ", QueueManager.getCurrentVirtualQueues());
     }
-    
+
     public void start() {
         //移除失效客户端
         removeExpireClients();
-        
+
         // 清理所有客户端
         removeAllClient();
         // 注册group
@@ -205,21 +205,21 @@ public class RedisMqClient implements DisposableBean {
         startRegisterClientTask();
         // 20秒自动重平衡
         startRebalanceTask();
-        
+
         //启动队列监控
         redisListenerContainerManager.startRedisListener();
         //启动延时队列监控
         redisListenerContainerManager.startDelayRedisListener();
         // 启动成功
-        log.info("RedisMQ Start Success  \nGroupId:{} \nQueues:{}",GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),QueueManager.getLocalQueues());
+        log.info("RedisMQ Start Success  \nGroupId:{} \nQueues:{}", GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), QueueManager.getLocalQueues());
     }
-    
+
     private void serverSubscribe() {
         redisMessageListenerContainer.addMessageListener(new RedisServerListener(),
                 new ChannelTopic(RedisMQConstant.getServerTopic()));
     }
-    
-    
+
+
     // 多个服务应该只有一个执行重平衡
     public void rebalanceTask() {
         String lockKey = getRebalanceLock();
@@ -235,7 +235,7 @@ public class RedisMqClient implements DisposableBean {
             }
         }
     }
-    
+
     /**
      * 平衡
      */
@@ -245,8 +245,8 @@ public class RedisMqClient implements DisposableBean {
         // 在执行重平衡.当前服务暂停重新分配拉取消息 放到注册客户端中
         doRebalance();
     }
-    
-    
+
+
     /**
      * 暂停消息分配.重新负载均衡后.重新拉取消息
      */
@@ -263,28 +263,28 @@ public class RedisMqClient implements DisposableBean {
         rebalance.rebalance(allClient(), clientId);
         repush();
     }
-    
+
     private void publishRebalance() {
         redisMQStoreUtil.publishRebalance(clientId);
     }
-    
-    
+
+
     /**
      * 重平衡时对任务重新进行拉取
      */
     public void repush() {
         Map<String, List<String>> queues = QueueManager.getCurrentVirtualQueues();
         boolean isEmpty = queues.values().stream().allMatch(CollectionUtils::isEmpty);
-        
+
         //没有监听的队列取消订阅
         if (isEmpty) {
             unSubscribe();
             return;
         }
-        
+
         //监听队列消息的订阅
         subscribe();
-        
+
         //此操作 On2 如果有几千个虚拟队列的话。那么最少也要有几百个Queue 这里性能不会慢。但是另一边监听到会去redis中获取。线程数不多可能会阻塞
         queues.forEach((k, v) -> {
             Queue queue = QueueManager.getQueue(k);
@@ -302,13 +302,13 @@ public class RedisMqClient implements DisposableBean {
             RedisMQListenerContainer redisistenerContainer = redisListenerContainerManager
                     .getRedisistenerContainer(k);
             redisistenerContainer.pause();
-        
+
             //获取虚拟队列重新推送到阻塞队列
             virtualQueues.forEach(vq -> {
                 PushMessage pushMessage = new PushMessage();
                 pushMessage.setQueue(vq);
                 pushMessage.setTimestamp(System.currentTimeMillis());
-                
+
                 //推送到指定的队列
                 LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisListenerContainerManager
                         .getDelayBlockingQueue();
@@ -322,7 +322,7 @@ public class RedisMqClient implements DisposableBean {
             });
         });
     }
-    
+
     /**
      * 监听队列消息的订阅
      */
@@ -334,7 +334,7 @@ public class RedisMqClient implements DisposableBean {
             isSub = true;
         }
     }
-    
+
     /**
      * 取消监听队列消息的订阅
      */
@@ -346,7 +346,7 @@ public class RedisMqClient implements DisposableBean {
             isSub = false;
         }
     }
-    
+
     /**
      * 负载均衡订阅
      */
@@ -355,7 +355,7 @@ public class RedisMqClient implements DisposableBean {
         redisMessageListenerContainer.addMessageListener(new RedisRebalanceListener(redisMqClient),
                 new ChannelTopic(RedisMQConstant.getRebalanceTopic(GlobalConfigCache.CONSUMER_CONFIG.getGroupId())));
     }
-    
+
     /**
      * 开始注册客户任务   心跳任务
      */
@@ -363,7 +363,7 @@ public class RedisMqClient implements DisposableBean {
         registerThread.scheduleAtFixedRate(this::registerClient, CLIENT_REGISTER_TIME, CLIENT_REGISTER_TIME,
                 TimeUnit.SECONDS);
     }
-    
+
     /**
      * 开始负载均衡任务
      */
@@ -371,7 +371,7 @@ public class RedisMqClient implements DisposableBean {
         rebalanceThread.scheduleAtFixedRate(this::rebalanceTask, CLIENT_RABALANCE_TIME, CLIENT_RABALANCE_TIME,
                 TimeUnit.SECONDS);
     }
-    
+
     /**
      * 队列寄存器
      *
@@ -386,7 +386,7 @@ public class RedisMqClient implements DisposableBean {
         redisMQStoreUtil.registerQueueGroup(queue.getQueueName());
         return queue;
     }
-    
+
     /**
      * 获取所有队列
      *

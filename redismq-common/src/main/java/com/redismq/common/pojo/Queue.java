@@ -14,7 +14,7 @@ public class Queue {
     }
 
     public Queue(String queueName) {
-        this.queueName=queueName;
+        this.queueName = queueName;
         this.queueMaxSize = GlobalConfigCache.GLOBAL_CONFIG.getQueueMaxSize();
     }
 

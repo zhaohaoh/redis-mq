@@ -4,11 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.*;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
@@ -30,8 +26,9 @@ import java.util.Map;
  */
 public class RedisMQStringMapper {
     // 定义jackson对象
-    
+
     public static final ObjectMapper STRING_MAPPER = new ObjectMapper();
+
     static {
         //在解析json的时候忽略字段名字不对应的会报错的情况  如usernamexxx字段映射到User实体类
         STRING_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -43,17 +40,17 @@ public class RedisMQStringMapper {
         STRING_MAPPER.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // 指定要序列化的域，field,get和set,以及修饰符范围，ANY是都有包括private和public
         SimpleModule simpleModule = new SimpleModule();
-        simpleModule.addSerializer(Message.class,new MessageSerializer(Message.class));
-        simpleModule.addDeserializer(Message.class,new MessageDeserializer(Message.class));
+        simpleModule.addSerializer(Message.class, new MessageSerializer(Message.class));
+        simpleModule.addDeserializer(Message.class, new MessageDeserializer(Message.class));
         simpleModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         simpleModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         simpleModule.addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         simpleModule.addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
-  
+
         STRING_MAPPER.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         STRING_MAPPER.registerModule(simpleModule);
     }
-    
+
 //    public static void main(String[] args) {
 //        ConcurrentMap<Object, Object> objectObjectConcurrentMap = Maps.newConcurrentMap();
 //        objectObjectConcurrentMap.put("a","b");
@@ -76,8 +73,8 @@ public class RedisMQStringMapper {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
-    
-    public static <T,K,V> List<T> mapsToBeans(List<Map<K,V>> source, Class<T> targetType) {
+
+    public static <T, K, V> List<T> mapsToBeans(List<Map<K, V>> source, Class<T> targetType) {
         try {
             String json = toJsonStr(source);
             List<T> ts = toList(json, targetType);
@@ -89,8 +86,8 @@ public class RedisMQStringMapper {
 
     // 将对象转换成json字符串
     public static String toJsonStr(Object obj) {
-        if (obj instanceof String){
-            return (String)obj;
+        if (obj instanceof String) {
+            return (String) obj;
         }
         try {
             return STRING_MAPPER.writeValueAsString(obj);
@@ -101,8 +98,8 @@ public class RedisMQStringMapper {
 
     // 将json数据转换成pojo对象
     public static <T> T toBean(String json, Class<T> beanType) {
-        if (beanType.equals(String.class)){
-            return (T)json;
+        if (beanType.equals(String.class)) {
+            return (T) json;
         }
         try {
             T t = STRING_MAPPER.readValue(json, beanType);
@@ -111,6 +108,7 @@ public class RedisMQStringMapper {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
+
     public static <T> T toBean(byte[] bytes, Class<T> beanType) {
         try {
             T t = STRING_MAPPER.readValue(bytes, beanType);

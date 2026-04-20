@@ -39,50 +39,50 @@ import java.nio.charset.StandardCharsets;
  * @since 0.7.0
  */
 public class ProtocolV1Encoder extends MessageToByteEncoder {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ProtocolV1Encoder.class);
-    
+
     @Override
     public void encode(ChannelHandlerContext ctx, Object msg, ByteBuf out) {
         try {
             if (msg instanceof RemoteMessage) {
                 RemoteMessage rpcMessage = (RemoteMessage) msg;
-                
+
                 int fullLength;
                 int msgIdLength;
                 int addressLength;
                 int bodyLength;
-                
+
                 AddressInfo addressInfo = rpcMessage.getAddressInfo();
                 String str = RedisMQStringMapper.toJsonStr(addressInfo);
                 byte[] address = str.getBytes(StandardCharsets.UTF_8);
-                
-                addressLength=address.length;
+
+                addressLength = address.length;
                 byte[] idBytes = rpcMessage.getId().getBytes(StandardCharsets.UTF_8);
                 msgIdLength = idBytes.length;
-                
+
                 String body = rpcMessage.getBody();
-                byte[]  bodyBytes = body.getBytes(StandardCharsets.UTF_8);
-                bodyLength=bodyBytes.length;
-                
+                byte[] bodyBytes = body.getBytes(StandardCharsets.UTF_8);
+                bodyLength = bodyBytes.length;
+
                 int messageType = rpcMessage.getMessageType();
-                out.writeBytes(new byte[] {(byte) 0xda, (byte) 0xda});
+                out.writeBytes(new byte[]{(byte) 0xda, (byte) 0xda});
                 out.writerIndex(out.writerIndex() + 4);
                 // full Length(4B) and head length(2B) will fix in the end. 
-               
+
                 out.writeInt(messageType);
                 out.writeInt(msgIdLength);
                 out.writeInt(addressLength);
                 out.writeInt(bodyLength);
                 out.writeBytes(idBytes);
                 out.writeBytes(address);
-                
-                
+
+
                 //魔数 + 4位长度 + 4位消息类型 +4位消息id长度+4位地址长度+4位消息体长度 + 消息id长度 + 消息地址长度 + 消息体长度
                 fullLength = 2 + 4 + 4 + 4 + 4 + 4 + msgIdLength + addressLength + bodyLength;
-                
+
                 out.writeBytes(bodyBytes);
-    
+
                 //当前写入位置
                 int writeIndex = out.writerIndex();
                 //回到开始的第二个位置
@@ -91,7 +91,7 @@ public class ProtocolV1Encoder extends MessageToByteEncoder {
                 out.writeInt(fullLength);
                 //回到最后位置
                 out.writerIndex(writeIndex);
-        
+
             } else {
                 throw new UnsupportedOperationException("Not support this class:" + msg.getClass());
             }

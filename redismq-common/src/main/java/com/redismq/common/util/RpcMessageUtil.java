@@ -17,7 +17,7 @@ public class RpcMessageUtil {
         return rpcMessage;
     }
 
-    public static RemoteMessage buildResponseMessage(String id,Object responseMsg ,Integer messageType) {
+    public static RemoteMessage buildResponseMessage(String id, Object responseMsg, Integer messageType) {
         RemoteMessage rpcMessage = new RemoteMessage();
         rpcMessage.setMessageType(messageType);
         rpcMessage.setBody(RedisMQStringMapper.toJsonStr(responseMsg));

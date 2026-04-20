@@ -67,22 +67,22 @@ public class RedisMQTemplate {
      * 带tag的队列消息
      */
     public boolean sendMessage(Object obj, String queue, String tag) {
-        return redisMQProducer.sendMessage(obj, queue, tag,"");
+        return redisMQProducer.sendMessage(obj, queue, tag, "");
     }
-    
+
     /**
      * 带tag和key的队列消息
      */
-    public boolean sendMessage(Object obj, String queue, String tag,String key) {
-        return redisMQProducer.sendMessage(obj, queue, tag,key);
+    public boolean sendMessage(Object obj, String queue, String tag, String key) {
+        return redisMQProducer.sendMessage(obj, queue, tag, key);
     }
-  
+
     /**
      * 带tag的队列延迟消息
      */
     public boolean sendDelayMessage(Object obj, String queue, String tag, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, queue, tag,"", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag, "", millis);
     }
 
     /**
@@ -90,7 +90,7 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, Long delayTime, TimeUnit timeUnit) {
         long millis = timeUnit.toMillis(delayTime);
-        return redisMQProducer.sendDelayMessage(obj, queue, "","", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "", "", millis);
     }
 
     /**
@@ -98,7 +98,7 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, String tag, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, queue, tag,"", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, tag, "", millis);
     }
 
     /**
@@ -106,20 +106,20 @@ public class RedisMQTemplate {
      */
     public boolean sendDelayMessage(Object obj, String queue, Duration duration) {
         long millis = duration.toMillis();
-        return redisMQProducer.sendDelayMessage(obj, queue, "","", millis);
+        return redisMQProducer.sendDelayMessage(obj, queue, "", "", millis);
     }
 
     /**
      * 定时消息
      */
     public boolean sendTimingMessage(Object obj, String queue, String tag, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, queue, tag,"", executorTime);
+        return redisMQProducer.sendTimingMessage(obj, queue, tag, "", executorTime);
     }
 
     public boolean sendTimingMessage(Object obj, String queue, Long executorTime) {
-        return redisMQProducer.sendTimingMessage(obj, queue, "","", executorTime);
+        return redisMQProducer.sendTimingMessage(obj, queue, "", "", executorTime);
     }
-   
+
 
     /*
      * redis的发布订阅  直接传递实际数据即可
@@ -131,7 +131,7 @@ public class RedisMQTemplate {
     /*
      * 尝试取消删除消息-注意消息有可能已经被消费
      */
-    public void tryCancel(String queueName,String msgId) {
-        redisMQProducer.tryCancel(queueName,msgId);
+    public void tryCancel(String queueName, String msgId) {
+        redisMQProducer.tryCancel(queueName, msgId);
     }
 }

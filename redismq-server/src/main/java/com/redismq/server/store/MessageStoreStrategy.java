@@ -9,15 +9,15 @@ import com.redismq.server.pojo.PageResult;
 import java.util.List;
 
 public interface MessageStoreStrategy {
-    
-    boolean updateStatusByIds(List<String> ids,int status);
-    
+
+    boolean updateStatusByIds(List<String> ids, int status);
+
     boolean saveMessages(List<Message> message);
-    
+
     void clearExpireMessage();
-    
+
     List<Message> getMessageListByQueueAndOffset(GroupOffsetQeueryMessageDTO offset);
-    
+
     PageResult<HistoryMessageVO> pageMessageList(HistoryMessageQueryDTO message);
-    
+
 }

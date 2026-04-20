@@ -1,4 +1,3 @@
-
 package com.redismq.common.util;
 
 import io.netty.channel.Channel;
@@ -6,11 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.regex.Pattern;
@@ -111,7 +106,7 @@ public class NetUtil {
         InetAddress address = getLocalAddress(preferredNetworks);
         return address == null ? LOCALHOST : address.getHostAddress();
     }
-    
+
     public static String getAddressFromChannel(Channel channel) {
         SocketAddress socketAddress = channel.remoteAddress();
         String address = socketAddress.toString();
@@ -120,11 +115,12 @@ public class NetUtil {
         }
         return address;
     }
-    
+
     public static void main(String[] args) {
         String localHost = getLocalHost();
         System.out.println(localHost);
     }
+
     /**
      * Gets local host.
      *
@@ -140,6 +136,7 @@ public class NetUtil {
      * not support ipv6
      * if match the preferredNetworks rule return the first
      * if all not match preferredNetworks rule return the first valid ip
+     *
      * @return the local address
      */
     public static InetAddress getLocalAddress(String... preferredNetworks) {

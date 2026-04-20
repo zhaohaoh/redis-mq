@@ -21,9 +21,9 @@ import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
  */
 @Slf4j
 public class ServerUtil {
-    
+
     private static final ServerSelectBalance SELECT_BALANCE = new RandomBalance();
-    
+
     /**
      * 获取有效的服务器列表
      */
@@ -34,7 +34,7 @@ public class ServerUtil {
         }
         return servers;
     }
-    
+
     /**
      * 两个参数暂时无用，预留
      */
@@ -42,7 +42,7 @@ public class ServerUtil {
     public static String loadBalance(String group, Object msg) {
         String address = null;
         int count = 0;
-        while (count <=  PRODUCER_CONFIG.loadBalanceRetryCount) {
+        while (count <= PRODUCER_CONFIG.loadBalanceRetryCount) {
             count++;
             try {
                 Set<Server> servers = getAvailServerList();
@@ -67,5 +67,5 @@ public class ServerUtil {
         }
         return address;
     }
-    
+
 }

@@ -19,7 +19,7 @@ public interface RedisMQBeanNameConstant {
     String REDISMQ_CONNECTIONFACTORY = "RedisMQConnectionFactory";
 
     /**
-     *  redismq的lettuce源数据
+     * redismq的lettuce源数据
      */
     String REDISMQ_LETTUCE_CLIENTRESOURCES = "RedisMQLettuceClientResources";
 }

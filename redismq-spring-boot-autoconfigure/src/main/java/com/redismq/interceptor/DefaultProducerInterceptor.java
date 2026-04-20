@@ -3,6 +3,7 @@ package com.redismq.interceptor;
 import com.redismq.common.pojo.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.List;
 
 public class DefaultProducerInterceptor implements ProducerInterceptor {

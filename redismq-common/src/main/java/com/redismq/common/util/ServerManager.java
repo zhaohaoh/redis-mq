@@ -14,23 +14,23 @@ import java.util.Set;
  */
 @Slf4j
 public class ServerManager {
-    
+
     private static RedisMQServerUtil redisMQServerUtil;
-    
+
     private static Set<Server> SERVERS = new HashSet<>();
-    
+
     public ServerManager() {
     }
-    
+
     @Autowired
     public void setRedisMQServerUtil(RedisMQServerUtil redisMQServerUtil) {
         ServerManager.redisMQServerUtil = redisMQServerUtil;
     }
-    
+
     public static Set<Server> getLocalAvailServers() {
         return SERVERS;
     }
-    
+
     public static Set<Server> getRemoteAvailServers() {
         Set<Server> servers = redisMQServerUtil.getServers();
         if (CollectionUtils.isEmpty(servers)) {
@@ -39,7 +39,7 @@ public class ServerManager {
         ServerManager.SERVERS = new HashSet<>(servers);
         return servers;
     }
-    
+
     /**
      * 删除过期的远程服务
      *
@@ -50,14 +50,14 @@ public class ServerManager {
         SERVERS.remove(server);
         log.info("removeExpireServer :{}", server);
     }
-    
+
     /**
      * 添加本地服务
      */
     public static void addLocalServer(Server server) {
         SERVERS.add(server);
     }
-    
+
     /**
      * 添加本地服务
      */

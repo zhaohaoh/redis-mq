@@ -12,9 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2024/05/06
  */
 public class RpcGlobalCache {
-    
+
     public static final ConcurrentHashMap<String, MessageFuture> FUTURES = new ConcurrentHashMap<>();
-    
+
     public static final ConcurrentHashMap<String, RemoteMessageFuture> REMOTE_FUTURES = new ConcurrentHashMap<>();
-    
+
 }

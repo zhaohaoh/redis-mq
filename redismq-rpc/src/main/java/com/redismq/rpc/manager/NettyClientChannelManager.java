@@ -19,28 +19,30 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- *如果你需要标记一个对象为无效，你可以从对象池中借出该对象，
+ * 如果你需要标记一个对象为无效，你可以从对象池中借出该对象，
  * 调用其业务逻辑中的某个方法（如果适用）来标记其无效，
  * 然后调用 invalidateObject 方法。
  * 但请注意，invalidateObject 并不直接删除对象，而是将其标记为不再可用。
  * Pool2 会在后续操作中（如 returnObject）检查对象的有效性，并根据需要采取相应措施。
  */
 public class NettyClientChannelManager {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyClientChannelManager.class);
-    
+
     private final ConcurrentMap<String, Object> channelLocks = new ConcurrentHashMap<>();
-    
+
     private final ConcurrentMap<String, Channel> channels = new ConcurrentHashMap<>();
-    
+
     private final GenericKeyedObjectPool<AddressInfo, Channel> nettyClientKeyPool;
-    
-    private final ConcurrentMap<String, AddressInfo> addressKeyMap =new ConcurrentHashMap<>();
+
+    private final ConcurrentMap<String, AddressInfo> addressKeyMap = new ConcurrentHashMap<>();
+
     public NettyClientChannelManager(final NettyPoolableFactory keyPoolableFactory) {
         nettyClientKeyPool = new GenericKeyedObjectPool<>(keyPoolableFactory);
         nettyClientKeyPool.setConfig(getNettyPoolConfig());
     }
-    private GenericKeyedObjectPoolConfig  getNettyPoolConfig() {
+
+    private GenericKeyedObjectPoolConfig getNettyPoolConfig() {
         GenericKeyedObjectPoolConfig poolConfig = new GenericKeyedObjectPoolConfig<>();
         poolConfig.setMaxTotal(8);
         // 最多的空闲连接数
@@ -54,8 +56,8 @@ public class NettyClientChannelManager {
         poolConfig.setLifo(true);
         return poolConfig;
     }
-    
-    
+
+
     /**
      * Get all channels registered on current Rpc Client.
      *
@@ -64,12 +66,12 @@ public class NettyClientChannelManager {
     public ConcurrentMap<String, Channel> getChannels() {
         return channels;
     }
-    
+
     /**
      * Acquire netty client channel connected to remote server.
      */
     public Channel acquireChannel(String serverAddress) {
-       
+
         Channel channelToServer = channels.get(serverAddress);
         if (channelToServer != null) {
             //如果服务已经下线了
@@ -90,21 +92,21 @@ public class NettyClientChannelManager {
         }
         return doConnect(serverAddress);
     }
-    
+
     private boolean serverActive(String serverAddress) {
         Set<Server> remoteAvailServerList = ServerManager.getRemoteAvailServers();
         Optional<Server> first = remoteAvailServerList.stream()
                 .filter(server -> server.getAddress().equals(serverAddress)).findFirst();
         return first.isPresent();
     }
-    
+
     /**
      * Release channel to pool if necessary.
      *
      * @param channel       channel
      * @param serverAddress server address
      */
-    public void releaseChannel(String serverAddress,Channel channel) {
+    public void releaseChannel(String serverAddress, Channel channel) {
         if (channel == null || serverAddress == null) {
             return;
         }
@@ -129,7 +131,7 @@ public class NettyClientChannelManager {
             LOGGER.error(exx.getMessage());
         }
     }
-    
+
     /**
      * Destroy channel.
      *
@@ -150,10 +152,11 @@ public class NettyClientChannelManager {
             LOGGER.error("return channel to rmPool error:{}", exx.getMessage());
         }
     }
+
     public void destroyChannel(Channel channel) {
-      destroyChannel(NetUtil.getAddressFromChannel(channel),channel);
+        destroyChannel(NetUtil.getAddressFromChannel(channel), channel);
     }
-    
+
     /**
      *
      */
@@ -167,17 +170,17 @@ public class NettyClientChannelManager {
             acquireChannel(serverAddress.getAddress());
         }
     }
-    
+
     public void invalidateObject(final String serverAddress, final Channel channel) {
         AddressInfo addressInfo = getAddressInfo(serverAddress);
         try {
             nettyClientKeyPool.invalidateObject(addressInfo, channel);
-            LOGGER.info("invalidateObject address:{} channel:{}",addressInfo,channel);
+            LOGGER.info("invalidateObject address:{} channel:{}", addressInfo, channel);
         } catch (Exception e) {
             LOGGER.error("invalidateObject error", e);
         }
     }
-    
+
     private AddressInfo getAddressInfo(String serverAddress) {
         return addressKeyMap.computeIfAbsent(serverAddress, k -> {
             AddressInfo address = new AddressInfo();
@@ -185,7 +188,7 @@ public class NettyClientChannelManager {
             return address;
         });
     }
-    
+
     public void registerChannel(final String serverAddress, final Channel channel) {
         Channel channelToServer = channels.get(serverAddress);
         if (channelToServer != null && channelToServer.isActive()) {
@@ -193,7 +196,7 @@ public class NettyClientChannelManager {
         }
         channels.put(serverAddress, channel);
     }
-    
+
     private Channel doConnect(String serverAddress) {
         Object lockObj = channelLocks.computeIfAbsent(serverAddress, key -> new Object());
         Channel channelFromPool;
@@ -202,7 +205,7 @@ public class NettyClientChannelManager {
             if (channelToServer != null && channelToServer.isActive()) {
                 return channelToServer;
             }
-            
+
             try {
                 AddressInfo addressInfo = getAddressInfo(serverAddress);
                 channelFromPool = nettyClientKeyPool.borrowObject(addressInfo);
@@ -217,9 +220,8 @@ public class NettyClientChannelManager {
         }
         return channelFromPool;
     }
-    
-    
-    
+
+
     private Channel getExistAliveChannel(Channel channel, String serverAddress) {
         if (channel.isActive()) {
             return channel;
@@ -238,7 +240,7 @@ public class NettyClientChannelManager {
             }
             if (i == 100) {
                 LOGGER.warn("channel {} is not active after long wait, close it.", channel);
-                releaseChannel( serverAddress,channel);
+                releaseChannel(serverAddress, channel);
                 return null;
             }
         }

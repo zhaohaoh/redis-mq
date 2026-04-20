@@ -8,7 +8,7 @@ public class Group {
      * 分组名
      */
     private String groupId;
-    
+
     /**
      * 最近注册时间
      */

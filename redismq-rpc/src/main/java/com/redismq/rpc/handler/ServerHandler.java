@@ -14,20 +14,20 @@ import lombok.extern.slf4j.Slf4j;
 @ChannelHandler.Sharable
 @Slf4j
 public class ServerHandler extends ChannelDuplexHandler {
-    
+
     /**
      * 远程服务器管理器
      */
     private final RemoteServerProccessManager remoteServerProccessManager;
-    
+
     public ServerHandler(RemoteServerProccessManager remoteServerProccessManager) {
         this.remoteServerProccessManager = remoteServerProccessManager;
     }
-    
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-       
-        log.error("nettyServer error : " ,cause);
+
+        log.error("nettyServer error : ", cause);
         ctx.close();
     }
 
@@ -41,7 +41,7 @@ public class ServerHandler extends ChannelDuplexHandler {
 //        log.info("nettyServer :" + channel.remoteAddress() + " active");
 //        ctx.writeAndFlush("[连接server服务成功]:");
     }
-    
+
     @Override
     public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
         log.info("nettyServer channelWritabilityChanged :" + ctx.channel().isWritable());
@@ -52,7 +52,7 @@ public class ServerHandler extends ChannelDuplexHandler {
         }
         super.channelWritabilityChanged(ctx);
     }
-    
+
     /**
      * 处理新加的消息通道
      *
@@ -95,11 +95,11 @@ public class ServerHandler extends ChannelDuplexHandler {
         //接受json串
         RemoteMessage remoteMessage = (RemoteMessage) msg;
         log.info("nettyServer Receive message :" + ctx.channel().remoteAddress() + remoteMessage);
-        
+
 //        RemoteMessage remoteMessage = RedisMQStringMapper.toBean(data, RemoteMessage.class);
         RemoteResponse remoteResponse = new RemoteResponse();
         remoteResponse.setChannelHandlerContext(ctx);
-        remoteServerProccessManager.processMessage(remoteResponse,remoteMessage);
+        remoteServerProccessManager.processMessage(remoteResponse, remoteMessage);
     }
 
 

@@ -87,13 +87,13 @@ public class FileLogUtil {
      * @return int
      */
     public static int checkMessageAndReturnSize(java.nio.ByteBuffer byteBuffer, final boolean checkCRC,
-                                         final boolean readBody) {
+                                                final boolean readBody) {
         try {
             // 1 TOTAL SIZE
             int totalSize = byteBuffer.getInt();
             //没有消息了
-            if (totalSize <= 0){
-               return 0;
+            if (totalSize <= 0) {
+                return 0;
             }
 
             // 2 MAGIC CODE

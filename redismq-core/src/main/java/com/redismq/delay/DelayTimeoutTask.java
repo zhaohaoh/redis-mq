@@ -25,55 +25,55 @@ import static com.redismq.common.constant.StateConstant.STOP;
  * @Date: 2022/4/25 12:05 延时任务  一个虚拟队列一个任务实例DelayTimeoutTask
  */
 public abstract class DelayTimeoutTask {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(DelayTimeoutTask.class);
-    
+
     //时间轮
     private final HashedWheelTimer timer = new HashedWheelTimer(
             new DefaultThreadFactory("REDISMQ-HashedWheelTimer-WORKER"), 100, TimeUnit.MILLISECONDS, 1024, false);
-    
+
     private final Map<Long, TimeoutTask> timeoutTaskMap = new ConcurrentHashMap<>();
-    
+
     private volatile int state = RUNNING;
-    
+
     private final String virtualQueue;
-    
+
     private final RedisMQClientUtil redisMQClientUtil;
-    
+
     public DelayTimeoutTask(String virtualQueue, RedisMQClientUtil redisMQClientUtil) {
         this.virtualQueue = virtualQueue;
         this.redisMQClientUtil = redisMQClientUtil;
-   
+
     }
-    
+
     public static class TimeoutTask {
-        
+
         private final long startTime;
-        
+
         private final Timeout task;
-        
+
         public TimeoutTask(long startTime, Timeout task) {
             super();
             this.startTime = startTime;
             this.task = task;
         }
-        
+
         public long getStartTime() {
             return startTime;
         }
-        
+
         public Timeout getTask() {
             return task;
         }
-        
+
     }
-    
+
     private final AtomicReference<TimeoutTask> lastTimeoutTask = new AtomicReference<>();
-    
+
     public void start(Long startTime) {
-        scheduleTask(startTime,false);
+        scheduleTask(startTime, false);
     }
-    
+
     public void stop() {
         state = STOP;
         timer.stop();
@@ -83,8 +83,8 @@ public abstract class DelayTimeoutTask {
         // 释放锁
         unLockQueue(virtualQueueLock);
     }
-    
-    private void scheduleTask(final Long startTime,boolean forceLock) {
+
+    private void scheduleTask(final Long startTime, boolean forceLock) {
         if (startTime == null || !isRunning()) {
             //结束本次循环调用
             return;
@@ -95,14 +95,14 @@ public abstract class DelayTimeoutTask {
             return;
         }
         long delay = startTime - System.currentTimeMillis();
-        
+
         if (delay > 10) {
             // 加入时间轮执行
             long l = timer.pendingTimeouts();
             Timeout timeout = timer.newTimeout(t -> {
                 try {
-                  invokeTask(false);
-                }finally {
+                    invokeTask(false);
+                } finally {
                     //任务执行完清理缓存
                     timeoutTaskMap.remove(startTime);
                 }
@@ -114,31 +114,31 @@ public abstract class DelayTimeoutTask {
             invokeTask(forceLock);
         }
     }
-    
+
     public boolean isRunning() {
         return state == RUNNING;
     }
-    
+
     protected abstract Set<Long> pullTask();
-    
+
     private boolean invokeTask(boolean forceLock) {
         // 虚拟队列锁定执行任务默认时长,有看门狗机制
         String virtualQueueLock = getVirtualQueueLock(virtualQueue);
-        
-     
-        if (!forceLock){
+
+
+        if (!forceLock) {
             // 这里被锁住,如果有服务下线了.需要超过这个时间消息才能继续被消费.因为会被锁定.
             Boolean success = lockQueue(virtualQueueLock);
             if (GLOBAL_CONFIG.printConsumeLog) {
                 log.info("current virtualQueue:{} tryLockSuccess:{} state:{}", virtualQueue, success, state);
             }
-    
+
             //获取锁失败
             if (success == null || !success) {
-                 return false;
+                return false;
             }
         }
-        
+
         Runnable runnable = () -> {
             try {
                 if (isRunning()) {
@@ -148,7 +148,7 @@ public abstract class DelayTimeoutTask {
                         //重复调用
                         for (Long nextTime : nextTimes) {
                             if (isRunning()) {
-                                scheduleTask(nextTime,false);
+                                scheduleTask(nextTime, false);
                             }
                         }
                     }
@@ -165,29 +165,29 @@ public abstract class DelayTimeoutTask {
         }
         return true;
     }
-    
+
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     public void unLockQueue(String virtualQueueLock) {
         redisMQClientUtil.unlock(virtualQueueLock);
     }
-    
+
     //获取锁和释放锁的动作只能有一个线程执行 后面要优化成redisson
     public Boolean lockQueue(String virtualQueueLock) {
-     
+
         int i = 0;
         Boolean lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
-       
+
         while (!lock && i < 2) {
             i++;
             try {
                 Thread.sleep(300L);
             } catch (InterruptedException e) {
-               Thread.currentThread().interrupt();
+                Thread.currentThread().interrupt();
             }
             lock = redisMQClientUtil.lock(virtualQueueLock, Duration.ofSeconds(GLOBAL_CONFIG.virtualLockTime));
         }
         return lock;
     }
-    
+
 }
 

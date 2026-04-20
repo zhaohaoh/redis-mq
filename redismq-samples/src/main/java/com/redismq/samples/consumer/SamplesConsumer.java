@@ -16,16 +16,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * 消费者简单案例
  */
 @Component
-public class SamplesConsumer  {
+public class SamplesConsumer {
     @Autowired
     private RedisMQTemplate redisMQTemplate;
-    Map<String,Object> map =new ConcurrentHashMap<>();
+    Map<String, Object> map = new ConcurrentHashMap<>();
 
     /**
      * delaytest1消费延时队列
      */
     @SneakyThrows
-    @RedisListener(queue = "delaytest1",delay = true,maxConcurrency = 200,concurrency = 200,retryMax = 16)
+    @RedisListener(queue = "delaytest1", delay = true, maxConcurrency = 200, concurrency = 200, retryMax = 16)
     public void delaytest1(Message message) {
         Long executeTime = message.getExecuteTime();
         Long offset = message.getOffset();
@@ -33,11 +33,11 @@ public class SamplesConsumer  {
         long diff = l - executeTime;
         Object object = map.get(message.getId());
         Thread.sleep(1000);
-        if (object!=null){
-            System.out.println(Thread.currentThread().getName()+" 重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        if (object != null) {
+            System.out.println(Thread.currentThread().getName() + " 重复消费" + message.getId() + "偏移量" + offset + "应该消费的时间:" + executeTime + "实际消费的时间:" + l + "差值:" + diff);
         }
         map.put(message.getId(), "fff");
-        System.out.println(message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        System.out.println(message.getId() + "偏移量" + offset + "应该消费的时间:" + executeTime + "实际消费的时间:" + l + "差值:" + diff);
     }
 //
 //    /**
@@ -50,15 +50,16 @@ public class SamplesConsumer  {
 //        System.out.println(data.getOffset());
 //    }
 //
-////    /**
-////     * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序
-////     */
-////    @RedisListener(queue = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
-////    public void order(Message message) {
-////        System.out.println(message);
-////        throw new RuntimeException();
-////    }
-////
+
+    /// /    /**
+    /// /     * 顺序消息消费  虚拟队列，消费者线程都设置为1即可保证顺序
+    /// /     */
+    /// /    @RedisListener(queue = "order", virtual = 1, concurrency = 1, maxConcurrency = 1)
+    /// /    public void order(Message message) {
+    /// /        System.out.println(message);
+    /// /        throw new RuntimeException();
+    /// /    }
+    /// /
 //    @RedisListener(queue = "time",tag = "bussiness1",delay = true)
 //    public void time(Message message) {
 //        JavaBean javaBean = message.parseJavaBean(JavaBean.class);
@@ -73,13 +74,13 @@ public class SamplesConsumer  {
 //        System.out.println(message);
 //    }
 //
-    
+
 //    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5)
 //    public void test1(JavaBean test) {
 //        redisMQTemplate.sendMessage(test,"test2");
 //    }
 //
-    @RedisListener(queue = "test1",maxConcurrency = 64,concurrency = 8,retryMax = 5,virtual = 2)
+    @RedisListener(queue = "test1", maxConcurrency = 64, concurrency = 8, retryMax = 5, virtual = 2)
     public void test2(Message message) throws InterruptedException {
         Long executeTime = message.getExecuteTime();
         Long offset = message.getOffset();
@@ -88,12 +89,12 @@ public class SamplesConsumer  {
         String id = message.getId();
         Thread.sleep(1000);
         Object object = map.get(id);
-        if (object!=null){
-            System.out.println(Thread.currentThread().getName()+" 重复消费"+message.getId()+"偏移量"+offset+"应该消费的时间:"+executeTime+"实际消费的时间:"+l +"差值:"+diff);
+        if (object != null) {
+            System.out.println(Thread.currentThread().getName() + " 重复消费" + message.getId() + "偏移量" + offset + "应该消费的时间:" + executeTime + "实际消费的时间:" + l + "差值:" + diff);
         }
         System.out.println(message);
     }
-    
+
 //
 //
 //    /**

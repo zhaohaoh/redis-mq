@@ -9,27 +9,18 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class StringRedisTemplateAdapter implements RedisClient {
-    
+
     private final StringRedisTemplate stringRedisTemplate;
-    
+
     public StringRedisTemplateAdapter(StringRedisTemplate stringRedisTemplate) {
         this.stringRedisTemplate = stringRedisTemplate;
     }
-    
-    
+
+
     /**
      * 执行lua
      *
@@ -41,12 +32,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long executeLua(String lua, List<String> keys, Object... args) {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
-        
+
         DefaultRedisScript<Long> redisScript = new DefaultRedisScript<>(lua, Long.class);
-        Long execute = stringRedisTemplate.execute(redisScript, keys, array);
-        return execute;
+        return stringRedisTemplate.execute(redisScript, keys, (Object) array);
     }
-    
+
     /**
      * 阻塞redis获取set集合中所有的元素
      */
@@ -56,10 +46,9 @@ public class StringRedisTemplateAdapter implements RedisClient {
         if (CollectionUtils.isEmpty(members)) {
             return new HashSet<>();
         }
-        Set<T> set = members.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
-        return set;
+        return members.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
     }
-    
+
     /**
      * 转换并发送
      *
@@ -76,7 +65,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
             return null;
         }, true);
     }
-    
+
     /**
      * 删除key
      *
@@ -84,35 +73,32 @@ public class StringRedisTemplateAdapter implements RedisClient {
      */
     @Override
     public Boolean delete(String key) {
-        Boolean delete = stringRedisTemplate.delete(key);
-        return delete;
+        return stringRedisTemplate.delete(key);
     }
-    
-    
+
+
     /**
      * 批量删除key
      */
     @Override
     public Long delete(Collection<String> keys) {
-        Long count = stringRedisTemplate.delete(keys);
-        return count;
+        return stringRedisTemplate.delete(keys);
     }
-    
-    
+
+
     @Override
     public Boolean setIfAbsent(String key, Object value, Duration duration) {
-  
-        Boolean aBoolean = stringRedisTemplate.opsForValue()
+
+        return stringRedisTemplate.opsForValue()
                 .setIfAbsent(key, RedisMQStringMapper.toJsonStr(value), duration);
-        return aBoolean;
     }
-    
+
     @Override
     public Object get(String key) {
         return null;
     }
-    
-    
+
+
     /**
      * set添加元素
      *
@@ -126,8 +112,8 @@ public class StringRedisTemplateAdapter implements RedisClient {
                 .toArray(a -> new String[values.length]);
         return stringRedisTemplate.opsForSet().add(key, array);
     }
-    
-    
+
+
     /**
      * set移除元素
      *
@@ -139,11 +125,11 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long sRemove(String key, Object... values) {
         String[] array = Arrays.stream(values).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[values.length]);
-        return stringRedisTemplate.opsForSet().remove(key, array);
+        return stringRedisTemplate.opsForSet().remove(key, (Object) array);
     }
-    
+
     /**------------------zSet相关操作--------------------------------*/
-    
+
     /**
      * 添加元素,有序集合是按照元素的score值由小到大排列
      *
@@ -156,12 +142,12 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Boolean zAdd(String key, Object value, double score) {
         return stringRedisTemplate.opsForZSet().add(key, RedisMQStringMapper.toJsonStr(value), score);
     }
-    
+
     @Override
     public Boolean zAddIfAbsent(String key, Object value, double score) {
         return null;
     }
-    
+
     /**
      * @param key
      * @param values
@@ -171,18 +157,16 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long zRemove(String key, Object... values) {
         String[] array = Arrays.stream(values).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[values.length]);
-        return stringRedisTemplate.opsForZSet().remove(key, array);
+        return stringRedisTemplate.opsForZSet().remove(key, (Object) array);
     }
-    
-    
+
+
     @Override
     public Long mapCacheRemove(String key, String hashKey) {
         return stringRedisTemplate.opsForHash().delete(key, hashKey);
     }
-    
-   
-    
-    
+
+
     /**
      * 获取集合元素, 并且把score值也获取
      *
@@ -203,17 +187,17 @@ public class StringRedisTemplateAdapter implements RedisClient {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
         }
-        
- 
+
+
         return newMap;
     }
-    
+
     @Override
     public Double zScore(String key, String member) {
         return null;
     }
-    
-    
+
+
     /**
      * 获取集合大小
      *
@@ -224,8 +208,8 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long zSize(String key) {
         return stringRedisTemplate.opsForZSet().size(key);
     }
-    
-    
+
+
     /**
      * 根据指定的score值的范围来移除成员
      *
@@ -238,12 +222,12 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public Long zRemoveRangeByScore(String key, double min, double max) {
         return stringRedisTemplate.opsForZSet().removeRangeByScore(key, min, max);
     }
-    
+
     /**
      * 范围查找消息
      */
     @Override
-    public Map<Message, Double> zrangeMessage(String key,String group, double min, double max, long start, long end) {
+    public Map<Message, Double> zrangeMessage(String key, String group, double min, double max, long start, long end) {
         String lua =
                 "local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
@@ -253,10 +237,10 @@ public class StringRedisTemplateAdapter implements RedisClient {
                         + "        redis.call('zrem', KEYS[1],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
         Object[] array = new Object[4];
         array[0] = min;
-        array[1] = max == 0D ? Double.MAX_VALUE : max;
+        array[1] = Double.valueOf(0D).equals(max) ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
-        List list = luaList(lua, Collections.singletonList(key), array);
+        List<?> list = luaList(lua, Collections.singletonList(key), array);
         Map<Message, Double> newMap = new LinkedHashMap<>();
         for (int i = 0; i < list.size(); i += 2) {
             Object msgObj = list.get(i);
@@ -266,37 +250,35 @@ public class StringRedisTemplateAdapter implements RedisClient {
         }
         return newMap;
     }
-    
+
     @Override
-    public List luaList(String lua, List<String> keys, Object[] args) {
+    public List<?> luaList(String lua, List<String> keys, Object[] args) {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
-        
-        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>(lua, List.class);
-        List execute = stringRedisTemplate.execute(redisScript, keys, array);
-        return execute;
+
+        DefaultRedisScript<List<?>> redisScript = new DefaultRedisScript<>();
+        return stringRedisTemplate.execute(redisScript, keys, (Object) array);
     }
-    
+
     @Override
     public Boolean exists(String key) {
-       return stringRedisTemplate.hasKey(key);
+        return stringRedisTemplate.hasKey(key);
     }
-    
+
     @Override
     public Boolean lock(String key, String s, Duration duration) {
-        Boolean aBoolean = stringRedisTemplate.opsForValue()
+        return stringRedisTemplate.opsForValue()
                 .setIfAbsent(key, RedisMQStringMapper.toJsonStr(s), duration);
-        return aBoolean;
     }
-    
+
     @Override
     public Boolean unlock(String key) {
         return stringRedisTemplate.delete(key);
     }
-    
+
     @Override
     public Boolean isLock(String key) {
         return stringRedisTemplate.hasKey(key);
     }
-    
+
 }

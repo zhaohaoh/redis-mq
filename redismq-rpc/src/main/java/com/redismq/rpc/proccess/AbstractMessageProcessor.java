@@ -22,19 +22,19 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public abstract class AbstractMessageProcessor implements RemoteMessageProcessor {
-    
+
     @Override
     public boolean process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception {
         String exception = null;
         try {
-               doProcess(ctx, messages);
+            doProcess(ctx, messages);
         } catch (Exception e) {
             exception = StringUtils.substring(ExceptionUtils.getStackTrace(e), 0, 512);
             log.error("process error messages :{} e:", messages, e);
         }
-        
+
         if (CollectionUtils.isEmpty(ctx.getRpcMessage())) {
-            List<RemoteMessage> responses=new ArrayList<>();
+            List<RemoteMessage> responses = new ArrayList<>();
             for (RemoteMessage message : messages) {
                 RemoteMessage responseMessage = RpcMessageUtil
                         .buildResponseMessage(message.getId(), exception == null ? responses : exception,
@@ -43,7 +43,7 @@ public abstract class AbstractMessageProcessor implements RemoteMessageProcessor
             }
             ctx.setRpcMessage(responses);
         }
-        
+
         //如果是rpc的话写回通道 否则使用http或者本地
         ChannelHandlerContext channelHandlerContext = ctx.getChannelHandlerContext();
         //这里暂时不会往客户端回复，这里消息是空的
@@ -54,9 +54,9 @@ public abstract class AbstractMessageProcessor implements RemoteMessageProcessor
                                 TimeUnit.MILLISECONDS);
             }
         }
-        
+
         return true;
     }
-    
+
     protected abstract boolean doProcess(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception;
 }

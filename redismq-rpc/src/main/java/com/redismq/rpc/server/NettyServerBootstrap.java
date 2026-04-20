@@ -4,14 +4,7 @@ import com.redismq.common.config.NettyConfig;
 import com.redismq.rpc.codec.ProtocolV1Decoder;
 import com.redismq.rpc.codec.ProtocolV1Encoder;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
-import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -35,27 +28,27 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
  */
 @Slf4j
 public class NettyServerBootstrap {
-    
+
     private final NettyConfig nettyConfig;
-    
+
     private final ServerBootstrap serverBootstrap = new ServerBootstrap();
     //boss线程是分发器，将任务丢给work
     private final EventLoopGroup boss = new NioEventLoopGroup(1);
     //work默认为cpu线程数。
     private final EventLoopGroup work = new NioEventLoopGroup();
 
-//    @Resource
+    //    @Resource
 //    private HeartbeatHandlerAdapter heartbeatHandler;
     private final List<ChannelHandler> channelHandlers;
-    
-    public NettyServerBootstrap(List<ChannelHandler> channelHandlers,NettyConfig  nettyConfig) {
+
+    public NettyServerBootstrap(List<ChannelHandler> channelHandlers, NettyConfig nettyConfig) {
         this.channelHandlers = channelHandlers;
         this.nettyConfig = nettyConfig;
     }
-    
-   
+
+
     public void start() {
-        
+
         Class<? extends ServerChannel> serverChannelClazz = nettyConfig.getServerChannelClazz();
         NettyConfig.Server server = nettyConfig.getServer();
         serverBootstrap.group(boss, work)
@@ -63,11 +56,11 @@ public class NettyServerBootstrap {
                 .channel(serverChannelClazz)
                 //链接队列
                 .option(ChannelOption.SO_BACKLOG, server.getSoBackLogSize())
-                .option(SO_REUSEADDR,true)
+                .option(SO_REUSEADDR, true)
                 //心跳检测，2小时
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 //true是禁止nagle算法进行延迟批量发送 禁止延迟发送
-                .childOption(ChannelOption.TCP_NODELAY,true)
+                .childOption(ChannelOption.TCP_NODELAY, true)
                 // 发送缓冲区大小
                 .childOption(ChannelOption.SO_SNDBUF, server.getServerSocketSendBufSize())
                 // 接收缓存区大小
@@ -112,11 +105,11 @@ public class NettyServerBootstrap {
             work.shutdownGracefully();
         }
     }
-    
+
     public void close() {
         shutdown();
     }
-    
+
     public void shutdown() {
         log.info("[netty服务]关闭服务器....");
         boss.shutdownGracefully();

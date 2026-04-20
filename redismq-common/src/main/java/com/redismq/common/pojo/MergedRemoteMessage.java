@@ -7,8 +7,8 @@ import java.util.List;
 
 @Data
 public class MergedRemoteMessage {
-    
+
     private List<RemoteMessage> messages = new ArrayList<>();
-    
-    
+
+
 }

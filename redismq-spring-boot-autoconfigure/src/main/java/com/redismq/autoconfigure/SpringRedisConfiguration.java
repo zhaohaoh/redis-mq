@@ -22,13 +22,12 @@ import static com.redismq.common.constant.RedisMQBeanNameConstant.REDISMQ_MESSAG
  */
 @Configuration
 public class SpringRedisConfiguration {
-    
+
     private static final String REDIS_PROTOCOL_PREFIX = "redis://";
-    
+
     private static final String REDISS_PROTOCOL_PREFIX = "rediss://";
-    
-  
-    
+
+
     /**
      * redisMQ使用的redisTemplate
      *
@@ -58,7 +57,7 @@ public class SpringRedisConfiguration {
         redisMessageListenerContainer.setTaskExecutor(executor);
         return redisMessageListenerContainer;
     }
-    
+
     @Bean(REDISMQ_INNER_MESSAGE_LISTENERCONTAINER)
     public RedisMessageListenerContainer redismqInnerRedisMessageListenerContainer(
             RedisConnectionFactory redisConnectionFactory) {
@@ -81,8 +80,8 @@ public class SpringRedisConfiguration {
         redisMessageListenerContainer.setTaskExecutor(executor);
         return redisMessageListenerContainer;
     }
-    
-    
+
+
     private String[] convert(List<String> nodesObject) {
         List<String> nodes = new ArrayList<String>(nodesObject.size());
         for (String node : nodesObject) {
