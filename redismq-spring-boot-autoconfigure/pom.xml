@@ -8,7 +8,7 @@
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
+    <packaging>jar</packaging>
     <artifactId>redismq-spring-boot-autoconfigure</artifactId>
 
     <dependencies>
@@ -16,10 +16,7 @@
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-rpc</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.github.zhaohaoh</groupId>
-            <artifactId>redismq-core</artifactId>
-        </dependency>
+
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
@@ -52,8 +49,12 @@
         </dependency>
         <dependency>
             <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-data-32</artifactId>
+            <artifactId>redisson-spring-data-35</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.zhaohaoh</groupId>
+            <artifactId>redismq-core</artifactId>
         </dependency>
     </dependencies>
 </project>

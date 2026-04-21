@@ -83,6 +83,7 @@ public class RedisMQClusterConfiguration extends RedisClusterConfiguration {
      *
      * @param nodes must not be {@literal null}.
      */
+    @Override
     public void setClusterNodes(Iterable<RedisNode> nodes) {
 
         Assert.notNull(nodes, "Cannot set cluster nodes to 'null'.");
@@ -108,6 +109,7 @@ public class RedisMQClusterConfiguration extends RedisClusterConfiguration {
      *
      * @param node must not be {@literal null}.
      */
+    @Override
     public void addClusterNode(RedisNode node) {
 
         Assert.notNull(node, "ClusterNode must not be 'null'.");
@@ -117,6 +119,7 @@ public class RedisMQClusterConfiguration extends RedisClusterConfiguration {
     /**
      * @return this.
      */
+    @Override
     public RedisMQClusterConfiguration clusterNode(RedisNode node) {
 
         this.clusterNodes.add(node);
@@ -135,6 +138,7 @@ public class RedisMQClusterConfiguration extends RedisClusterConfiguration {
     /**
      * @param maxRedirects the max number of redirects to follow.
      */
+    @Override
     public void setMaxRedirects(int maxRedirects) {
 
         Assert.isTrue(maxRedirects >= 0, "MaxRedirects must be greater or equal to 0");
@@ -146,6 +150,7 @@ public class RedisMQClusterConfiguration extends RedisClusterConfiguration {
      * @param port Redis cluster node port.
      * @return this.
      */
+    @Override
     public RedisMQClusterConfiguration clusterNode(String host, Integer port) {
         return clusterNode(new RedisNode(host, port));
     }

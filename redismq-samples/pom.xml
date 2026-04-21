@@ -63,7 +63,6 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <dependencies>
-
                 <dependency>
                     <groupId>io.github.zhaohaoh</groupId>
                     <artifactId>redismq-spring-boot-starter</artifactId>
@@ -81,7 +80,12 @@
         </profile>
         <profile>
             <id>spring-boot-4</id>
-
+            <dependencies>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot4-starter</artifactId>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>

@@ -1,0 +1,3 @@
+com.enable.EnableRedisMQConfiguration
+com.enable.NettyClientAutoConfigration
+com.enable.RedissonFactoryAutoConfiguration

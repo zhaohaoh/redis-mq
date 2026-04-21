@@ -11,7 +11,7 @@
     </parent>
     <!-- 有很多兼容性问题。暂无法支持-->
     <artifactId>redismq-spring-boot3-starter</artifactId>
-
+    <packaging>jar</packaging>
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -43,13 +43,8 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>jsr250-api</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
             <groupId>org.redisson</groupId>
-            <artifactId>redisson-spring-data-32</artifactId>
+            <artifactId>redisson-spring-data-35</artifactId>
         </dependency>
     </dependencies>
 

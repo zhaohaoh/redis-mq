@@ -32,8 +32,8 @@ public class RedissonAdapter implements RedisClient {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
 
-        Object eval = redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.INTEGER,
-                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), array);
+        Object eval = redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.LONG,
+                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), (Object) array);
         return Long.parseLong(eval.toString());
     }
 
@@ -47,8 +47,7 @@ public class RedissonAdapter implements RedisClient {
         if (CollectionUtils.isEmpty(members)) {
             return new HashSet<>();
         }
-        Set<T> zset = members.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
-        return zset;
+        return members.stream().map(a -> RedisMQStringMapper.toBean(a, tClass)).collect(Collectors.toSet());
     }
 
     /**
@@ -79,8 +78,7 @@ public class RedissonAdapter implements RedisClient {
      */
     @Override
     public Long delete(Collection<String> keys) {
-        long delete = redissonClient.getKeys().delete(keys.toArray(new String[0]));
-        return delete;
+        return redissonClient.getKeys().delete(keys.toArray(new String[0]));
     }
 
 
@@ -266,7 +264,7 @@ public class RedissonAdapter implements RedisClient {
         array[1] = max == 0D ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
-        List list = luaList(lua, keys, array);
+        List<?> list = luaList(lua, keys, array);
         Map<Message, Double> newMap = new LinkedHashMap<>();
         for (int i = 0; i < list.size(); i += 2) {
             Object msgObj = list.get(i);
@@ -278,12 +276,11 @@ public class RedissonAdapter implements RedisClient {
     }
 
     @Override
-    public List luaList(String lua, List<String> keys, Object[] args) {
+    public List<?> luaList(String lua, List<String> keys, Object[] args) {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
-        List eval = redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.MULTI,
-                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), array);
-        return eval;
+        return redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.LIST,
+                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), (Object) array);
     }
 
     @Override

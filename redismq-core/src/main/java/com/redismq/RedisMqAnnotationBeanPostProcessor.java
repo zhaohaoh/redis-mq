@@ -6,7 +6,6 @@ import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.OffsetEnum;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Queue;
-import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
@@ -302,9 +301,8 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         RedisMessageListenerContainer container = applicationContext.getBean("redisMQMessageListenerContainer", RedisMessageListenerContainer.class);
         MessageListenerAdapter listener = new MessageListenerAdapter(bean, method.getName());
         //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
-        Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);
-        jacksonSeial.setObjectMapper(RedisMQStringMapper.STRING_MAPPER);
-        listener.setSerializer(jacksonSeial);
+        Jackson2JsonRedisSerializer<Object> jacksonSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
+        listener.setSerializer(jacksonSerializer);
         listener.afterPropertiesSet();
         //名称完全对应的topic
         container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));

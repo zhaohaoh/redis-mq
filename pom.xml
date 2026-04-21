@@ -11,19 +11,17 @@
     <packaging>pom</packaging>
     <!--  使用jdk21 部署   deploy -f pom.xml  自定义maven的config-->
     <modules>
-        <module>redismq-core</module>
         <module>redismq-samples</module>
         <module>redismq-server</module>
         <module>redismq-rpc</module>
         <module>redismq-common</module>
-        <module>redismq-spring-boot-autoconfigure</module>
     </modules>
 
     <properties>
-        <revision>0.5.0-beta8</revision>
+        <revision>0.5.1-SNAPSHOT</revision>
         <commons-lang3.version>3.20.0</commons-lang3.version>
-        <seata.version>1.5.1</seata.version>
-        <redisson.version>3.30.0</redisson.version>
+        <seata.version>2.0.0</seata.version>
+        <redisson.version>4.3.1</redisson.version>
         <maven-javadoc-plugin.version>3.7.0</maven-javadoc-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
@@ -61,7 +59,7 @@
         <system>Github Issue</system>
         <url>https://github.com/zhaohaoh/redis-mq</url>
     </issueManagement>
-    <distributionManagement>
+<!--    <distributionManagement>
         <snapshotRepository>
             <id>oss</id>
             <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
@@ -70,6 +68,18 @@
             <id>oss</id>
             <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
+    </distributionManagement>-->
+    <distributionManagement>
+        <repository>
+            <id>nexus-releases</id>
+            <name>Nexus Release Repository</name>
+            <url>http://192.168.1.85:8081/repository/maven-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>nexus-snapshots</id>
+            <name>Nexus Snapshot Repository</name>
+            <url>http://192.168.1.85:8081/repository/maven-snapshots/</url>
+        </snapshotRepository>
     </distributionManagement>
     <dependencyManagement>
         <dependencies>
@@ -152,12 +162,37 @@
             </dependency>
             <dependency>
                 <groupId>org.redisson</groupId>
-                <artifactId>redisson-spring-data-32</artifactId>
+                <artifactId>redisson-spring-data-35</artifactId>
+                <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.redisson</groupId>
+                <artifactId>redisson-spring-data-40</artifactId>
                 <version>${redisson.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.github.zhaohaoh</groupId>
                 <artifactId>redismq-spring-boot-autoconfigure</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.zhaohaoh</groupId>
+                <artifactId>redismq-spring-boot4-autoconfigure</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.zhaohaoh</groupId>
+                <artifactId>redismq-spring-boot4-starter</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.zhaohaoh</groupId>
+                <artifactId>redismq-spring-boot3-starter</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.zhaohaoh</groupId>
+                <artifactId>redismq-spring-boot-starter</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -168,6 +203,11 @@
             <dependency>
                 <groupId>io.github.zhaohaoh</groupId>
                 <artifactId>redismq-core</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.zhaohaoh</groupId>
+                <artifactId>redismq-core4</artifactId>
                 <version>${revision}</version>
             </dependency>
             <dependency>
@@ -218,7 +258,7 @@
                     <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.7.0</version>
@@ -228,7 +268,7 @@
                     <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
-            </plugin>
+            </plugin>-->
             <!-- 生成java source.jar -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -243,7 +283,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>3.2.8</version>
@@ -256,17 +296,17 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
 
-            <!--<plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
                     <failOnError>false</failOnError>
-                    <charset>UTF-8</charset>&lt;!&ndash; utf-8读取文件 &ndash;&gt;
-                    <encoding>UTF-8</encoding>&lt;!&ndash; utf-8进行编码代码 &ndash;&gt;
-                    <docencoding>UTF-8</docencoding>&lt;!&ndash; utf-8进行编码文档 &ndash;&gt;
+                    <charset>UTF-8</charset><!-- utf-8读取文件 -->
+                    <encoding>UTF-8</encoding><!-- utf-8进行编码代码 -->
+                    <docencoding>UTF-8</docencoding><!-- utf-8进行编码文档 -->
                 </configuration>
                 <executions>
                     <execution>
@@ -276,7 +316,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>-->
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
@@ -317,16 +357,9 @@
             </properties>
             <modules>
                 <module>redismq-spring-boot-starter</module>
+                <module>redismq-spring-boot-autoconfigure</module>
+                <module>redismq-core</module>
             </modules>
-            <dependencyManagement>
-                <dependencies>
-                    <dependency>
-                        <groupId>io.github.zhaohaoh</groupId>
-                        <artifactId>redismq-spring-boot-starter</artifactId>
-                        <version>${revision}</version>
-                    </dependency>
-                </dependencies>
-            </dependencyManagement>
         </profile>
         <profile>
             <id>spring-boot-3</id>
@@ -337,16 +370,9 @@
             </properties>
             <modules>
                 <module>redismq-spring-boot3-starter</module>
+                <module>redismq-spring-boot-autoconfigure</module>
+                <module>redismq-core</module>
             </modules>
-            <dependencyManagement>
-                <dependencies>
-                    <dependency>
-                        <groupId>io.github.zhaohaoh</groupId>
-                        <artifactId>redismq-spring-boot3-starter</artifactId>
-                        <version>${revision}</version>
-                    </dependency>
-                </dependencies>
-            </dependencyManagement>
         </profile>
         <profile>
             <id>spring-boot-4</id>
@@ -355,6 +381,11 @@
                 <maven.compiler.target>21</maven.compiler.target>
                 <spring-boot.version>4.0.5</spring-boot.version>
             </properties>
+            <modules>
+                <module>redismq-spring-boot4-autoconfigure</module>
+                <module>redismq-spring-boot4-starter</module>
+                <module>redismq-core4</module>
+            </modules>
         </profile>
     </profiles>
 </project>

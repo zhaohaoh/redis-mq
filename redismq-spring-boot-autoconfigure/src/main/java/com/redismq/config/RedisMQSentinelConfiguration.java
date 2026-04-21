@@ -90,6 +90,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      *
      * @param sentinels must not be {@literal null}.
      */
+    @Override
     public void setSentinels(Iterable<RedisNode> sentinels) {
 
         Assert.notNull(sentinels, "Cannot set sentinels to 'null'.");
@@ -105,6 +106,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * (non-Javadoc)
      * @see org.springframework.data.redis.connection.RedisConfiguration.SentinelConfiguration#getSentinels()
      */
+    @Override
     public Set<RedisNode> getSentinels() {
         return Collections.unmodifiableSet(sentinels);
     }
@@ -114,6 +116,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      *
      * @param sentinel must not be {@literal null}.
      */
+    @Override
     public void addSentinel(RedisNode sentinel) {
 
         Assert.notNull(sentinel, "Sentinel must not be 'null'.");
@@ -124,6 +127,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * (non-Javadoc)
      * @see org.springframework.data.redis.connection.RedisConfiguration.SentinelConfiguration#setMaster(org.springframework.data.redis.connection.NamedNode)
      */
+    @Override
     public void setMaster(NamedNode master) {
 
         Assert.notNull(master, "Sentinel master node must not be 'null'.");
@@ -134,6 +138,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * (non-Javadoc)
      * @see org.springframework.data.redis.connection.RedisConfiguration.SentinelConfiguration#getMaster()
      */
+    @Override
     public NamedNode getMaster() {
         return master;
     }
@@ -143,6 +148,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * @return this.
      * @see #setMaster(String)
      */
+    @Override
     public RedisMQSentinelConfiguration master(String master) {
         this.setMaster(master);
         return this;
@@ -153,6 +159,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * @return this.
      * @see #setMaster(NamedNode)
      */
+    @Override
     public RedisMQSentinelConfiguration master(NamedNode master) {
         this.setMaster(master);
         return this;
@@ -163,6 +170,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * @return this.
      * @see #addSentinel(RedisNode)
      */
+    @Override
     public RedisMQSentinelConfiguration sentinel(RedisNode sentinel) {
         this.addSentinel(sentinel);
         return this;
@@ -174,6 +182,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * @return this.
      * @see #sentinel(RedisNode)
      */
+    @Override
     public RedisMQSentinelConfiguration sentinel(String host, Integer port) {
         return sentinel(new RedisNode(host, port));
     }
@@ -250,6 +259,7 @@ public class RedisMQSentinelConfiguration extends RedisSentinelConfiguration {
      * (non-Javadoc)
      * @see org.springframework.data.redis.connection.RedisConfiguration.SentinelConfiguration#setSentinelPassword(org.springframework.data.redis.connection.RedisPassword)
      */
+    @Override
     public void setSentinelPassword(RedisPassword sentinelPassword) {
 
         Assert.notNull(sentinelPassword, "SentinelPassword must not be null!");
