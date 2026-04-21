@@ -16,7 +16,6 @@ import com.redismq.queue.QueueManager;
 import com.redismq.rpc.client.RemotingClient;
 import com.redismq.utils.RedisMQTemplate;
 import org.redisson.api.RedissonClient;
-import org.redisson.spring.data.connection.RedissonConnectionFactory;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -33,13 +32,15 @@ import java.util.List;
 @Configuration
 @EnableConfigurationProperties({RedisMQProperties.class, RedisProperties.class})
 public class RedisMQAutoConfiguration implements InitializingBean {
-    @Autowired
-    private RedisMQProperties redisMqProperties;
-    @Autowired
-    private RedisProperties redisProperties;
+    private final RedisMQProperties redisMqProperties;
+    private final RedisProperties redisProperties;
+    private final List<ProducerInterceptor> producerInterceptors;
 
-    @Autowired(required = false)
-    private List<ProducerInterceptor> producerInterceptors;
+    public RedisMQAutoConfiguration(RedisMQProperties redisMqProperties, RedisProperties redisProperties, List<ProducerInterceptor> producerInterceptors) {
+        this.redisMqProperties = redisMqProperties;
+        this.redisProperties = redisProperties;
+        this.producerInterceptors = producerInterceptors;
+    }
 
 
     @Bean
@@ -80,7 +81,7 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         return new RedisMQTemplate(redisMQProducer);
     }
 
-    @Bean(initMethod = "init",destroyMethod = "destroy")
+    @Bean(initMethod = "init", destroyMethod = "destroy")
     public RedisMQProducer redisMQProducer(RedisMQClientUtil redisMQClientUtil, @Autowired(required = false) RemotingClient remotingClient) {
         return new RedisMQProducer(redisMQClientUtil, remotingClient);
     }

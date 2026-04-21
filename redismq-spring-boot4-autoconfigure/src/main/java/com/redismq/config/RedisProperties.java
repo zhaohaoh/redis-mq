@@ -2,6 +2,7 @@ package com.redismq.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisProperties;
 
 import java.time.Duration;
 import java.util.List;
@@ -273,9 +274,9 @@ public class RedisProperties {
 
         public static class Cluster {
 
-            private final org.springframework.boot.data.redis.autoconfigure.DataRedisProperties.Lettuce.Cluster.Refresh refresh = new org.springframework.boot.data.redis.autoconfigure.DataRedisProperties.Lettuce.Cluster.Refresh();
+            private final DataRedisProperties.Lettuce.Cluster.Refresh refresh = new DataRedisProperties.Lettuce.Cluster.Refresh();
 
-            public org.springframework.boot.data.redis.autoconfigure.DataRedisProperties.Lettuce.Cluster.Refresh getRefresh() {
+            public DataRedisProperties.Lettuce.Cluster.Refresh getRefresh() {
                 return this.refresh;
             }
 

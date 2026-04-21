@@ -33,7 +33,7 @@ public class RedissonAdapter implements RedisClient {
                 .toArray(a -> new String[args.length]);
 
         Object eval = redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.LONG,
-                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), (Object) array);
+                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), array);
         return Long.parseLong(eval.toString());
     }
 
@@ -200,9 +200,9 @@ public class RedissonAdapter implements RedisClient {
         RScoredSortedSet<String> scoredSortedSet = redissonClient.getScoredSortedSet(key);
         Collection<ScoredEntry<String>> scoredEntries = scoredSortedSet.entryRange((int) start, (int) end);
         if (CollectionUtils.isEmpty(scoredEntries)) {
-            return new HashMap<>();
+            return new HashMap<>(16);
         }
-        Map<T, Double> newMap = new HashMap<>();
+        Map<T, Double> newMap = new HashMap<>(16);
         for (ScoredEntry<String> typedTuple : scoredEntries) {
             T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
             newMap.put(t, typedTuple.getScore());
@@ -220,8 +220,7 @@ public class RedissonAdapter implements RedisClient {
     @Override
     public Double zScore(String key, String member) {
         RScoredSortedSet<String> scoredSortedSet = redissonClient.getScoredSortedSet(key);
-        Double score = scoredSortedSet.getScore(member);
-        return score;
+        return scoredSortedSet.getScore(member);
     }
 
     /**
@@ -280,7 +279,7 @@ public class RedissonAdapter implements RedisClient {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
         return redissonClient.getScript().eval(RScript.Mode.READ_WRITE, lua, RScript.ReturnType.LIST,
-                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), (Object) array);
+                keys.stream().map(a -> (Object) a).collect(Collectors.toList()), array);
     }
 
     @Override

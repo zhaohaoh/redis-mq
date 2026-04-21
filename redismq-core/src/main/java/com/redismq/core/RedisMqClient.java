@@ -264,14 +264,12 @@ public class RedisMqClient {
     
     /**
      * 执行本地 rebalance。
-     *
      * 核心步骤：
      * 1. 先刷新本节点心跳，确保自己在 client 列表中可见；
      * 2. 记录 rebalance 前的分片视图；
      * 3. 等待极短收敛时间，让其他新注册节点也进入视图；
      * 4. 计算新的分片；
      * 5. 只对“释放的虚拟队列”做 quiesce，对“新获得的虚拟队列”重新投递拉取任务。
-     *
      * 这样做的关键点是：不再粗暴地 pauseAll + unlock，避免已在执行中的消息被其他节点抢走而重复消费。
      */
     public void doRebalance() {
@@ -336,7 +334,6 @@ public class RedisMqClient {
     
     /**
      * 负载均衡订阅。
-     *
      * rebalance topic 在客户端生命周期里应该一直存在，因此这里同样复用 listener，
      * 但不做频繁 add/remove。
      */
@@ -389,8 +386,7 @@ public class RedisMqClient {
      * @return {@link Set}<{@link Queue}>
      */
     public Set<Queue> getAllQueue() {
-        Set<Queue> queueList = redisMQStoreUtil.getQueueList();
-        return queueList;
+        return redisMQStoreUtil.getQueueList();
     }
 
     private Map<String, List<String>> snapshotCurrentAssignments() {
@@ -403,12 +399,10 @@ public class RedisMqClient {
 
     /**
      * 把 rebalance 结果真正应用到当前节点。
-     *
      * 处理顺序非常重要：
      * 1. 先找出 released 分片并 quiesce，立刻阻止这些分片继续拉新消息；
      * 2. 根据当前是否还有分片，决定是否保留 pull topic 的订阅；
      * 3. 最后把 newly-acquired 分片重新投递到本地阻塞队列，由新的 owner 去抢锁并开始拉取。
-     *
      * 这个顺序保证：
      * 1. 旧 owner 会渐进排空，不会粗暴释放锁；
      * 2. 新 owner 即使马上开始入队，也只能在锁可用时接手；

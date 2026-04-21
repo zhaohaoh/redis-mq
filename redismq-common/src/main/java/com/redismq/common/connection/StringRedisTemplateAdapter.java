@@ -237,7 +237,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
                         + "        redis.call('zrem', KEYS[1],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
         Object[] array = new Object[4];
         array[0] = min;
-        array[1] = Double.valueOf(0D).equals(max) ? Double.MAX_VALUE : max;
+        array[1] = max==0D ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
         List<?> list = luaList(lua, Collections.singletonList(key), array);
