@@ -190,7 +190,14 @@ public class RedisListenerContainerManager {
     }
 
     /**
-     * 暂停所有  RedisListenerContainer.start方法中会自动退出并且删除redis的key 需要注意这里删除了队列的锁。说明任何人可以获取到。那么就存在有任务正在线程中消费。从而存在重复消费
+     * 旧版“全量暂停”逻辑。
+     *
+     * 注意：
+     * 1. 这个实现会在 pause 后立即把当前持有的虚拟队列锁释放掉；
+     * 2. 如果业务线程里还有消息没处理完，其他节点就可能马上抢到同一分片并重复消费；
+     * 3. 因此它不再适合用于 rebalance 主流程，新的 rebalance 已改成 released 分片逐个 quiesce。
+     *
+     * 这里保留方法仅兼容旧调用方，不建议再接回新的负载均衡链路。
      */
     public void pauseAll() {
         redisListenerContainerMap.values().forEach(r -> {

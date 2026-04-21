@@ -12,22 +12,35 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
-import static com.redismq.common.constant.RedisMQConstant.*;
+import static com.redismq.common.constant.RedisMQConstant.NAMESPACE;
+import static com.redismq.common.constant.RedisMQConstant.PREFIX;
+import static com.redismq.common.constant.RedisMQConstant.getClientCollection;
+import static com.redismq.common.constant.RedisMQConstant.getGroupCollection;
+import static com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollection;
+import static com.redismq.common.constant.RedisMQConstant.getQueueCollection;
+import static com.redismq.common.constant.RedisMQConstant.getRebalanceTopic;
+import static com.redismq.common.constant.RedisMQConstant.getTopic;
+import static com.redismq.common.constant.RedisMQConstant.getVqueueOffsetKey;
 
 @Slf4j
 public class RedisMQClientUtil {
-
+    
     private final RedisClient redisClient;
-
+    
     public RedisMQClientUtil(RedisClient redisClient) {
         this.redisClient = redisClient;
     }
-
+    
     /**
      * 注册队列
      */
@@ -38,7 +51,7 @@ public class RedisMQClientUtil {
         redisClient.sAdd(getQueueCollection(), queue);
         return queue;
     }
-
+    
     /**
      * 获取队列
      */
@@ -48,7 +61,7 @@ public class RedisMQClientUtil {
                 .findFirst();
         return first.orElse(null);
     }
-
+    
     /**
      * 获取所有队列
      */
@@ -59,7 +72,7 @@ public class RedisMQClientUtil {
         }
         return set.stream().map(s -> (Queue) s).collect(Collectors.toSet());
     }
-
+    
     /**
      * 注册队列
      */
@@ -67,13 +80,13 @@ public class RedisMQClientUtil {
         redisClient.sRemove(getQueueCollection(), queue);
         return queue;
     }
-
+    
     public void registerClient(Client client) {
         long heartbeatTime = System.currentTimeMillis();
         redisClient.zAdd(getClientCollection(), client, heartbeatTime);
     }
-
-
+    
+    
     /**
      * 组内所有客户端
      *
@@ -86,55 +99,54 @@ public class RedisMQClientUtil {
         if (CollectionUtils.isEmpty(clientDoubleMap)) {
             return new ArrayList<>();
         }
-        return clientDoubleMap.entrySet().stream().filter(a -> a.getKey().getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
+        return clientDoubleMap.entrySet().stream().filter(a->a.getKey().getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
                 .map(Map.Entry::getKey).collect(Collectors.toList());
     }
-
+    
     /**
      * 所有客户端
      *
      * @return {@link Set}<{@link String}>
      */
     public List<Client> getAllClients() {
-
+        
         String clientCollection = getClientCollection();
         Map<Client, Double> clientDoubleMap = redisClient.zRangeWithScores(clientCollection, 0, Long.MAX_VALUE,
                 Client.class);
-
+        
         return clientDoubleMap.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList());
     }
-
+    
     /**
      * 获取所有的group
-     *
      * @return
      */
     public Set<String> getGroups() {
         String groupCollection = getGroupCollection();
         Map<String, Double> doubleMap = redisClient.zRangeWithScores(groupCollection, 0, Long.MAX_VALUE,
                 String.class);
-        if (CollectionUtils.isEmpty(doubleMap)) {
+        if (CollectionUtils.isEmpty(doubleMap)){
             return new HashSet<>();
         }
-        return doubleMap.keySet();
-
+        return  doubleMap.keySet();
+        
     }
-
-
+    
+    
     /**
      * 删除客户端
      */
     public Long removeClient(double start, double end) {
         return redisClient.zRemoveRangeByScore(getClientCollection(), start, end);
     }
-
+    
     /**
      * 删除客户端
      */
     public void removeClient(Client client) {
         redisClient.zRemove(getClientCollection(), client);
     }
-
+    
     /**
      * 放入死队列
      */
@@ -143,40 +155,40 @@ public class RedisMQClientUtil {
         String deadQueue = RedisMQConstant.getDeadQueueNameByQueue(queue);
         redisClient.zAdd(deadQueue, message, System.currentTimeMillis());
     }
-
+    
     /**
      * 删除消息
      */
     public Boolean removeMessage(String queueName, String msgId) {
-        boolean success = false;
+        boolean success =false;
         String lua = "local result={};"
                 + "local r1 = redis.call('zrem', KEYS[1], ARGV[1]); "
                 + "local r2  = redis.call('hdel', KEYS[2],  ARGV[1]); "
                 + "table.insert(result,r1);table.insert(result,r2);"
                 + "return result;";
-        List<String> params = new ArrayList<>();
+        List<String> params=new ArrayList<>();
         String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
-        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
         //队列名+groupId
         params.add(queueName + SPLITE + groupId);
         params.add(queueName + ":body");
         Object[] objects = {msgId};
         List list = redisClient.luaList(lua, params, objects);
-        if (!CollectionUtils.isEmpty(list)) {
+        if (!CollectionUtils.isEmpty(list)){
             long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
             success = count >= 1;
         }
-        if (!success) {
-            log.error("remove message failed, queueName:{} messageId:{}", queueName, msgId);
+        if (!success){
+            log.error("remove message failed, queueName:{} messageId:{}",queueName,msgId);
         }
         return success;
     }
-
+    
     /**
      * ack消息
      */
-    public Boolean ackMessage(String queueName, String msgId, long offset) {
-        boolean success = false;
+    public Boolean ackMessage(String queueName, String msgId,long offset) {
+        boolean success =false;
         String lua = "local result={};\n" + "local messageIdQueue=KEYS[1];\n" + "local queueGroups= KEYS[3];\n"
                 + "local offsetGroup= KEYS[4];\n" + "local orginalQueueName =KEYS[5];\n"
                 + "local otherMessageIdQueues =KEYS[6];\n" + "local diffMax =KEYS[7];\n" + "local msgOffset =KEYS[8];\n"
@@ -197,14 +209,14 @@ public class RedisMQClientUtil {
                 + "            table.insert(result,r2);\n" + "        end\n" + "    end\n" + "end\n" + "return result;";
         List<String> keys = new ArrayList<>();
         String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(queueName);
-
+        
         queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
         String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
-        Set<String> group = getGroups();
+        Set<String> group =  getGroups();
         String finalQueueName = queueName;
         //其他group的Id 判断所有groupId的偏移量都提交后。才删除消息体
         String queueGroups = group.stream()
-                .filter(a -> !a.equals(groupId))
+                .filter(a->!a.equals(groupId))
                 .map(g -> finalQueueName + SPLITE + g)
                 .collect(Collectors.joining(","));
         //1.队列名+groupId  存消息的队列
@@ -220,30 +232,30 @@ public class RedisMQClientUtil {
         keys.add(orginalQueueName);
         //key6 除当前队列外所有其他队列的消息id队列
         String offsetGroups = group.stream().filter(gId -> !gId.equals(groupId))
-                .map(gId -> finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
+                .map(gId ->  finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
         keys.add(offsetGroups);
         //key7 除当前队列外所有其他队列的消息id队列
         keys.add(GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax().toString());
-
-
-        Object[] objects = {msgId, offset};
+        
+        
+        Object[] objects = {msgId,offset};
         List list = redisClient.luaList(lua, keys, objects);
-        if (!CollectionUtils.isEmpty(list)) {
+        if (!CollectionUtils.isEmpty(list)){
             long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
             success = count >= 1;
         }
-        if (!success) {
-            log.error("remove message failed, queueName:{} messageId:{}", queueName, msgId);
+        if (!success){
+            log.error("remove message failed, queueName:{} messageId:{}",queueName,msgId);
         }
         return success;
     }
-
-
+    
+    
     /**
      * ack消息
      */
-    public Boolean ackBatchMessage(String queueName, String msgIds, long msgOffset) {
-        boolean success = false;
+    public Boolean ackBatchMessage(String vQueueName, String msgIds,long msgOffset) {
+        boolean success =false;
         String lua = "local result={};\n" + "local messageIdQueue=KEYS[1];\n" + "local queueGroups= KEYS[3];\n"
                 + "local offsetGroup= KEYS[4];\n" + "local orginalQueueName =KEYS[5];\n"
                 + "local otherMessageIdQueues =KEYS[6];\n" + "local diffMax =KEYS[7];\n" + "\n"
@@ -266,15 +278,15 @@ public class RedisMQClientUtil {
                 + "    redis.call('zadd', offsetGroup, msgOffset,orginalQueueName);\n" + "end\n" + "\n"
                 + "return result;";
         List<String> keys = new ArrayList<>();
-        String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(queueName);
-
-        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
+        String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(vQueueName);
+        
+        String queueName = RedisMQConstant.getVQueueNameByVQueue(vQueueName);
         String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
-        Set<String> group = getGroups();
+        Set<String> group =  getGroups();
         String finalQueueName = queueName;
         //其他group的Id 判断所有groupId的偏移量都提交后。才删除消息体
         String queueGroups = group.stream()
-                .filter(a -> !a.equals(groupId))
+                .filter(a->!a.equals(groupId))
                 .map(g -> finalQueueName + SPLITE + g)
                 .collect(Collectors.joining(","));
         //1.队列名+groupId  存消息的队列
@@ -287,62 +299,62 @@ public class RedisMQClientUtil {
         //4 维护当前队列偏移量的组名
         keys.add(offsetGroupName);
         //5.原始队列名称
-        keys.add(orginalQueueName);
+        keys.add(vQueueName);
         //key6 除当前队列外所有其他队列的消息id队列
         String offsetGroups = group.stream().filter(gId -> !gId.equals(groupId))
-                .map(gId -> finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
+                .map(gId ->  finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
         keys.add(offsetGroups);
         //key7 除当前队列外所有其他队列的消息id队列
         keys.add(GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax().toString());
-
+        
         //msgOffset 所有消息最大偏移量
-        Object[] objects = {msgIds, msgOffset};
+        Object[] objects = {msgIds,msgOffset};
         List list = redisClient.luaList(lua, keys, objects);
-        if (!CollectionUtils.isEmpty(list)) {
+        if (!CollectionUtils.isEmpty(list)){
             long count = list.stream().mapToInt(value -> Integer.parseInt(value.toString())).count();
             success = count >= 1;
         }
-        if (!success) {
-            log.error("remove message failed, queueName:{} messageIds:{}", queueName, msgIds);
+        if (!success){
+            log.error("remove message failed, queueName:{} messageIds:{}",queueName,msgIds);
         }
         return success;
     }
-
+    
     /**
      * 根据时间拉取队列中的消息
      */
     public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex,
-                                                                  int end) {
-        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
-
+            int end) {
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
+        
         Map<Message, Double> messageScopeMap = redisClient
-                .zrangeMessage(queueName, GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), pullTime, Double.MAX_VALUE, startIndex, end);
+                .zrangeMessage(queueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), pullTime, Double.MAX_VALUE, startIndex, end);
         List<Pair<Message, Double>> pairs = new ArrayList<>();
         messageScopeMap.forEach((k, v) -> {
-            pairs.add(Pair.of(k, v));
+            pairs.add( Pair.of(k, v));
         });
         return pairs;
     }
-
+    
     /**
      * 拉取队列中的消息 拉取可以消费的消息
      */
-    public List<Message> pullMessage(String queueName, long minScopre, long time, int start, int pullSize) {
+    public List<Message> pullMessage(String queueName,long  minScopre,long time, int start, int pullSize) {
         queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
-        Map<Message, Double> messageScopeMap = redisClient.zrangeMessage(queueName, GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), minScopre, time, start, pullSize);
+        Map<Message, Double> messageScopeMap = redisClient.zrangeMessage(queueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), minScopre, time, start, pullSize);
         if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
         return new ArrayList<>(messageScopeMap.keySet());
     }
-
+    
     /**
      * 拉取队列中的消息 不管消息的scope消费时间
      */
     public List<Pair<Message, Double>> pullMessageWithScope(String queueName, int start, int pullSize) {
-        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
+        queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
         Map<Message, Double> messageScopeMap = redisClient
-                .zrangeMessage(queueName, GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), 0, Double.MAX_VALUE, start, pullSize);
+                .zrangeMessage(queueName, GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),0, Double.MAX_VALUE, start, pullSize);
         if (CollectionUtils.isEmpty(messageScopeMap)) {
             return new ArrayList<>();
         }
@@ -352,15 +364,15 @@ public class RedisMQClientUtil {
         });
         return pairs;
     }
-
-
+    
+    
     /**
      * 删除指定key
      */
     public Boolean unlock(String key) {
         return redisClient.unlock(key);
     }
-
+    
     /**
      * 队列大小
      */
@@ -368,14 +380,14 @@ public class RedisMQClientUtil {
         String queueName = RedisMQConstant.getVQueueNameByVQueue(vQueue);
         return redisClient.zSize(queueName);
     }
-
+    
     /**
      * 锁定指定key
      */
     public Boolean lock(String key, Duration duration) {
         return redisClient.lock(key, "", duration);
     }
-
+    
     /**
      * 发布重新平衡
      *
@@ -384,55 +396,55 @@ public class RedisMQClientUtil {
     public void publishRebalance(String clientId) {
         redisClient.convertAndSend(getRebalanceTopic(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()), clientId);
     }
-
+    
     /**
      * 发布重新平衡
      *
      * @param clientId 客户端id
      */
-    public void publishRebalance(String groupId, String clientId) {
+    public void publishRebalance(String groupId,String clientId) {
         redisClient.convertAndSend(getRebalanceTopic(groupId), clientId);
     }
-
+    
     /**
      * 发布拉取消息的topic
      */
     public void publishPullMessage(PushMessage pushMessage) {
         redisClient.convertAndSend(getTopic(), pushMessage);
     }
-
+    
     /**
      * 发布topic
      */
     public void publish(String topic, Object obj) {
         redisClient.convertAndSend(topic, obj);
     }
-
+    
     public Long executeLua(String lua, List<String> keys, Object... args) {
         return redisClient.executeLua(lua, keys, args);
     }
-
-    public Long getQueueMaxOffset(String queueName) {
-        String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queueName;
+    
+    public Long getQueueMaxOffset(String vQueueName){
+        String queueOffset = getVqueueOffsetKey(vQueueName);
         Object obj = redisClient.get(queueOffset);
-        if (obj == null) {
+        if (obj==null){
             return 0L;
         }
         String str = (String) obj;
         return Long.parseLong(str);
     }
-
+    
     public Boolean isLock(String key) {
         return redisClient.isLock(key);
     }
-
+    
     /**
      * 注册所有的消费组
      */
     public void registerGroup() {
-        redisClient.zAdd(getGroupCollection(), GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), System.currentTimeMillis());
+        redisClient.zAdd(getGroupCollection(),GlobalConfigCache.CONSUMER_CONFIG.getGroupId(),System.currentTimeMillis());
     }
-
+    
     /**
      * 注册所有的消费组
      */
@@ -441,26 +453,26 @@ public class RedisMQClientUtil {
         String offsetGroupCollection = getOffsetGroupCollection(GlobalConfigCache.CONSUMER_CONFIG.getGroupId());
         Boolean absent = redisClient.zAddIfAbsent(offsetGroupCollection,
                 queueName, 0L);
-
+        
     }
-
+    
     public Map<String, Double> getQueueGroupOffsets(String offsetGroupCollection) {
         Map<String, Double> queueOffsetMap = redisClient.zRangeWithScores(offsetGroupCollection, 0, Long.MAX_VALUE,
                 String.class);
-
+        
         return queueOffsetMap;
     }
-
-    public Long getQueueGroupOffset(String offsetGroupCollection, String queue) {
+    
+    public  Long getQueueGroupOffset(String offsetGroupCollection,String queue) {
         Double offset = redisClient.zScore(offsetGroupCollection, queue);
-        if (offset == null) {
+        if (offset==null){
             return 0L;
         }
         return offset.longValue();
     }
-
+    
     public void deleteGroup(String groupId) {
-        redisClient.zRemove(getGroupCollection(), groupId);
+        redisClient.zRemove(getGroupCollection(),groupId);
         String offsetGroupCollection = getOffsetGroupCollection(groupId);
         redisClient.delete(offsetGroupCollection);
         //查找所有队列的虚拟队列。删除队列内的消息
@@ -473,6 +485,6 @@ public class RedisMQClientUtil {
                 redisClient.delete(vQueueName + groupId);
             }
         }
-
+        
     }
 }

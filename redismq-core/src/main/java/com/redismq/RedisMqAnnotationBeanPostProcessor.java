@@ -3,9 +3,9 @@ package com.redismq;
 
 import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.connection.RedisMQClientUtil;
-import com.redismq.common.constant.OffsetEnum;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.Queue;
+import com.redismq.common.serializer.RedisMQStringMapper;
 import com.redismq.container.AbstractMessageListenerContainer;
 import com.redismq.container.RedisMQListenerContainer;
 import com.redismq.core.RedisListenerContainerManager;
@@ -37,13 +37,18 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
-import static com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollection;
 
 
 //Bean的后置处理器切入点
@@ -54,9 +59,9 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
     private final Set<Class<?>> nonAnnotatedClasses = Collections.newSetFromMap(new ConcurrentHashMap<>(64));
     private final Map<String, List<RedisListenerEndpoint>> redisListenerEndpointMap = new ConcurrentHashMap<>();
     //    为了让RedisMQAutoConfiguration加载执行init方法
-//    private RedisMqClient redisMqClient;
-
-
+    //    private RedisMqClient redisMqClient;
+    
+    
     //bean初始化后的回调方法 查找出RedisListener注解标记的类
     @Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
@@ -93,10 +98,10 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
                         throw new RedisMqException("redismq  duplicate queueName");
                     }
                 });
-
+                
                 // Non-empty set of methods
                 annotatedMethods.forEach((method, redisListener) -> process(redisListener, method, bean));
-
+                
                 if (logger.isTraceEnabled()) {
                     logger.trace(annotatedMethods.size() + " @RedisListener methods processed on bean '" + beanName +
                             "': " + annotatedMethods);
@@ -105,7 +110,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         }
         return bean;
     }
-
+    
     //处理RedisListener注解
     private void process(RedisListener redisListener, Method method, Object bean) {
         RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
@@ -117,7 +122,7 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         Queue queue = new Queue(redisListener.queue());
         //初始化队列设置默认值
         initQueue(queue);
-
+        
         //注解中有配置以注解的配置优先
         if (redisListener.concurrency() > 0) {
             queue.setConcurrency(redisListener.concurrency());
@@ -141,15 +146,14 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
         if (redisListener.queueMaxSize() > 0) {
             queue.setQueueMaxSize(redisListener.queueMaxSize());
         }
-
-
-        redisMqClient.registerQueue(queue);
-
+        
         QueueManager.registerLocalQueue(queue);
-
+        
+        redisMqClient.registerQueue(queue);
+        
         //反射获取方法
         Method invocableMethod = AopUtils.selectInvocableMethod(method, bean.getClass());
-
+        
         //监听端点 封装方法名 bean名字 和routingKey一对一。一个队列可能有多个
         List<RedisListenerEndpoint> redisListenerEndpoints = redisListenerEndpointMap.computeIfAbsent(queue.getQueueName(), q -> new ArrayList<>());
         for (String tag : redisListener.tag()) {
@@ -161,14 +165,14 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             redisListenerEndpoints.add(redisListenerEndpoint);
         }
     }
-
-
+    
+    
     @Override
     public int getOrder() {
         return LOWEST_PRECEDENCE;
     }
-
-
+    
+    
     @Override
     public void start() {
         RedisMqClient redisMqClient = applicationContext.getBean(RedisMqClient.class);
@@ -182,14 +186,14 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             }
         }
     }
-
+    
     /**
      * 创建容器
      */
     private boolean createContainer() {
         Map<String, Queue> queues = QueueManager.getLocalQueueMap();
         //设置工厂中的属性，工厂生成的属性和最终队列属性一致
-
+        
         RedisMQClientUtil redisMQClientUtil = applicationContext.getBean("redisMQClientUtil", RedisMQClientUtil.class);
         Map<String, ConsumeInterceptor> consumeInterceptorMap = applicationContext.getBeansOfType(ConsumeInterceptor.class);
         //没有配置取全局配置
@@ -205,54 +209,38 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
 
             RemotingClient remotingClient = beanProvider.getIfAvailable();
 
-            String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
-            //消费者组偏移量
-            Long queueGroupOffset = redisMQClientUtil.getQueueGroupOffset(getOffsetGroupCollection(groupId),
-                    queue.getQueueName());
-            //队列偏移量
-            Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(queue.getQueueName());
-
-            // 第一次上线的消费者组，从哪里开始消费
-            OffsetEnum newGroupOffset = GlobalConfigCache.CONSUMER_CONFIG.getNewGroupOffset();
-            if (newGroupOffset.equals(OffsetEnum.LATEST) && queueGroupOffset == 0L) {
-                queueGroupOffset = queueMaxOffset;
-            }
-
-            // 中断了很久，重新上线的消费者组从哪里开始消费
-            OffsetEnum autoOffsetConsume = GlobalConfigCache.CONSUMER_CONFIG.getAutoOffsetConsume();
-            if (autoOffsetConsume.equals(OffsetEnum.LATEST)) {
-                queueGroupOffset = queueMaxOffset;
-            }
-
-            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(redisMQClientUtil, queue,
+            // 创建监听容器（不再传递offset参数，改为在容器内部动态获取）
+            AbstractMessageListenerContainer listenerContainer = new RedisMQListenerContainer(
+                    redisMQClientUtil,
+                    queue,
                     CollectionUtils.isEmpty(consumeInterceptorMap) ?
-                            new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values())
-                    , remotingClient
-                    , queueGroupOffset, queueMaxOffset);
+                            new ArrayList<>() : new ArrayList<>(consumeInterceptorMap.values()),
+                    remotingClient
+            );
 
             RedisListenerContainerManager redisListenerContainerManager = redisMqClient.getRedisListenerContainerManager();
             redisListenerContainerManager.registerContainer(listenerContainer, listenerEndpoints);
         });
         return create.get();
     }
-
+    
     //继承SmartLifecycle   容器停止执行调用
     @Override
     public void stop(Runnable callback) {
         stop();
         callback.run();
     }
-
+    
     @Override
     public int getPhase() {
         return 0;
     }
-
+    
     @Override
     public boolean isAutoStartup() {
         return true;
     }
-
+    
     @Override
     public void stop() {
         if (!CollectionUtils.isEmpty(QueueManager.getLocalQueues())) {
@@ -261,22 +249,22 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             isRunning = false;
         }
     }
-
+    
     @Override
     public boolean isRunning() {
         return isRunning;
     }
-
+    
     @Override
     public void destroy() {
         stop();
     }
-
+    
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
-
+    
     private void registryBeanQueue() {
         Map<String, Queue> queueMap = applicationContext.getBeansOfType(Queue.class);
         if (!CollectionUtils.isEmpty(queueMap)) {
@@ -296,20 +284,21 @@ public class RedisMqAnnotationBeanPostProcessor implements BeanPostProcessor, Or
             }
         }
     }
-
+    
     private void handlerPubSub(RedisListener redisListener, Method method, Object bean) {
         RedisMessageListenerContainer container = applicationContext.getBean("redisMQMessageListenerContainer", RedisMessageListenerContainer.class);
         MessageListenerAdapter listener = new MessageListenerAdapter(bean, method.getName());
         //使用Jackson2JsonRedisSerializer来序列化和反序列化redis的value值（默认使用JDK的序列化方式）这种序列化速度中上，明文存储
-        Jackson2JsonRedisSerializer<Object> jacksonSerializer = new Jackson2JsonRedisSerializer<>(Object.class);
-        listener.setSerializer(jacksonSerializer);
+        Jackson2JsonRedisSerializer<Object> jacksonSeial = new Jackson2JsonRedisSerializer<>(Object.class);
+        jacksonSeial.setObjectMapper(RedisMQStringMapper.STRING_MAPPER);
+        listener.setSerializer(jacksonSeial);
         listener.afterPropertiesSet();
         //名称完全对应的topic
         container.addMessageListener(listener, new ChannelTopic(redisListener.channelTopic()));
     }
-
+    
     private void initQueue(Queue queue) {
-
+        
         if (queue.getConcurrency() == null) {
             queue.setConcurrency(GlobalConfigCache.QUEUE_CONFIG.getConcurrency());
         }

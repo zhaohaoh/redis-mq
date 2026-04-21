@@ -8,7 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,8 +30,12 @@ public class QueueRebalanceImpl {
         this.allocateMessageQueueStrategy = allocateMessageQueueStrategy;
     }
 
-    /*
-        返回监听的队列
+    /**
+     * 根据当前 client 列表为本节点重新分配虚拟队列。
+     *
+     * 这里额外强调“稳定输入 -> 稳定输出”：
+     * 1. clientId 必须排序，否则同一批客户端只要心跳返回顺序不同，分配结果就可能抖动；
+     * 2. virtualQueue 也必须排序，否则不同节点看到的列表顺序不一致时，会算出不同结果。
      */
     public void rebalance(List<Client> clients, String clientId) {
         if (CollectionUtils.isEmpty(clients)) {
@@ -39,12 +45,15 @@ public class QueueRebalanceImpl {
 
         List<String> allQueues = QueueManager.getLocalQueues();
         for (String queue : allQueues) {
-            //获取每个客户端各自维护的队列列表 获得存在订阅该队列的有效客户端
+            // 对clientId做稳定排序，避免同一批客户端因为心跳顺序不同导致分配结果抖动。
             List<String> clientIds = clients.stream().filter(c -> c.getQueues() != null && c.getQueues().contains(queue))
                     .filter(a -> a.getGroupId().equals(GlobalConfigCache.CONSUMER_CONFIG.getGroupId()))
                     .map(Client::getClientId)
+                    .sorted()
                     .collect(Collectors.toList());
-            List<String> virtualQueues = QueueManager.getLocalVirtualQueues(queue);
+            // 对虚拟队列也做稳定排序，确保同样的输入一定得到同样的输出。
+            List<String> virtualQueues = new ArrayList<>(QueueManager.getLocalVirtualQueues(queue));
+            Collections.sort(virtualQueues);
             List<String> vQueues = allocateMessageQueueStrategy.allocate(clientId, virtualQueues, clientIds);
             putCurrentVirtualQueues(queue, vQueues);
         }

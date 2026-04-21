@@ -30,8 +30,10 @@ public class RedisPullListener extends AbstractRedisPushListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
+        boolean acquired = false;
         try {
             semaphore.acquire();
+            acquired = true;
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
@@ -74,7 +76,9 @@ public class RedisPullListener extends AbstractRedisPushListener {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            semaphore.release();
+            if (acquired) {
+                semaphore.release();
+            }
         }
     }
 
