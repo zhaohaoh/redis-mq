@@ -1,7 +1,6 @@
-package com.redismq.core;
+package com.redismq.processor;
 
 
-import com.redismq.RedisMqAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;

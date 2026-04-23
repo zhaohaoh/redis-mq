@@ -15,6 +15,7 @@
         <module>redismq-server</module>
         <module>redismq-rpc</module>
         <module>redismq-common</module>
+        <module>redismq-core</module>
     </modules>
 
     <properties>
@@ -196,11 +197,6 @@
             </dependency>
             <dependency>
                 <groupId>io.github.zhaohaoh</groupId>
-                <artifactId>redismq-core4</artifactId>
-                <version>${revision}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.github.zhaohaoh</groupId>
                 <artifactId>redismq-common</artifactId>
                 <version>${revision}</version>
             </dependency>
@@ -237,7 +233,7 @@
                     <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
                 <version>1.7.0</version>
@@ -248,7 +244,7 @@
                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>
-            <!-- 生成java source.jar -->
+            &lt;!&ndash; 生成java source.jar &ndash;&gt;
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
@@ -283,9 +279,9 @@
                 <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
                     <failOnError>false</failOnError>
-                    <charset>UTF-8</charset><!-- utf-8读取文件 -->
-                    <encoding>UTF-8</encoding><!-- utf-8进行编码代码 -->
-                    <docencoding>UTF-8</docencoding><!-- utf-8进行编码文档 -->
+                    <charset>UTF-8</charset>&lt;!&ndash; utf-8读取文件 &ndash;&gt;
+                    <encoding>UTF-8</encoding>&lt;!&ndash; utf-8进行编码代码 &ndash;&gt;
+                    <docencoding>UTF-8</docencoding>&lt;!&ndash; utf-8进行编码文档 &ndash;&gt;
                 </configuration>
                 <executions>
                     <execution>
@@ -295,7 +291,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
@@ -337,7 +333,6 @@
             <modules>
                 <module>redismq-spring-boot-starter</module>
                 <module>redismq-spring-boot-autoconfigure</module>
-                <module>redismq-core</module>
             </modules>
         </profile>
         <profile>
@@ -350,7 +345,6 @@
             <modules>
                 <module>redismq-spring-boot3-starter</module>
                 <module>redismq-spring-boot-autoconfigure</module>
-                <module>redismq-core</module>
             </modules>
         </profile>
         <profile>
@@ -363,7 +357,6 @@
             <modules>
                 <module>redismq-spring-boot4-autoconfigure</module>
                 <module>redismq-spring-boot4-starter</module>
-                <module>redismq-core4</module>
             </modules>
         </profile>
     </profiles>

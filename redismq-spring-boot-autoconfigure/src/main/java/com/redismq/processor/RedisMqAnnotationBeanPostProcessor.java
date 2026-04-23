@@ -1,6 +1,7 @@
-package com.redismq;
+package com.redismq.processor;
 
 
+import com.redismq.RedisListener;
 import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.exception.RedisMqException;
@@ -37,13 +38,7 @@ import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.util.CollectionUtils;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;

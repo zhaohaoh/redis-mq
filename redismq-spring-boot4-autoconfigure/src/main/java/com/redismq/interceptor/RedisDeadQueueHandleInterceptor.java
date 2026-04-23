@@ -6,7 +6,6 @@ import com.redismq.common.pojo.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-;
 
 /**
  * @Author: hzh

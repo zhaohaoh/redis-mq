@@ -1,7 +1,7 @@
 package com.enable;
 
 
-import com.redismq.core.RedisListenerConfigurationRegister;
+import com.redismq.processor.RedisListenerConfigurationRegister;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.*;
