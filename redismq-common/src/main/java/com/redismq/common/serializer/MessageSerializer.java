@@ -69,7 +69,7 @@ public class MessageSerializer extends StdSerializer<Message> {
         char c;
         for (int i = 0; i < len; i++) {
             c = str.charAt(i);
-            if (false == ArrayUtils.contains(chars, c)) {
+            if (!ArrayUtils.contains(chars, c)) {
                 builder.append(c);
             }
         }

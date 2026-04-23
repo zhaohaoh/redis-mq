@@ -29,7 +29,7 @@ import java.util.Set;
 @Configuration
 @ConditionalOnProperty(value = "spring.redismq.netty-config.client.enable", havingValue = "true")
 @AutoConfigureAfter(RedisMQAutoConfiguration.class)
-public class NettyClientAutoConfigration implements CommandLineRunner {
+public class NettyClientAutoConfiguration implements CommandLineRunner {
 
     /**
      * netty客户端引导程序
@@ -46,8 +46,7 @@ public class NettyClientAutoConfigration implements CommandLineRunner {
     @Bean
     public NettyClientChannelManager nettyClientChannelManager(@Lazy NettyClientBootstrap nettyClientBootstrap) {
         NettyPoolableFactory nettyPoolableFactory = new NettyPoolableFactory(nettyClientBootstrap);
-        NettyClientChannelManager nettyClientChannelManager = new NettyClientChannelManager(nettyPoolableFactory);
-        return nettyClientChannelManager;
+        return new NettyClientChannelManager(nettyPoolableFactory);
     }
 
     /**

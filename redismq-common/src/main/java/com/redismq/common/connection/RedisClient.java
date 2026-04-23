@@ -176,7 +176,7 @@ public interface RedisClient {
      * <p>
      * 返回list的lua
      */
-    List luaList(String lua, List<String> keys, Object[] args);
+    List<?> luaList(String lua, List<String> keys, Object[] args);
 
     Boolean exists(String key);
 

@@ -309,8 +309,7 @@ public class RedissonAdapter implements RedisClient {
     @Override
     public Boolean unlock(String key) {
         RLock lock = redissonClient.getLock(key);
-        boolean b = lock.forceUnlock();
-        return b;
+        return lock.forceUnlock();
     }
 
     @Override

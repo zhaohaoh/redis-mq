@@ -20,26 +20,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -137,20 +119,20 @@ import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
  * @see MessageStatus
  */
 public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(RedisMQListenerContainer.class);
-    
+
     /**
      * 延长锁看门狗
      */
     private final ScheduledThreadPoolExecutor lifeExtensionThread = new ScheduledThreadPoolExecutor(1);
-    
+
     private volatile ScheduledFuture<?> scheduledFuture;
-    
+
     private final ThreadPoolExecutor work;
     /**
      * 全局消费槽位。
-     *
+     * <p>
      * 设计目的：
      * 1. 拉取线程只有拿到槽位后才允许把消息提交到业务线程池，防止“先拉一堆、再慢慢消费”把内存打满。
      * 2. 槽位在任务真正执行结束后才归还，因此空闲线程一旦出现，下一轮 pull 很快就能再次拉消息。
@@ -159,7 +141,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
     private final Semaphore consumeSlots;
     /**
      * 正在渐进下线的虚拟队列集合。
-     *
+     * <p>
      * rebalance 释放分片时，不再像旧实现那样立刻 pause + unlock，而是先把虚拟队列标记成 quiescing：
      * 1. 禁止继续为该虚拟队列拉取新消息；
      * 2. 允许已提交的任务把手头工作做完；
@@ -167,22 +149,30 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     private final Set<String> quiescingVirtualQueues = ConcurrentHashMap.newKeySet();
     private RemotingClient remotingClient;
-    
+
     /**
      * 虚拟队列偏移量管理器（每个虚拟队列独立管理offset、window、消息ID）
      */
     private static class VirtualQueueOffsetManager {
-        /** 该虚拟队列已提交的最大连续偏移量 */
+        /**
+         * 该虚拟队列已提交的最大连续偏移量
+         */
         volatile long committedOffset = 0;
-        /** 偏移量窗口（维护消息完成状态） */
+        /**
+         * 偏移量窗口（维护消息完成状态）
+         */
         final SortedMap<Long, MessageStatus> offsetWindow = Collections.synchronizedSortedMap(new TreeMap<>());
-        /** 正在拉取的消息ID集合（防止重复拉取） */
+        /**
+         * 正在拉取的消息ID集合（防止重复拉取）
+         */
         final Set<String> pullingMessageIds = ConcurrentHashMap.newKeySet();
-        /** 是否需要从持久化存储追赶offset */
+        /**
+         * 是否需要从持久化存储追赶offset
+         */
         volatile boolean pullOffsetLow = false;
         /**
          * 当前虚拟队列正在执行或已提交但尚未结束的任务数。
-         *
+         * <p>
          * 普通队列和延时队列都要依赖这个值：
          * 1. 延时队列要求“上一批完全结束后再拉下一批”；
          * 2. quiesce 时要靠它判断当前虚拟队列是否已经彻底排空。
@@ -190,34 +180,34 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         final AtomicInteger inFlight = new AtomicInteger();
         /**
          * 延时队列已完成但尚未统一 ACK 的消息。
-         *
+         * <p>
          * 延时队列没有普通队列那种 offsetWindow 连续提交逻辑，因此任务线程只负责把完成结果回传到这里，
          * 真正的 ACK 仍然放回 pull 线程统一批量提交，避免业务线程直接和 ACK 时序纠缠在一起。
          */
         final ConcurrentLinkedQueue<Message> completedMessages = new ConcurrentLinkedQueue<>();
     }
-    
+
     /**
      * 虚拟队列偏移量管理器映射表（key=虚拟队列名）
      */
     private final Map<String, VirtualQueueOffsetManager> vqOffsetManagers = new ConcurrentHashMap<>();
-    
+
     /**
      * 窗口最大大小限制（防止内存溢出）
      */
     private static final int MAX_OFFSET_WINDOW_SIZE = 1000;
-    
+
     /**
      * 窗口大小告警阈值（达到80%时告警）
      */
     private static final int OFFSET_WINDOW_WARN_SIZE = (int) (MAX_OFFSET_WINDOW_SIZE * 0.8);
-    
+
     /**
      * 极端超时时间（10分钟，600000毫秒）
      * 超过此时间的消息将被移到死信队列
      */
     private static final long EXTREME_TIMEOUT = 600000;
-    
+
     /**
      * 消息状态类
      */
@@ -225,23 +215,27 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         final String messageId;
         final Message message;
         volatile boolean finished;
-        /** 进入窗口的时间，用来判断极端超时 */
+        /**
+         * 进入窗口的时间，用来判断极端超时
+         */
         final long pullTime;
-        /** 真实提交到线程池后的 Future，仅用于极端超时场景尝试 cancel */
+        /**
+         * 真实提交到线程池后的 Future，仅用于极端超时场景尝试 cancel
+         */
         volatile Future<Message> future;
-        
+
         MessageStatus(String messageId, Message message) {
             this.messageId = messageId;
             this.message = message;
             this.finished = false;
             this.pullTime = System.currentTimeMillis();
         }
-        
+
         boolean isExtremeTimeout(long timeout) {
             return !finished && (System.currentTimeMillis() - pullTime > timeout);
         }
     }
-    
+
     /**
      * 停止
      */
@@ -263,9 +257,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             Thread.currentThread().interrupt();
         }
     }
-    
+
     public RedisMQListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue,
-            List<ConsumeInterceptor> consumeInterceptorList, RemotingClient remotingClient) {
+                                    List<ConsumeInterceptor> consumeInterceptorList, RemotingClient remotingClient) {
         super(redisMQClientUtil, queue, consumeInterceptorList);
         lifeExtension();
         consumeSlots = new Semaphore(getMaxConcurrency());
@@ -280,7 +274,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         this.remotingClient = remotingClient;
         // 注意：不在构造函数中初始化offset，改为在getOrCreateVQManager中动态获取
     }
-    
+
     /**
      * 创建线程工厂
      *
@@ -292,12 +286,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             private final ThreadGroup group;
             private final AtomicInteger threadNumber = new AtomicInteger(1);
             private final String NAME_PREFIX = "REDISMQ-WORK-" + queueName + "-";
-            
+
             {
                 SecurityManager s = System.getSecurityManager();
                 group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
             }
-            
+
             @Override
             public Thread newThread(Runnable r) {
                 // 线程编号递增，达到THREAD_NUM_MAX时重置为concurrency+1，防止线程名过长
@@ -312,7 +306,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
         };
     }
-    
+
     /**
      * 获取或创建虚拟队列的偏移量管理器
      *
@@ -324,11 +318,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             VirtualQueueOffsetManager manager = new VirtualQueueOffsetManager();
             String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
             String offsetGroupCollection = com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollection(groupId);
-            
+
             // 从Redis获取该虚拟队列的已提交偏移量
             Long vqOffset = redisMQClientUtil.getQueueGroupOffset(offsetGroupCollection, vQueueName);
             Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(vQueueName);
-            
+
             // ❌ 暂时禁用: 新消费者组的LATEST跳转会导致startScore过大，拉不到消息
             // 原因: queueMaxOffset是逻辑队列的全局offset计数器，虚拟队列的实际offset可能小于这个值
             // 导致查询条件 score >= (queueMaxOffset + 1) 匹配不到任何消息
@@ -339,7 +333,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             //     log.info("redis-mq New consumer group using LATEST offset: vQueue={}, offset={}",
             //             vQueueName, vqOffset);
             // }
-            
+
             // ❌ 删除: autoOffsetConsume=LATEST会导致每次初始化都无条件跳转，覆盖已有offset
             // 这会导致消费者重启后跳过未消费的消息，且同样存在startScore过大的问题
             // OffsetEnum autoOffsetConsume = GlobalConfigCache.CONSUMER_CONFIG.getAutoOffsetConsume();
@@ -348,20 +342,20 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             //     log.info("redis-mq Consumer group auto reset to LATEST offset: vQueue={}, offset={}",
             //             vQueueName, vqOffset);
             // }
-            
+
             manager.committedOffset = vqOffset != null ? vqOffset : 0L;
-            
+
             // 计算是否需要追赶offset
             long diff = queueMaxOffset - manager.committedOffset;
             manager.pullOffsetLow = diff > GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax();
-            
+
             log.info("redis-mq Initialize VQ offset manager: vQueue={}, committedOffset={}, queueMaxOffset={}, pullOffsetLow={}",
                     vQueueName, manager.committedOffset, queueMaxOffset, manager.pullOffsetLow);
             return manager;
         });
     }
-    
-    
+
+
     /**
      * 拉取队列消息
      *
@@ -381,11 +375,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     public Set<Long> pull(String vQueueName) {
         Set<Long> delayTimes = new LinkedHashSet<>();
-        
+
         while (isRunning()) {
             try {
                 long pullTime = System.currentTimeMillis();
-                
+
                 // 先处理“已经完成但还没提交”的结果，再决定本轮还能不能继续拉。
                 // 普通队列走连续 offset 提交；延时队列走 completedMessages 批量 ACK。
                 if (!delay) {
@@ -402,33 +396,33 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     sleepForNextCheck();
                     continue;
                 }
-                
+
                 int availableSlots = calculateAvailableSlots(vQueueName);
                 if (availableSlots <= 0) {
                     sleepForNextCheck();
                     continue;
                 }
-                
+
                 List<Message> messages = pullMessages(vQueueName, pullTime, availableSlots);
                 messages = filterDuplicateMessages(vQueueName, messages);
-                
+
                 if (CollectionUtils.isEmpty(messages)) {
                     if (!handleEmptyMessages(vQueueName, delayTimes, pullTime)) {
                         break;
                     }
                     continue;
                 }
-                
+
                 // 这里仍然按“先构造任务、再统一提交”的方式推进，但是否能真正提交由 consumeSlots 决定。
                 // 因此即使某一轮拉到了多条消息，也只会在当前可承受的并发范围内入池。
                 List<RedisListenerCallable> callables = buildCallables(vQueueName, messages);
                 submitToThreadPool(vQueueName, callables);
-                
+
             } catch (Throwable e) {
                 handlePullError(e);
             }
         }
-        
+
         if (!delay) {
             commitContinuousOffset(vQueueName);
         } else {
@@ -436,7 +430,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         }
         return delayTimes;
     }
-    
+
     /**
      * 计算可用的拉取槽位数量
      *
@@ -456,12 +450,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         if (availableSlots <= 0) {
             return 0;
         }
-        
+
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
         if (delay && vqManager.inFlight.get() > 0) {
             return 0;
         }
-        
+
         if (!delay) {
             int windowSize = vqManager.offsetWindow.size();
             if (windowSize >= MAX_OFFSET_WINDOW_SIZE) {
@@ -474,22 +468,22 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
             availableSlots = Math.min(availableSlots, MAX_OFFSET_WINDOW_SIZE - windowSize);
         }
-        
+
         return availableSlots;
     }
-    
+
     /**
      * 拉取消息（先从持久化存储，再从Redis）
      *
      * @param vQueueName 虚拟队列名称
-     * @param pullTime 拉取时间戳
-     * @param pullSize 拉取数量
+     * @param pullTime   拉取时间戳
+     * @param pullSize   拉取数量
      * @return 消息列表
      */
     private List<Message> pullMessages(String vQueueName, long pullTime, int pullSize) {
         // 先获取偏移量落后的group的持久化的message
         List<Message> messages = getOffsetLowStoreMessage(vQueueName);
-        
+
         // 从redis中获取消息
         if (CollectionUtils.isEmpty(messages)) {
             long startScore;
@@ -504,43 +498,43 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
             messages = redisMQClientUtil.pullMessage(vQueueName, startScore, pullTime, 0, pullSize);
         }
-        
+
         return messages;
     }
-    
+
     /**
      * 过滤重复消息（防止重复消费）
      *
      * @param vQueueName 虚拟队列名称
-     * @param messages 原始消息列表
+     * @param messages   原始消息列表
      * @return 过滤后的消息列表
      */
     private List<Message> filterDuplicateMessages(String vQueueName, List<Message> messages) {
         if (CollectionUtils.isEmpty(messages) || delay) {
             return messages;
         }
-        
+
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
         return messages.stream()
                 .filter(msg -> msg != null && !vqManager.pullingMessageIds.contains(msg.getId()))
                 .collect(Collectors.toList());
     }
-    
+
     /**
      * 处理没有消息的情况
      *
      * @param vQueueName 虚拟队列名称
      * @param delayTimes 延时时间集合（延时队列使用）
-     * @param pullTime 拉取时间戳
+     * @param pullTime   拉取时间戳
      * @return true表示继续循环，false表示退出循环
      */
     private boolean handleEmptyMessages(String vQueueName, Set<Long> delayTimes, long pullTime) {
         if (!isRunning()) {
             return false;
         }
-        
+
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-        
+
         if (delay) {
             // 延时队列要求“当前批次完全结束后再继续拉下一批”，否则 ACK 与调度时间会互相穿插。
             if (vqManager.inFlight.get() > 0 || !vqManager.completedMessages.isEmpty()) {
@@ -556,27 +550,27 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             pairs.forEach(pair -> delayTimes.add(pair.getValue().longValue()));
             return false;
         }
-        
+
         if (hasPendingWork(vQueueName)) {
             // 普通队列没有新消息时，仍要继续盯住窗口里的存量任务，直到连续 offset 被推进完。
             commitContinuousOffset(vQueueName);
             sleepForNextCheck();
             return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * 构建Callable列表
      *
      * @param vQueueName 虚拟队列名称
-     * @param messages 消息列表
+     * @param messages   消息列表
      * @return RedisListenerCallable列表
      */
     private List<RedisListenerCallable> buildCallables(String vQueueName, List<Message> messages) {
         List<RedisListenerCallable> callableInvokes = new ArrayList<>();
-        
+
         for (Message message : messages) {
             if (!isRunning()) {
                 break;
@@ -584,13 +578,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             if (message == null) {
                 continue;
             }
-            
+
             try {
                 // 手动ack模式
                 if (AckMode.MAUAL.equals(ackMode)) {
                     // 手动ACK，无需框架处理
                 }
-                
+
                 String id = super.getRunableKey(message.getTag());
                 RedisListenerCallable callable = super.getRedisListenerCallable(id, message);
                 if (callable == null) {
@@ -600,24 +594,24 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                             RedisMQStringMapper.toJsonStr(message));
                     continue;
                 }
-                
+
                 callableInvokes.add(callable);
-                
+
             } catch (Throwable e) {
                 if (isRunning()) {
                     log.error("redisMQ listener container error", e);
                 }
             }
         }
-        
+
         return callableInvokes;
     }
-    
+
     /**
      * 追踪消息到窗口（仅普通队列）
      *
      * @param vQueueName 虚拟队列名称
-     * @param message 消息对象
+     * @param message    消息对象
      */
     private MessageStatus trackMessageInWindow(String vQueueName, Message message) {
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
@@ -629,12 +623,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         vqManager.offsetWindow.put(message.getOffset(), status);
         return status;
     }
-    
+
     /**
      * 提交Callable到线程池
      *
      * @param vQueueName 虚拟队列名称
-     * @param callables Callable列表
+     * @param callables  Callable列表
      * @return true表示提交成功，false表示列表为空
      */
     private boolean submitToThreadPool(String vQueueName, List<RedisListenerCallable> callables) {
@@ -644,10 +638,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
             return false;
         }
-        
+
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
         boolean submitted = false;
-        
+
         for (RedisListenerCallable callable : callables) {
             Message message = (Message) callable.getArgs();
             if (message == null) {
@@ -692,10 +686,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 throw e;
             }
         }
-        
+
         return submitted;
     }
-    
+
     /**
      * 处理拉取错误
      *
@@ -705,16 +699,16 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         if (!isRunning()) {
             return;
         }
-        
+
         log.error("redisMQ pop error", e);
-        
+
         // 检查是否是Redis数据类型错误
         if (e.getMessage() != null && e.getMessage().contains("WRONGTYPE Operation against a key holding the wrong kind of value")) {
             log.error("redisMQ [ERROR] queue not is zset type. cancel pop");
             stop();
             return;
         }
-        
+
         // 发生错误后等待5秒再继续
         try {
             Thread.sleep(5000L);
@@ -795,10 +789,10 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             Thread.currentThread().interrupt();
         }
     }
-    
+
     /**
      * 获取偏移量落后的队列消息（从MySQL持久化存储拉取）
-     *
+     * <p>
      * 适用场景：
      * 1. 消费者组长时间下线，Redis中的消息已被删除，但MySQL中还有历史消息
      * 2. 消费进度严重落后，需要追赶
@@ -811,12 +805,12 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             log.warn("remotingClient not register not getOffsetLowStoreMessage please open spring.redismq.netty-config.client.enable=true");
             return null;
         }
-        
+
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
         if (!vqManager.pullOffsetLow) {
             return null;
         }
-        
+
         // 新消费者组处理
         OffsetEnum newGroupOffset = GlobalConfigCache.CONSUMER_CONFIG.getNewGroupOffset();
         if (newGroupOffset.equals(OffsetEnum.LATEST)) {
@@ -826,21 +820,21 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(vQueueName);
             // 计算需要追赶的范围
             long diff = queueMaxOffset - vqManager.committedOffset;
-            
+
             if (diff <= 0) {
                 // 已经追上或超过最小offset，不需要追赶
                 vqManager.pullOffsetLow = false;
                 return null;
             }
-            
+
             if (diff <= GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax()) {
                 // 差距不大，从Redis拉取就够了
                 log.debug("Offset diff is small: {}, skip catchup", diff);
                 vqManager.pullOffsetLow = false;
                 return null;
             }
-            
-            
+
+
             if (!GlobalConfigCache.NETTY_CONFIG.getServer().isEnable()) {
                 log.warn("Offset diff too large: {}, but netty server not enabled. Skip catchup.", diff);
                 vqManager.pullOffsetLow = false;
@@ -849,20 +843,20 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             // 差距很大，需要从MySQL追赶
             log.info("Start offset catchup. vQueueName: {}, groupId: {}, committedOffset: {}, queueMaxOffset: {}, diff: {}",
                     vQueueName, GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), vqManager.committedOffset, queueMaxOffset, diff);
-            
+
             GroupOffsetQeueryMessageDTO offsetDTO = new GroupOffsetQeueryMessageDTO();
             offsetDTO.setOffset(vqManager.committedOffset);
             offsetDTO.setVQueue(vQueueName);
             offsetDTO.setLastOffset(queueMaxOffset);  // 追赶到最小offset即可
-            
+
             String object = (String) remotingClient.sendSync(offsetDTO, MessageType.GET_QUEUE_MESSAGE_BY_OFFSET);
             if (object == null) {
                 return null;
             }
-            
+
             List<Map> list = RedisMQStringMapper.toList(object, Map.class);
             List<Message> messages = new ArrayList<>();
-            
+
             if (!CollectionUtils.isEmpty(list)) {
                 for (Map map : list) {
                     String jsonStr = RedisMQStringMapper.toJsonStr(map);
@@ -881,18 +875,18 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             return messages;
         }
     }
-    
+
     private void ackMessage(String vQueueName, List<Message> messageList) {
-        if (!messageList.isEmpty()){
+        if (!messageList.isEmpty()) {
             Long offset = messageList.stream().map(Message::getOffset).max(Long::compareTo).get();
             String msgIds = messageList.stream().map(Message::getId).collect(Collectors.joining(","));
-            redisMQClientUtil.ackBatchMessage(vQueueName,msgIds,offset);
+            redisMQClientUtil.ackBatchMessage(vQueueName, msgIds, offset);
         }
     }
-    
+
     /**
      * 提交连续的偏移量，处理超时消息
-     *
+     * <p>
      * 该方法负责：
      * 1. 检查并处理极端超时的消息（先尝试 cancel，再决定是否移到死信队列）
      * 2. 查找连续完成的偏移量（虚拟队列级别）
@@ -903,22 +897,22 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      */
     private void commitContinuousOffset(String vQueueName) {
         VirtualQueueOffsetManager vqManager = getOrCreateVQManager(vQueueName);
-        
+
         if (vqManager.offsetWindow.isEmpty()) {
             log.debug("redis-mq commitContinuousOffset: vQueue={}, offsetWindow is empty, skip", vQueueName);
             return;
         }
-        
+
         log.info("redis-mq commitContinuousOffset START: vQueue: {}, committedOffset: {}, offsetWindow size: {}, first offset: {}, last offset: {}",
                 vQueueName, vqManager.committedOffset, vqManager.offsetWindow.size(),
                 vqManager.offsetWindow.firstKey(), vqManager.offsetWindow.lastKey());
-        
+
         List<Message> dlqMessages = new ArrayList<>();
         List<Long> toRemoveOffsets = new ArrayList<>();
         List<String> toAckMsgIds = new ArrayList<>();
         long newCommittedOffset = vqManager.committedOffset;
         int extremeTimeoutCount = 0;
-        
+
         // 使用单一同步块处理所有offsetWindow操作，避免并发问题
         synchronized (vqManager.offsetWindow) {
             for (Map.Entry<Long, MessageStatus> entry : vqManager.offsetWindow.entrySet()) {
@@ -927,7 +921,7 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     log.error("redis-mq Invalid MessageStatus in offsetWindow, offset: {}", entry.getKey());
                     continue;
                 }
-                
+
                 if (status.isExtremeTimeout(EXTREME_TIMEOUT)) {
                     Future<Message> future = status.future;
                     // 极端超时不再直接强推 offset。
@@ -951,11 +945,11 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     }
                 }
             }
-            
+
             for (Map.Entry<Long, MessageStatus> entry : vqManager.offsetWindow.entrySet()) {
                 Long offset = entry.getKey();
                 MessageStatus status = entry.getValue();
-                
+
                 if (status.finished) {
                     toRemoveOffsets.add(offset);
                     toAckMsgIds.add(status.messageId);
@@ -968,17 +962,17 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                     break;
                 }
             }
-            
+
             for (Long offset : toRemoveOffsets) {
                 vqManager.offsetWindow.remove(offset);
             }
         }
-        
+
         if (!dlqMessages.isEmpty()) {
             log.error("redis-mq Extreme timeout summary: vQueue: {}, count: {}, offsets: {}",
                     vQueueName, extremeTimeoutCount,
                     dlqMessages.stream().map(Message::getOffset).collect(Collectors.toList()));
-            
+
             for (Message dlqMsg : dlqMessages) {
                 try {
                     // 移除原消息
@@ -994,15 +988,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
                 }
             }
         }
-        
+
         if (newCommittedOffset > vqManager.committedOffset && !toAckMsgIds.isEmpty()) {
             try {
                 String msgIdStr = String.join(",", toAckMsgIds);
                 redisMQClientUtil.ackBatchMessage(vQueueName, msgIdStr, newCommittedOffset);
-                
+
                 log.info("redis-mq Committed continuous offset: vQueue={}, {} -> {}, message count: {}",
                         vQueueName, vqManager.committedOffset, newCommittedOffset, toAckMsgIds.size());
-                
+
                 // 更新已提交的偏移量
                 vqManager.committedOffset = newCommittedOffset;
             } catch (Exception e) {
@@ -1011,14 +1005,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             }
         }
     }
-    
-    
-    
+
+
     @Override
     public void repush() {
         throw new RedisMqException("延时队列不存在的方法  repush()");
     }
-    
+
     public void quiesceVirtualQueue(String virtualQueue) {
         // quiesce 的语义是“停止接新活，但不要粗暴中断正在执行的活”。
         quiescingVirtualQueues.add(virtualQueue);
@@ -1041,15 +1034,15 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
      * @param startTime    开始时间
      */
     public void start(String virtualQueue, Long startTime) {
-        
+
         running();
         // 同一个虚拟队列重新分配到当前节点时，需要先清掉 quiesce 标记，
         // 否则新的 DelayTimeoutTask 即使被推入，也会在 pull 主循环里立刻退出。
         activateVirtualQueue(virtualQueue);
-        
+
         //为空说明当前能获取到数据
         DelayTimeoutTask timeoutTask = delayTimeoutTaskManager
-                .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask(virtualQueue,redisMQClientUtil) {
+                .computeIfAbsent(virtualQueue, task -> new DelayTimeoutTask(virtualQueue, redisMQClientUtil) {
                     @Override
                     protected Set<Long> pullTask() {
                         try {
@@ -1076,10 +1069,8 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
             log.error("delayTimeoutTaskManager schedule ", e);
         }
     }
-    
-    
-    
-    
+
+
     /**
      * 消费锁续期 看门狗
      */

@@ -27,7 +27,7 @@ import java.util.Set;
 @Configuration
 @ConditionalOnProperty(value = "spring.redismq.netty-config.client.enable", havingValue = "true")
 @AutoConfigureAfter(RedisMQAutoConfiguration.class)
-public class NettyClientAutoConfigration {
+public class NettyClientAutoConfiguration {
 
 
     /**

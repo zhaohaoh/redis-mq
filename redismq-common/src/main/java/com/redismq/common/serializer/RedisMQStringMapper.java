@@ -77,8 +77,7 @@ public class RedisMQStringMapper {
     public static <T, K, V> List<T> mapsToBeans(List<Map<K, V>> source, Class<T> targetType) {
         try {
             String json = toJsonStr(source);
-            List<T> ts = toList(json, targetType);
-            return ts;
+            return toList(json, targetType);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -111,8 +110,7 @@ public class RedisMQStringMapper {
 
     public static <T> T toBean(byte[] bytes, Class<T> beanType) {
         try {
-            T t = STRING_MAPPER.readValue(bytes, beanType);
-            return t;
+            return STRING_MAPPER.readValue(bytes, beanType);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -140,8 +138,7 @@ public class RedisMQStringMapper {
         String json = new String(bytes);
 
         try {
-            T t = STRING_MAPPER.readValue(json, beanType);
-            return t;
+            return STRING_MAPPER.readValue(json, beanType);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage(), e);
         }

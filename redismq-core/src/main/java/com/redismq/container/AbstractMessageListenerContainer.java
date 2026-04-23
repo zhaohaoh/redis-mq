@@ -80,16 +80,7 @@ public abstract class AbstractMessageListenerContainer {
      */
     protected final DelayTimeoutTaskManager delayTimeoutTaskManager = new DelayTimeoutTaskManager();
 
-    public void setConsumeInterceptorList(List<ConsumeInterceptor> consumeInterceptorList) {
-        this.consumeInterceptorList = consumeInterceptorList;
-    }
-
-    public void setRedisListenerEndpointMap(Map<String, RedisListenerEndpoint> redisListenerEndpointMap) {
-        this.redisListenerEndpointMap = redisListenerEndpointMap;
-    }
-
-    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue, List<ConsumeInterceptor> consumeInterceptorList
-    ) {
+    public AbstractMessageListenerContainer(RedisMQClientUtil redisMQClientUtil, Queue queue, List<ConsumeInterceptor> consumeInterceptorList) {
         this.queueName = queue.getQueueName();
         this.redisMQClientUtil = redisMQClientUtil;
         this.concurrency = queue.getConcurrency();

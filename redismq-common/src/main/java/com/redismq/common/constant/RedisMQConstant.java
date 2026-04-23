@@ -6,6 +6,7 @@ package com.redismq.common.constant;
  */
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 import static com.redismq.common.constant.GlobalConstant.SPLITE;
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
@@ -123,14 +124,14 @@ public class RedisMQConstant {
     }
     
     public static String getVQueueNameByVQueue(String queue) {
-        if (!StringUtils.startsWith(queue, PREFIX + NAMESPACE + SPLITE)) {
+        if (!Strings.CI.startsWith(queue, PREFIX + NAMESPACE + SPLITE)) {
             return PREFIX + NAMESPACE + SPLITE + "{" + queue + "}";
         }
         return queue;
     }
     
     public static String getDeadQueueNameByQueue(String queue) {
-        if (!StringUtils.startsWith(queue, PREFIX + NAMESPACE + DEAD_NAME + SPLITE)) {
+        if (!Strings.CI.startsWith(queue, PREFIX + NAMESPACE + DEAD_NAME + SPLITE)) {
             return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + "{" + queue + "}";
         }
         return PREFIX + NAMESPACE + DEAD_NAME + SPLITE + "{" + queue + "}";
