@@ -12,19 +12,11 @@ import org.springframework.util.CollectionUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import static com.redismq.common.constant.GlobalConstant.BLOCKING_QUEUE_SIZE;
-import static com.redismq.common.constant.GlobalConstant.BOSS_NUM;
-import static com.redismq.common.constant.GlobalConstant.DELAY_BLOCKING_QUEUE_SIZE;
-import static com.redismq.common.constant.GlobalConstant.THREAD_NUM_MAX;
+import static com.redismq.common.constant.GlobalConstant.*;
 import static com.redismq.common.constant.RedisMQConstant.getVirtualQueueLock;
 import static com.redismq.common.constant.StateConstant.RUNNING;
 import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
@@ -35,51 +27,51 @@ import static com.redismq.queue.QueueManager.INVOKE_VIRTUAL_QUEUES;
  * @date 2021/8/10 监听器容器注册类。一个或多个boss线程轮询从redis队列中取数据。交给多个监听器多个线程池进行消费
  */
 public class RedisListenerContainerManager {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(RedisListenerContainerManager.class);
-    
+
     /**
      * 延时队列每次的携带队列和时间戳.数据可能会不同.队列数量要求比较高
      */
     private final LinkedBlockingQueue<PushMessage> delayBlockingQueue = new LinkedBlockingQueue<>(
             DELAY_BLOCKING_QUEUE_SIZE);
-    
+
     /**
      * 普通消息队列
      */
     private final LinkedBlockingQueue<String> linkedBlockingQueue = new LinkedBlockingQueue<>(BLOCKING_QUEUE_SIZE);
-    
+
     /**
      * boss线程 负责调度普通队列和线程队列。获取队列开启拉取任务的消息
      */
     private ThreadPoolExecutor boss;
-    
+
     /**
      * 队列的容器
      */
     private final Map<String, AbstractMessageListenerContainer> redisListenerContainerMap = new ConcurrentHashMap<>();
-    
+
     /**
      * 状态 目前没有
      */
     private volatile int state = 0;
-    
+
     public LinkedBlockingQueue<String> getLinkedBlockingQueue() {
         return linkedBlockingQueue;
     }
-    
+
     public LinkedBlockingQueue<PushMessage> getDelayBlockingQueue() {
         return delayBlockingQueue;
     }
-    
+
     public RedisMQListenerContainer getRedisistenerContainer(String queueName) {
         return (RedisMQListenerContainer) redisListenerContainerMap.get(queueName);
     }
-    
+
     public RedisListenerContainerManager() {
         setBoss(BOSS_NUM);
     }
-    
+
     /*
         boss线程数
      */
@@ -89,18 +81,18 @@ public class RedisListenerContainerManager {
         }
         boss = new ThreadPoolExecutor(bossNum, BOSS_NUM, 10L, TimeUnit.SECONDS, new SynchronousQueue<>(),
                 new ThreadFactory() {
-                    
+
                     private final ThreadGroup group;
-                    
+
                     private final AtomicInteger threadNumber = new AtomicInteger(1);
-                    
+
                     private static final String NAME_PREFIX = "REDISMQ-BOSS-";
-                    
+
                     {
                         SecurityManager s = System.getSecurityManager();
                         group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
                     }
-                    
+
                     @Override
                     public Thread newThread(Runnable r) {
                         //除了固定的boss线程。临时新增的线程会删除了会递增，int递增有最大值。这里再9999的时候就从固定线程的数量上重新计算
@@ -115,15 +107,15 @@ public class RedisListenerContainerManager {
                     }
                 }, new ThreadPoolExecutor.DiscardPolicy());
     }
-    
+
     boolean isRunning() {
         return state == RUNNING;
     }
-    
+
     void running() {
         state = RUNNING;
     }
-    
+
     /**
      * 开始轮询监听队列消息
      */
@@ -144,8 +136,8 @@ public class RedisListenerContainerManager {
             }
         });
     }
-    
-    
+
+
     /**
      * 开始轮询监听延时队列消息
      */
@@ -166,9 +158,9 @@ public class RedisListenerContainerManager {
             }
         });
     }
-    
+
     public void registerContainer(AbstractMessageListenerContainer listenerContainer,
-            List<RedisListenerEndpoint> redisListenerEndpoints) {
+                                  List<RedisListenerEndpoint> redisListenerEndpoints) {
         //id是队列的名称
         AbstractMessageListenerContainer container = redisListenerContainerMap
                 .computeIfAbsent(listenerContainer.getQueueName(), c -> listenerContainer);
@@ -177,8 +169,8 @@ public class RedisListenerContainerManager {
                 .collect(Collectors.toMap(RedisListenerEndpoint::getId, r -> r));
         container.setRedisListenerEndpointMap(redisListenerEndpointMap);
     }
-    
-    
+
+
     /**
      * 全部停止 RedisListenerContainer.start方法中会自动退出并且删除redis的key
      */
@@ -196,9 +188,16 @@ public class RedisListenerContainerManager {
         boss.shutdownNow();
         log.info("redisMQ shutdown All ThreadPollExecutor");
     }
-    
+
     /**
-     * 暂停所有  RedisListenerContainer.start方法中会自动退出并且删除redis的key 需要注意这里删除了队列的锁。说明任何人可以获取到。那么就存在有任务正在线程中消费。从而存在重复消费
+     * 旧版“全量暂停”逻辑。
+     *
+     * 注意：
+     * 1. 这个实现会在 pause 后立即把当前持有的虚拟队列锁释放掉；
+     * 2. 如果业务线程里还有消息没处理完，其他节点就可能马上抢到同一分片并重复消费；
+     * 3. 因此它不再适合用于 rebalance 主流程，新的 rebalance 已改成 released 分片逐个 quiesce。
+     *
+     * 这里保留方法仅兼容旧调用方，不建议再接回新的负载均衡链路。
      */
     public void pauseAll() {
         redisListenerContainerMap.values().forEach(r -> {
@@ -217,5 +216,5 @@ public class RedisListenerContainerManager {
             }
         });
     }
-   
+
 }

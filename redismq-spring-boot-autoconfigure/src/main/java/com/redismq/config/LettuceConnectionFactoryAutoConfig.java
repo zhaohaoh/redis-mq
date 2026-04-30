@@ -3,6 +3,7 @@ package com.redismq.config;
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.SocketOptions;
 import io.lettuce.core.TimeoutOptions;
+import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.cluster.ClusterClientOptions;
 import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import io.lettuce.core.resource.ClientResources;
@@ -27,40 +28,40 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 
 
-@EnableConfigurationProperties({ RedisProperties.class})
+@EnableConfigurationProperties({RedisProperties.class})
 @ConditionalOnProperty(name = "spring.redismq.client.client-type", havingValue = "lettuce", matchIfMissing = true)
 @Configuration
-public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfiguration{
-    
+public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfiguration {
+
     protected LettuceConnectionFactoryAutoConfig(RedisProperties properties,
-            ObjectProvider<RedisStandaloneConfiguration> standaloneConfigurationProvider,
-            ObjectProvider<RedisSentinelConfiguration> sentinelConfigurationProvider,
-            ObjectProvider<RedisClusterConfiguration> clusterConfigurationProvider) {
+                                                 ObjectProvider<RedisStandaloneConfiguration> standaloneConfigurationProvider,
+                                                 ObjectProvider<RedisSentinelConfiguration> sentinelConfigurationProvider,
+                                                 ObjectProvider<RedisClusterConfiguration> clusterConfigurationProvider) {
         super(properties, standaloneConfigurationProvider, sentinelConfigurationProvider, clusterConfigurationProvider);
     }
-    
-     @Bean
-     @ConditionalOnMissingBean(RedisConnectionFactory.class)
-     LettuceConnectionFactory redisConnectionFactory(
+
+    @Bean
+    @ConditionalOnMissingBean(RedisConnectionFactory.class)
+    LettuceConnectionFactory redisConnectionFactory(
             ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
         LettuceConnectionFactory lettuceConnectionFactory = createLettuceConnectionFactory();
         lettuceConnectionFactory.afterPropertiesSet();
         return lettuceConnectionFactory;
     }
-    
-    
+
+
     /*
      LettuceClientConfiguration配置
     */
     public LettuceConnectionFactory createLettuceConnectionFactory() {
         DefaultClientResources.Builder builder = DefaultClientResources.builder();
         DefaultClientResources clientResources = builder.build();
-        
+
         LettuceClientConfiguration clientConfig = getLettuceClientConfiguration(clientResources,
                 getProperties().getLettuce().getPool());
         return createLettuceConnectionFactory(clientConfig);
     }
-    
+
     private LettuceClientConfiguration getLettuceClientConfiguration(
             ClientResources clientResources, RedisProperties.Pool pool) {
         LettuceClientConfiguration.LettuceClientConfigurationBuilder builder = createBuilder(pool);
@@ -75,7 +76,7 @@ public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfigu
         builder.clientResources(clientResources);
         return builder.build();
     }
-    
+
     private ClientOptions createClientOptions() {
         ClientOptions.Builder builder = initializeClientOptionsBuilder();
         Duration connectTimeout = getProperties().getConnectTimeout();
@@ -84,6 +85,7 @@ public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfigu
         }
         return builder.timeoutOptions(TimeoutOptions.enabled()).build();
     }
+
     private ClientOptions.Builder initializeClientOptionsBuilder() {
         if (getProperties().getCluster() != null) {
             ClusterClientOptions.Builder builder = ClusterClientOptions.builder();
@@ -100,35 +102,36 @@ public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfigu
         }
         return ClientOptions.builder();
     }
-    
+
     private LettuceClientConfiguration.LettuceClientConfigurationBuilder createBuilder(RedisProperties.Pool pool) {
         if (isPoolEnabled(pool)) {
             return new PoolBuilderFactory().createBuilder(pool);
         }
         return LettuceClientConfiguration.builder();
     }
-        static class PoolBuilderFactory {
 
-            LettuceClientConfiguration.LettuceClientConfigurationBuilder createBuilder(RedisProperties.Pool properties) {
-                return LettucePoolingClientConfiguration.builder().poolConfig(getPoolConfig(properties));
-            }
+    static class PoolBuilderFactory {
 
-            private GenericObjectPoolConfig<?> getPoolConfig(RedisProperties.Pool properties) {
-                GenericObjectPoolConfig<?> config = new GenericObjectPoolConfig<>();
-                config.setMaxTotal(properties.getMaxActive());
-                config.setMaxIdle(properties.getMaxIdle());
-                config.setMinIdle(properties.getMinIdle());
-                if (properties.getTimeBetweenEvictionRuns() != null) {
-                    config.setTimeBetweenEvictionRuns(properties.getTimeBetweenEvictionRuns());
-                }
-                if (properties.getMaxWait() != null) {
-                    config.setMaxWait(properties.getMaxWait());
-                }
-                return config;
-            }
-
+        LettuceClientConfiguration.LettuceClientConfigurationBuilder createBuilder(RedisProperties.Pool properties) {
+            return LettucePoolingClientConfiguration.builder().poolConfig(getPoolConfig(properties));
         }
-    
+
+        private GenericObjectPoolConfig<StatefulConnection<?, ?>> getPoolConfig(RedisProperties.Pool properties) {
+            GenericObjectPoolConfig<StatefulConnection<?, ?>> config = new GenericObjectPoolConfig<>();
+            config.setMaxTotal(properties.getMaxActive());
+            config.setMaxIdle(properties.getMaxIdle());
+            config.setMinIdle(properties.getMinIdle());
+            if (properties.getTimeBetweenEvictionRuns() != null) {
+                config.setTimeBetweenEvictionRuns(properties.getTimeBetweenEvictionRuns());
+            }
+            if (properties.getMaxWait() != null) {
+                config.setMaxWait(properties.getMaxWait());
+            }
+            return config;
+        }
+
+    }
+
     private LettuceConnectionFactory createLettuceConnectionFactory(LettuceClientConfiguration clientConfiguration) {
         if (getSentinelConfig() != null) {
             return new LettuceConnectionFactory(getSentinelConfig(), clientConfiguration);
@@ -138,7 +141,7 @@ public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfigu
         }
         return new LettuceConnectionFactory(getStandaloneConfig(), clientConfiguration);
     }
-    
+
     private LettuceClientConfiguration.LettuceClientConfigurationBuilder applyProperties(
             LettuceClientConfiguration.LettuceClientConfigurationBuilder builder) {
         if (getProperties().isSsl()) {
@@ -158,6 +161,6 @@ public class LettuceConnectionFactoryAutoConfig extends RedisMQConnectionConfigu
         }
         return builder;
     }
-    
-    
+
+
 }

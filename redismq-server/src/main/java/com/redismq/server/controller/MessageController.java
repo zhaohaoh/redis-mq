@@ -1,11 +1,11 @@
 package com.redismq.server.controller;
 
-import com.redismq.server.pojo.MQMessageQueryDTO;
-import com.redismq.server.pojo.MessageVO;
-import com.redismq.server.pojo.PageResult;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
 import com.redismq.common.pojo.Message;
+import com.redismq.server.pojo.MQMessageQueryDTO;
+import com.redismq.server.pojo.MessageVO;
+import com.redismq.server.pojo.PageResult;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.BeanUtils;
@@ -25,39 +25,39 @@ import java.util.stream.Collectors;
 public class MessageController {
     @Autowired
     private RedisMQClientUtil redisMQClientUtil;
-    
+
     /**
      * 分页查询消息
      *
      * @return {@link ResponseEntity}<{@link String}>
      */
     @PostMapping("page")
-    public ResponseEntity<PageResult<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO){
+    public ResponseEntity<PageResult<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO) {
         String vQueue = mqMessageDTO.getVirtualQueueName();
-        vQueue= RedisMQConstant.getVQueueNameByVQueue(vQueue);
+        vQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
         Long total = redisMQClientUtil.queueSize(vQueue);
-        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,mqMessageDTO.getStartOffset(),mqMessageDTO.getEndOffset());
-        List<MessageVO> messages = pairs.stream().map(m->{
+        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue, mqMessageDTO.getStartOffset(), mqMessageDTO.getEndOffset());
+        List<MessageVO> messages = pairs.stream().map(m -> {
             MessageVO messageVO = new MessageVO();
-            BeanUtils.copyProperties(m.getKey(),messageVO);
+            BeanUtils.copyProperties(m.getKey(), messageVO);
             Date date = new Date(m.getValue().longValue());
             String format = DateFormatUtils.format(date, "yyyy-MM-dd HH:mm:ss");
             messageVO.setConsumeTime(format);
             return messageVO;
         }).collect(Collectors.toList());
-      
-        return ResponseEntity.ok(PageResult.success(total,messages));
+
+        return ResponseEntity.ok(PageResult.success(total, messages));
     }
-    
+
     /**
      * 删除消息
      *
      * @return {@link ResponseEntity}<{@link String}>
      */
     @PostMapping("deleteMessage")
-    public ResponseEntity deleteMessage(@RequestBody Message message){
+    public ResponseEntity deleteMessage(@RequestBody Message message) {
         Boolean success = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
         return ResponseEntity.ok(success);
     }
-    
+
 }

@@ -16,13 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class HistoryController {
     @Autowired
     private MessageStoreStrategy jdbcStoreStrategy;
+
     /**
-     *  消息
+     * 消息
      *
      * @return {@link ResponseEntity}<{@link String}>
      */
     @PostMapping("page")
-    public ResponseEntity<PageResult<HistoryMessageVO>> page(@RequestBody HistoryMessageQueryDTO message){
+    public ResponseEntity<PageResult<HistoryMessageVO>> page(@RequestBody HistoryMessageQueryDTO message) {
         PageResult<HistoryMessageVO> pageResult = jdbcStoreStrategy.pageMessageList(message);
         return ResponseEntity.ok(pageResult);
     }

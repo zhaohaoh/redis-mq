@@ -13,8 +13,8 @@ import java.util.List;
  */
 @Data
 public class MergedWarpMessage {
-    
+
     private List<Message> messages = new ArrayList<>();
-    
+
     private PushMessage pushMessage;
 }

@@ -10,11 +10,11 @@ public enum ProducerAck {
     /**
      * 异步确认
      */
-    ASYNC("async" ),
+    ASYNC("async"),
     /**
      * 同步确认
      */
-    SYNC("sync" );
+    SYNC("sync");
     /**
      * 暂无，不可选。预留
      */

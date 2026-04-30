@@ -11,7 +11,7 @@ public class GlobalStoreConfig {
      * 存储消息的策略
      */
     private StoreEnum storeType = StoreEnum.MYSQL;
-    
+
     /**
      * 消息过期时间 默认3个月
      */

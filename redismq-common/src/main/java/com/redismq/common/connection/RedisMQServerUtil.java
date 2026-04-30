@@ -17,27 +17,27 @@ import static com.redismq.common.constant.RedisMQConstant.getServerTopic;
 
 @Slf4j
 public class RedisMQServerUtil {
-    
+
     private final RedisClient redisClient;
-    
+
     public RedisMQServerUtil(RedisClient redisClient) {
         this.redisClient = redisClient;
     }
-    
-    
+
+
     public void registerServer(Server server) {
         long heartbeatTime = System.currentTimeMillis();
-        redisClient.zAdd(getServerCollection(), server,heartbeatTime);
+        redisClient.zAdd(getServerCollection(), server, heartbeatTime);
     }
-    
+
     public void publishServer(ServerRegisterInfo server) {
-        redisClient.convertAndSend(getServerTopic(),server);
+        redisClient.convertAndSend(getServerTopic(), server);
     }
-    
+
     public void removeServer(Server server) {
-        redisClient.zRemove(getServerCollection(),server);
+        redisClient.zRemove(getServerCollection(), server);
     }
-  
+
     /**
      * 所有服务端
      *
@@ -52,20 +52,20 @@ public class RedisMQServerUtil {
         }
         int serverRegisterExpireSeconds = GlobalConfigCache.NETTY_CONFIG.getServer().getServerRegisterExpireSeconds();
         int removeTime = (serverRegisterExpireSeconds << 1) * 1000;
-        serverMap.entrySet().removeIf((e)->{
+        serverMap.entrySet().removeIf((e) -> {
             Double value = e.getValue();
             long longValue = value.longValue();
             long expireTime = System.currentTimeMillis() - longValue;
             //超过10秒说明是无效的直接删除
-            if (expireTime > removeTime){
-                redisClient.zRemove(serverCollection,e.getKey());
+            if (expireTime > removeTime) {
+                redisClient.zRemove(serverCollection, e.getKey());
                 return true;
             }
             return false;
         });
-        
+
         return serverMap.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toSet());
     }
-    
+
 
 }

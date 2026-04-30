@@ -1,4 +1,3 @@
-
 package com.redismq.samples.rocket.config;
 
 import com.redismq.samples.rocket.AppendMessageResult;
@@ -35,7 +34,7 @@ public class PutMessageResult {
     @Override
     public String toString() {
         return "PutMessageResult [putMessageStatus=" + putMessageStatus + ", appendMessageResult="
-            + appendMessageResult + "]";
+                + appendMessageResult + "]";
     }
 
 }

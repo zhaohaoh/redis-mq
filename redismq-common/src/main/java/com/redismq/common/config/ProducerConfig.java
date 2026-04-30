@@ -14,7 +14,7 @@ public class ProducerConfig {
     /**
      * 生产 loadBalance 加载服务 重试
      */
-    public int loadBalanceRetryCount  = 100;
+    public int loadBalanceRetryCount = 100;
     /**
      * 生产 loadBalance 加载服务 重试间隔
      */
@@ -40,7 +40,7 @@ public class ProducerConfig {
      */
     public boolean ignoreRpcError = true;
     /**
-     *  发送消息超时60秒 rpc默认30秒
+     * 发送消息超时60秒 rpc默认30秒
      */
     public long sendMaxTimeout = 60 * 1000;
     /**

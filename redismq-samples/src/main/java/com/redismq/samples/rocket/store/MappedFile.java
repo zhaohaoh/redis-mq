@@ -41,7 +41,7 @@
 //    /**
 //     * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
 //     */
-////    protected TransientStorePool transientStorePool = null;
+/// /    protected TransientStorePool transientStorePool = null;
 //    private String fileName;
 //    //文件的起始偏移量，在文件名上
 //    private long fileFromOffset;

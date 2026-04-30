@@ -1,71 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>0.5.0-beta7</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    
+
     <artifactId>redismq-server</artifactId>
-    <description>redismq server and console </description>
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-    </properties>
+    <description>redismq server and console</description>
     <dependencies>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-rpc</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        <version>${spring-boot.version}</version>
-      </dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-logging</artifactId>
-            <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring-boot.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.redisson</groupId>-->
-<!--            <artifactId>redisson-spring-boot-starter</artifactId>-->
-<!--            <version>3.20.1</version>-->
-<!--            <exclusions>-->
-<!--                <exclusion>-->
-<!--                    <groupId>org.springframework.data</groupId>-->
-<!--                    <artifactId>spring-data-redis</artifactId>-->
-<!--                </exclusion>-->
-<!--            </exclusions>-->
-<!--        </dependency>-->
-        <dependency>
-            <groupId>io.github.zhaohaoh</groupId>
-            <artifactId>redismq-spring-boot-autoconfigure</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>org.redisson</groupId>-->
+        <!--            <artifactId>redisson-spring-boot-starter</artifactId>-->
+        <!--            <version>3.20.1</version>-->
+        <!--            <exclusions>-->
+        <!--                <exclusion>-->
+        <!--                    <groupId>org.springframework.data</groupId>-->
+        <!--                    <artifactId>spring-data-redis</artifactId>-->
+        <!--                </exclusion>-->
+        <!--            </exclusions>-->
+        <!--        </dependency>-->
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
-            <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
-            <version>3.7.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
-            <version>2.6.3</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -73,86 +58,129 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
             <version>${spring-boot.version}</version>
         </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.19</version>
-        </dependency>
     </dependencies>
     <build>
-    <!-- 指定生成jar包的名字 -->
-    <finalName>${project.artifactId}-${project.version}</finalName>
-    <plugins>
-        <!--    jar包发布到服务器的必备插件  有application main进程的都需要-->
-        <plugin>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-maven-plugin</artifactId>
-            <version>${spring-boot.version}</version>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>repackage</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-        <plugin>
-            <groupId>com.google.cloud.tools</groupId>
-            <artifactId>jib-maven-plugin</artifactId>
-            <version>3.3.1</version>
-            <configuration>
-                <from>
-                    <image>openjdk:8u222-jdk</image>
-<!--                    <platforms>-->
-<!--                        <platform>-->
-<!--                            <architecture>${jib-maven-plugin.architecture}</architecture>-->
-<!--                            <os>linux</os>-->
-<!--                        </platform>-->
-<!--                    </platforms>-->
-                </from>
-                <to>
-                    <image>registry.cn-hangzhou.aliyuncs.com/zhaohaoh/redis-mq</image>
-                    <tags>
-                        <tag>${project.version}</tag>
-                    </tags>
-<!--                通过plugins的jib:build方式传入  jib:build -Dusername= -Dpasswor=       -f pom.xml                  -->
-                    <auth>
-                        <username>${username}</username>
-                        <password>${password}</password>
-                    </auth>
-                </to>
-                <container>
-<!--                    // 项目文件存放镜像中的目录-->
-                    <appRoot>/app</appRoot>
-<!--                    <workingDirectory>/application</workingDirectory>-->
-<!--                    <volumes>/applicat ion/log</volumes>-->
-                    <entrypoint>
-                        <arg>sh</arg>
-                        <arg>-c</arg>
-                        <arg>java ${JAVA_OPTS} -cp /app/resources/:/app/classes/:/app/libs/*
-                            com.redismq.server.ServerApplication</arg>
-                    </entrypoint>
-                    <ports>
-                        <port>8088</port>
-                    </ports>
-                    <environment>
-<!--                        <SPRING_OUTPUT_ANSI_ENABLED>ALWAYS</SPRING_OUTPUT_ANSI_ENABLED>-->
-<!--                        <JHIPSTER_SLEEP>0</JHIPSTER_SLEEP>-->
-                    </environment>
-                    <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
-                </container>
-<!--                <extraDirectories>-->
-<!--&lt;!&ndash;                    <paths>src/main/docker/jib</paths>&ndash;&gt;-->
-<!--                    <paths>src</paths>-->
-<!--                    <permissions>-->
-<!--                        <permission>-->
-<!--                            <file>/entrypoint.sh</file>-->
-<!--                            <mode>755</mode>-->
-<!--                        </permission>-->
-<!--                    </permissions>-->
-<!--                </extraDirectories>-->
-            </configuration>
-        </plugin>
-    </plugins>
+        <!-- 指定生成jar包的名字 -->
+        <finalName>${project.artifactId}-${project.version}</finalName>
+        <plugins>
+            <!--    jar包发布到服务器的必备插件  有application main进程的都需要-->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <from>
+                        <image>openjdk:8u222-jdk</image>
+                        <!--                    <platforms>-->
+                        <!--                        <platform>-->
+                        <!--                            <architecture>${jib-maven-plugin.architecture}</architecture>-->
+                        <!--                            <os>linux</os>-->
+                        <!--                        </platform>-->
+                        <!--                    </platforms>-->
+                    </from>
+                    <to>
+                        <image>registry.cn-hangzhou.aliyuncs.com/zhaohaoh/redis-mq</image>
+                        <tags>
+                            <tag>${project.version}</tag>
+                        </tags>
+                        <!--                通过plugins的jib:build方式传入  jib:build -Dusername= -Dpasswor=       -f pom.xml                  -->
+                        <auth>
+                            <username>${username}</username>
+                            <password>${password}</password>
+                        </auth>
+                    </to>
+                    <container>
+                        <!--                    // 项目文件存放镜像中的目录-->
+                        <appRoot>/app</appRoot>
+                        <!--                    <workingDirectory>/application</workingDirectory>-->
+                        <!--                    <volumes>/applicat ion/log</volumes>-->
+                        <entrypoint>
+                            <arg>sh</arg>
+                            <arg>-c</arg>
+                            <arg>java ${JAVA_OPTS} -cp /app/resources/:/app/classes/:/app/libs/*
+                                com.redismq.server.ServerApplication
+                            </arg>
+                        </entrypoint>
+                        <ports>
+                            <port>8088</port>
+                        </ports>
+                        <environment>
+                            <!--                        <SPRING_OUTPUT_ANSI_ENABLED>ALWAYS</SPRING_OUTPUT_ANSI_ENABLED>-->
+                            <!--                        <JHIPSTER_SLEEP>0</JHIPSTER_SLEEP>-->
+                        </environment>
+                        <creationTime>USE_CURRENT_TIMESTAMP</creationTime>
+                    </container>
+                    <!--                <extraDirectories>-->
+                    <!--&lt;!&ndash;                    <paths>src/main/docker/jib</paths>&ndash;&gt;-->
+                    <!--                    <paths>src</paths>-->
+                    <!--                    <permissions>-->
+                    <!--                        <permission>-->
+                    <!--                            <file>/entrypoint.sh</file>-->
+                    <!--                            <mode>755</mode>-->
+                    <!--                        </permission>-->
+                    <!--                    </permissions>-->
+                    <!--                </extraDirectories>-->
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>spring-boot-2</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot-autoconfigure</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>spring-boot-3</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.mysql</groupId>
+                    <artifactId>mysql-connector-j</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot-autoconfigure</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>spring-boot-4</id>
+            <dependencies>
+                <dependency>
+                    <groupId>com.mysql</groupId>
+                    <artifactId>mysql-connector-j</artifactId>
+                    <scope>runtime</scope>
+                </dependency>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot4-autoconfigure</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

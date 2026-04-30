@@ -1,7 +1,6 @@
-package com.redismq.core;
+package com.redismq.processor;
 
 
-import com.redismq.RedisMqAnnotationBeanPostProcessor;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -12,7 +11,7 @@ import org.springframework.core.type.AnnotationMetadata;
  * @date 2021/8/10
  * 注册类 @Import引入
  */
-public class RedisListenerConfigurationRegister implements ImportBeanDefinitionRegistrar  {
+public class RedisListenerConfigurationRegister implements ImportBeanDefinitionRegistrar {
 
 
     @Override

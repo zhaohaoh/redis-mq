@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class BasePageSelect  {
+public class BasePageSelect {
     private Integer size = 10;
 
     private Integer page = 1;

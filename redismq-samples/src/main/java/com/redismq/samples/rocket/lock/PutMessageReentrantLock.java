@@ -1,4 +1,3 @@
-
 package com.redismq.samples.rocket.lock;
 
 import java.util.concurrent.locks.ReentrantLock;

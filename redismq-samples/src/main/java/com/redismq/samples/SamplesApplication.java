@@ -5,12 +5,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class SamplesApplication {
- 
+
     public static void main(String[] args) {
         SpringApplication.run(SamplesApplication.class, args);
     }
-    
-    
+
+
     //test 通道连接
 //    @Override
 //    public void run(String... args) throws Exception {

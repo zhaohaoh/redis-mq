@@ -21,19 +21,19 @@ import org.springframework.util.StringUtils;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPoolConfig;
 
-@ConditionalOnClass({ GenericObjectPool.class, JedisConnection.class, Jedis.class })
-@EnableConfigurationProperties({ RedisProperties.class})
+@ConditionalOnClass({GenericObjectPool.class, JedisConnection.class, Jedis.class})
+@EnableConfigurationProperties({RedisProperties.class})
 @ConditionalOnProperty(name = "spring.redismq.client.client-type", havingValue = "jedis", matchIfMissing = false)
 @Configuration
-public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfiguration{
-    
+public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfiguration {
+
     protected JedisConnectionFactoryAutoConfig(RedisProperties properties,
-            ObjectProvider<RedisStandaloneConfiguration> standaloneConfigurationProvider,
-            ObjectProvider<RedisSentinelConfiguration> sentinelConfigurationProvider,
-            ObjectProvider<RedisClusterConfiguration> clusterConfigurationProvider) {
+                                               ObjectProvider<RedisStandaloneConfiguration> standaloneConfigurationProvider,
+                                               ObjectProvider<RedisSentinelConfiguration> sentinelConfigurationProvider,
+                                               ObjectProvider<RedisClusterConfiguration> clusterConfigurationProvider) {
         super(properties, standaloneConfigurationProvider, sentinelConfigurationProvider, clusterConfigurationProvider);
     }
-    
+
     @Bean
     @ConditionalOnMissingBean(RedisConnectionFactory.class)
     JedisConnectionFactory redisConnectionFactory(
@@ -42,7 +42,7 @@ public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfigura
         jedisConnectionFactory.afterPropertiesSet();
         return jedisConnectionFactory;
     }
-    
+
     public JedisConnectionFactory createJedisConnectionFactory() {
         JedisClientConfiguration clientConfiguration = getJedisClientConfiguration();
         if (getSentinelConfig() != null) {
@@ -53,7 +53,7 @@ public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfigura
         }
         return new JedisConnectionFactory(getStandaloneConfig(), clientConfiguration);
     }
-    
+
     private JedisClientConfiguration getJedisClientConfiguration() {
         JedisClientConfiguration.JedisClientConfigurationBuilder builder = JedisClientConfiguration.builder();
         RedisProperties.Pool pool = getProperties().getJedis().getPool();
@@ -65,12 +65,12 @@ public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfigura
         }
         return builder.build();
     }
-    
+
     private void applyPooling(RedisProperties.Pool pool,
-            JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
+                              JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
         builder.usePooling().poolConfig(jedisPoolConfig(pool));
     }
-    
+
     private JedisPoolConfig jedisPoolConfig(RedisProperties.Pool pool) {
         JedisPoolConfig config = new JedisPoolConfig();
         config.setMaxTotal(pool.getMaxActive());
@@ -84,7 +84,7 @@ public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfigura
         }
         return config;
     }
-    
+
     private JedisClientConfiguration.JedisClientConfigurationBuilder applyProperties(JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
         PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
         map.from(getProperties().isSsl()).whenTrue().toCall(builder::useSsl);
@@ -93,7 +93,7 @@ public class JedisConnectionFactoryAutoConfig extends RedisMQConnectionConfigura
         map.from(getProperties().getClientName()).whenHasText().to(builder::clientName);
         return builder;
     }
-    
+
     private void customizeConfigurationFromUrl(JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
         ConnectionInfo connectionInfo = parseUrl(getProperties().getUrl());
         if (connectionInfo.isUseSsl()) {

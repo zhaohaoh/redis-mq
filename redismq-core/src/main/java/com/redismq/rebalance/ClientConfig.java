@@ -17,6 +17,7 @@ public class ClientConfig {
     private static boolean isLinuxPlatform = false;
     private static boolean isWindowsPlatform = false;
     public static final String OS_NAME = System.getProperty("os.name");
+
     static {
         if (OS_NAME != null && OS_NAME.toLowerCase().contains("linux")) {
             isLinuxPlatform = true;
@@ -26,6 +27,7 @@ public class ClientConfig {
             isWindowsPlatform = true;
         }
     }
+
     public static String getLocalAddress() {
         try {
             // Traversal Network interface to get the first non-loopback and non-private address
@@ -73,6 +75,7 @@ public class ClientConfig {
 
         return null;
     }
+
     private static boolean isBridge(NetworkInterface networkInterface) {
         try {
             if (isLinuxPlatform) {
@@ -85,6 +88,7 @@ public class ClientConfig {
         }
         return false;
     }
+
     public static String normalizeHostAddress(final InetAddress localHost) {
         if (localHost instanceof Inet6Address) {
             return "[" + localHost.getHostAddress() + "]";

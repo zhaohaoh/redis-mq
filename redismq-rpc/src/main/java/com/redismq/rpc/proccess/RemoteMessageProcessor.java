@@ -20,6 +20,6 @@ public interface RemoteMessageProcessor {
      * @throws Exception 异常
      */
     boolean process(RemoteResponse ctx, List<RemoteMessage> messages) throws Exception;
-    
-    Integer  getType();
+
+    Integer getType();
 }

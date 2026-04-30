@@ -10,17 +10,17 @@ import lombok.Data;
  */
 @Data
 public class MQMessageDTO {
-    
+
     /**
      * 消息主体
      */
     private Object body;
-    
+
     /**
      * 主题
      */
     private String queue;
-    
+
     /**
      * 标签
      */

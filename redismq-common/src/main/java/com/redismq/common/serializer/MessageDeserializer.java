@@ -16,11 +16,11 @@ import java.util.Map;
  * @date 2020/11/18 18:21 自定义刷新令牌json解析器
  */
 public class MessageDeserializer extends StdDeserializer<Message> {
-    
+
     protected MessageDeserializer(Class<?> vc) {
         super(vc);
     }
-    
+
     @Override
     public Message deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
             throws IOException {
@@ -40,7 +40,7 @@ public class MessageDeserializer extends StdDeserializer<Message> {
         JsonNode virtualQueueName =
                 jsonNode.has("virtualQueueName") ? jsonNode.get("virtualQueueName") : MissingNode.getInstance();
         JsonNode header = jsonNode.has("header") ? jsonNode.get("header") : MissingNode.getInstance();
-        
+
         Message message = new Message();
         // 现在你可以使用JsonNode的方法来确定它的具体类型
         if (!body.isMissingNode()) {
@@ -48,14 +48,11 @@ public class MessageDeserializer extends StdDeserializer<Message> {
             Object obj = body.toString();
             if (body.isObject()) {
                 obj = body.toString();
-            }
-            else if (body.isArray()) {
+            } else if (body.isArray()) {
                 obj = body.toString();
-            }
-            else if (body.isPojo()) {
+            } else if (body.isPojo()) {
                 obj = body.toString();
-            }
-            else if (body.isDouble()) {
+            } else if (body.isDouble()) {
                 obj = body.asDouble();
                 // 处理数组节点
             } else if (body.isFloat()) {
@@ -69,27 +66,24 @@ public class MessageDeserializer extends StdDeserializer<Message> {
             } else if (body.isTextual()) {
                 obj = body.asText();
                 // 处理文本值
-            }
-            else if (body.isLong()) {
+            } else if (body.isLong()) {
                 obj = body.asLong();
                 // 处理布尔值
-            }
-            else if (body.isInt()) {
+            } else if (body.isInt()) {
                 obj = body.asInt();
                 // 处理数值
             } else if (body.isBoolean()) {
                 obj = body.asBoolean();
                 // 处理布尔值
-            }  else if (body.isShort()) {
+            } else if (body.isShort()) {
                 obj = body.shortValue();
                 // 处理布尔值
-            }
-            else if (body.isNull()) {
+            } else if (body.isNull()) {
                 obj = null;
                 // 处理null值
             }
             message.setBody(obj);
-            
+
         }
         message.setId(id.asText());
         message.setKey(key.asText());
@@ -103,7 +97,7 @@ public class MessageDeserializer extends StdDeserializer<Message> {
             Map map = mapper.treeToValue(header, Map.class);
             message.setHeader(map);
         }
-        
+
         return message;
     }
 }

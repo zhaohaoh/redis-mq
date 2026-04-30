@@ -20,10 +20,10 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/consumer/group")
 public class ConsumerGroupController {
-    
+
     @Autowired
     private RedisMQClientUtil redisMQClientUtil;
-    
+
     /**
      * 消费者组列表
      */
@@ -37,15 +37,15 @@ public class ConsumerGroupController {
         }).collect(Collectors.toList());
         return ResponseEntity.ok(groupList);
     }
-    
+
     /**
      * 消费者组删除 此动作高度危险，会删除队列所有消息，对redis有性能消耗
      */
     @DeleteMapping("delete")
-    public ResponseEntity  delete(String groupId) {
+    public ResponseEntity delete(String groupId) {
         redisMQClientUtil.deleteGroup(groupId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-    
- 
+
+
 }

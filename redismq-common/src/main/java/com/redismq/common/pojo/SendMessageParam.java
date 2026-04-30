@@ -32,8 +32,12 @@ public class SendMessageParam {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         SendMessageParam that = (SendMessageParam) o;
         return Objects.equals(message, that.message) && Objects.equals(executorTime, that.executorTime);
     }

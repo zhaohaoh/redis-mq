@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
+ *
  */
 public class MessageFuture {
     private Message message;
@@ -28,7 +29,7 @@ public class MessageFuture {
      * @param timeout the timeout
      * @param unit    the unit
      * @return the object
-     * @throws TimeoutException the timeout exception
+     * @throws TimeoutException     the timeout exception
      * @throws InterruptedException the interrupted exception
      */
     public Object get(long timeout, TimeUnit unit) throws TimeoutException, InterruptedException, ExecutionException {
@@ -36,7 +37,7 @@ public class MessageFuture {
         try {
             result = origin.get(timeout, unit);
             if (result instanceof TimeoutException) {
-                throw (TimeoutException)result;
+                throw (TimeoutException) result;
             }
         } catch (ExecutionException e) {
             throw new ExecutionException("Should not get results in a multi-threaded environment", e);
@@ -45,9 +46,9 @@ public class MessageFuture {
         }
 
         if (result instanceof RuntimeException) {
-            throw (RuntimeException)result;
+            throw (RuntimeException) result;
         } else if (result instanceof Throwable) {
-            throw new RuntimeException((Throwable)result);
+            throw new RuntimeException((Throwable) result);
         }
 
         return result;

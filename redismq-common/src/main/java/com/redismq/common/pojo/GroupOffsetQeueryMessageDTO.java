@@ -7,5 +7,5 @@ public class GroupOffsetQeueryMessageDTO {
     private String vQueue;
     private Long offset;
     private Long lastOffset;
-    
+
 }

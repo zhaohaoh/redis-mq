@@ -44,7 +44,7 @@ public class AppendMessageResult {
     }
 
     public AppendMessageResult(AppendMessageStatus status, long wroteOffset, int wroteBytes, String msgId,
-        long storeTimestamp, long logicsOffset, long pagecacheRT) {
+                               long storeTimestamp, long logicsOffset, long pagecacheRT) {
         this.status = status;
         this.wroteOffset = wroteOffset;
         this.totalSize = wroteBytes;
@@ -55,7 +55,7 @@ public class AppendMessageResult {
     }
 
     public AppendMessageResult(AppendMessageStatus status, long wroteOffset, int wroteBytes, Supplier<String> msgIdSupplier,
-            long storeTimestamp, long logicsOffset, long pagecacheRT) {
+                               long storeTimestamp, long logicsOffset, long pagecacheRT) {
         this.status = status;
         this.wroteOffset = wroteOffset;
         this.totalSize = wroteBytes;
@@ -139,14 +139,14 @@ public class AppendMessageResult {
     @Override
     public String toString() {
         return "AppendMessageResult{" +
-            "status=" + status +
-            ", wroteOffset=" + wroteOffset +
-            ", wroteBytes=" + totalSize +
-            ", msgId='" + msgId + '\'' +
-            ", storeTimestamp=" + storeTimestamp +
-            ", logicsOffset=" + logicsOffset +
-            ", pagecacheRT=" + pagecacheRT +
-            ", msgNum=" + msgNum +
-            '}';
+                "status=" + status +
+                ", wroteOffset=" + wroteOffset +
+                ", wroteBytes=" + totalSize +
+                ", msgId='" + msgId + '\'' +
+                ", storeTimestamp=" + storeTimestamp +
+                ", logicsOffset=" + logicsOffset +
+                ", pagecacheRT=" + pagecacheRT +
+                ", msgNum=" + msgNum +
+                '}';
     }
 }

@@ -30,6 +30,7 @@ import static com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollecti
 import static com.redismq.common.constant.RedisMQConstant.getQueueCollection;
 import static com.redismq.common.constant.RedisMQConstant.getRebalanceTopic;
 import static com.redismq.common.constant.RedisMQConstant.getTopic;
+import static com.redismq.common.constant.RedisMQConstant.getVqueueOffsetKey;
 
 @Slf4j
 public class RedisMQClientUtil {
@@ -124,9 +125,9 @@ public class RedisMQClientUtil {
         String groupCollection = getGroupCollection();
         Map<String, Double> doubleMap = redisClient.zRangeWithScores(groupCollection, 0, Long.MAX_VALUE,
                 String.class);
-         if (CollectionUtils.isEmpty(doubleMap)){
-           return new HashSet<>();
-          }
+        if (CollectionUtils.isEmpty(doubleMap)){
+            return new HashSet<>();
+        }
         return  doubleMap.keySet();
         
     }
@@ -235,7 +236,7 @@ public class RedisMQClientUtil {
         keys.add(offsetGroups);
         //key7 除当前队列外所有其他队列的消息id队列
         keys.add(GlobalConfigCache.CONSUMER_CONFIG.getGroupOffsetLowMax().toString());
-     
+        
         
         Object[] objects = {msgId,offset};
         List list = redisClient.luaList(lua, keys, objects);
@@ -253,7 +254,7 @@ public class RedisMQClientUtil {
     /**
      * ack消息
      */
-    public Boolean ackBatchMessage(String queueName, String msgIds,long msgOffset) {
+    public Boolean ackBatchMessage(String vQueueName, String msgIds,long msgOffset) {
         boolean success =false;
         String lua = "local result={};\n" + "local messageIdQueue=KEYS[1];\n" + "local queueGroups= KEYS[3];\n"
                 + "local offsetGroup= KEYS[4];\n" + "local orginalQueueName =KEYS[5];\n"
@@ -277,9 +278,9 @@ public class RedisMQClientUtil {
                 + "    redis.call('zadd', offsetGroup, msgOffset,orginalQueueName);\n" + "end\n" + "\n"
                 + "return result;";
         List<String> keys = new ArrayList<>();
-        String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(queueName);
+        String orginalQueueName = RedisMQConstant.getQueueNameByVirtual(vQueueName);
         
-        queueName = RedisMQConstant.getVQueueNameByVQueue(queueName);
+        String queueName = RedisMQConstant.getVQueueNameByVQueue(vQueueName);
         String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
         Set<String> group =  getGroups();
         String finalQueueName = queueName;
@@ -298,7 +299,7 @@ public class RedisMQClientUtil {
         //4 维护当前队列偏移量的组名
         keys.add(offsetGroupName);
         //5.原始队列名称
-        keys.add(orginalQueueName);
+        keys.add(vQueueName);
         //key6 除当前队列外所有其他队列的消息id队列
         String offsetGroups = group.stream().filter(gId -> !gId.equals(groupId))
                 .map(gId ->  finalQueueName + SPLITE + gId).collect(Collectors.joining(","));
@@ -325,7 +326,7 @@ public class RedisMQClientUtil {
     public List<Pair<Message, Double>> pullMessageByTimeWithScope(String queueName, long pullTime, int startIndex,
             int end) {
         queueName= RedisMQConstant.getVQueueNameByVQueue(queueName);
-     
+        
         Map<Message, Double> messageScopeMap = redisClient
                 .zrangeMessage(queueName,GlobalConfigCache.CONSUMER_CONFIG.getGroupId(), pullTime, Double.MAX_VALUE, startIndex, end);
         List<Pair<Message, Double>> pairs = new ArrayList<>();
@@ -423,8 +424,8 @@ public class RedisMQClientUtil {
         return redisClient.executeLua(lua, keys, args);
     }
     
-    public Long getQueueMaxOffset(String queueName){
-        String queueOffset = PREFIX + NAMESPACE + SPLITE + "QUEUE_OFFSET" + SPLITE + queueName;
+    public Long getQueueMaxOffset(String vQueueName){
+        String queueOffset = getVqueueOffsetKey(vQueueName);
         Object obj = redisClient.get(queueOffset);
         if (obj==null){
             return 0L;

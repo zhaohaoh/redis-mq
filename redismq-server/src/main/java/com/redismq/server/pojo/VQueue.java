@@ -10,12 +10,12 @@ import lombok.Data;
  */
 @Data
 public class VQueue {
-    
+
     /**
      * 队列名称
      */
     private String queueName;
-    
+
     /**
      * 大小
      */

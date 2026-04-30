@@ -21,17 +21,19 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @Date: 2022/5/7 14:16 接受消息订阅
  */
 public class RedisPullListener extends AbstractRedisPushListener {
-    
+
     protected static final Logger log = LoggerFactory.getLogger(RedisPullListener.class);
-    
+
     public RedisPullListener(RedisMqClient redisMqClient) {
         super(redisMqClient);
     }
-    
+
     @Override
     public void onMessage(Message message, byte[] pattern) {
+        boolean acquired = false;
         try {
             semaphore.acquire();
+            acquired = true;
             byte[] body = message.getBody();
             PushMessage pushMessage = RedisMQStringMapper.toBean(body, PushMessage.class);
             String queueName = pushMessage.getQueue();
@@ -48,7 +50,7 @@ public class RedisPullListener extends AbstractRedisPushListener {
                 return;
             }
             boolean delayState = queue.isDelayState();
-            
+
             //延时队列和普通队列分开处理
             if (delayState) {
                 LinkedBlockingQueue<PushMessage> delayBlockingQueue = redisMqClient.getRedisListenerContainerManager()
@@ -56,8 +58,8 @@ public class RedisPullListener extends AbstractRedisPushListener {
                 // 延时的时间小于当前时间，并且消息中已经存在比当前时间小的延时消息
                 Optional<PushMessage> first = delayBlockingQueue.stream()
                         .filter(a -> a.getTimestamp() <= System.currentTimeMillis()).findFirst();
-                if (first.isPresent()){
-                    if (pushMessage.getTimestamp()<=System.currentTimeMillis()){
+                if (first.isPresent()) {
+                    if (pushMessage.getTimestamp() <= System.currentTimeMillis()) {
                         return;
                     }
                 }
@@ -74,8 +76,10 @@ public class RedisPullListener extends AbstractRedisPushListener {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         } finally {
-            semaphore.release();
+            if (acquired) {
+                semaphore.release();
+            }
         }
     }
-    
+
 }

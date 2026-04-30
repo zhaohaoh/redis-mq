@@ -5,38 +5,26 @@
     <parent>
         <artifactId>redismq</artifactId>
         <groupId>io.github.zhaohaoh</groupId>
-        <version>0.5.0-beta7</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>redismq-samples</artifactId>
-
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-    </properties>
 
     <dependencies>
 
         <dependency>
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
-            <version>4.2.2</version>
-        </dependency>
-        <dependency>
-            <groupId>io.github.zhaohaoh</groupId>
-            <artifactId>redismq-spring-boot-starter</artifactId>
-            <version>${project.version}</version>
+            <version>5.18.1</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-logging</artifactId>
-            <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>${spring-boot.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -45,13 +33,13 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13.2</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>io.seata</groupId>-->
-<!--            <artifactId>seata-all</artifactId>-->
-<!--            <version>${seata.version}</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>io.seata</groupId>-->
+        <!--            <artifactId>seata-all</artifactId>-->
+        <!--            <version>${seata.version}</version>-->
+        <!--        </dependency>-->
         <!--        <dependency>-->
         <!--            <groupId>com.framework</groupId>-->
         <!--            <artifactId>framework-knife4j</artifactId>-->
@@ -63,4 +51,37 @@
         <!--            <version>1.0.0</version>-->
         <!--        </dependency>-->
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>spring-boot-2</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot-starter</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>spring-boot-3</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot3-starter</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>spring-boot-4</id>
+            <dependencies>
+                <dependency>
+                    <groupId>io.github.zhaohaoh</groupId>
+                    <artifactId>redismq-spring-boot4-starter</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>

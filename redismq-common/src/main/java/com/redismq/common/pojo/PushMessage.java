@@ -34,8 +34,12 @@ public class PushMessage {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         PushMessage that = (PushMessage) o;
         return Objects.equals(queue, that.queue) && Objects.equals(timestamp, that.timestamp);
     }

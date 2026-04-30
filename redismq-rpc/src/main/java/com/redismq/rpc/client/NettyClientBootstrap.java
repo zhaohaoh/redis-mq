@@ -10,13 +10,7 @@ import com.redismq.rpc.codec.ProtocolV1Decoder;
 import com.redismq.rpc.codec.ProtocolV1Encoder;
 import com.redismq.rpc.util.ServerUtil;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.*;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.channel.epoll.EpollMode;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -35,25 +29,25 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class NettyClientBootstrap {
-    
+
     private final NettyConfig nettyConfig;
-    
+
     private final Bootstrap bootstrap = new Bootstrap();
-    
+
     private final EventLoopGroup eventLoopGroupWorker;
-    
+
     private final List<ChannelHandler> channelHandlers;
-    
-    
+
+
     private final ScheduledExecutorService selectServer = new ScheduledThreadPoolExecutor(1);
-    
+
     public NettyClientBootstrap(List<ChannelHandler> channelHandlers, NettyConfig nettyConfig) {
         this.nettyConfig = nettyConfig;
         NettyConfig.Client client = nettyConfig.getClient();
         this.eventLoopGroupWorker = new NioEventLoopGroup(client.getClientThreadSize());
         this.channelHandlers = channelHandlers;
     }
-    
+
     public void start() {
         NettyConfig.Client client = nettyConfig.getClient();
         this.bootstrap.group(this.eventLoopGroupWorker).channel(nettyConfig.getClientChannelClazz())
@@ -61,7 +55,7 @@ public class NettyClientBootstrap {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, client.getConnectTimeoutMillis())
                 .option(ChannelOption.SO_SNDBUF, client.getClientSocketSndBufSize())
                 .option(ChannelOption.SO_RCVBUF, client.getClientSocketRcvBufSize());
-        
+
         if (nettyConfig.getTransportServerType().equals(TransportServerType.NATIVE)) {
             if (PlatformDependent.isOsx()) {
                 if (log.isInfoEnabled()) {
@@ -73,7 +67,7 @@ public class NettyClientBootstrap {
                         .option(EpollChannelOption.TCP_QUICKACK, true);
             }
         }
-        
+
         bootstrap.handler(new ChannelInitializer<SocketChannel>() {
             @Override
             public void initChannel(SocketChannel ch) {
@@ -93,7 +87,7 @@ public class NettyClientBootstrap {
         }
         reloadServer();
     }
-    
+
     public void shutdown() {
         try {
             this.eventLoopGroupWorker.shutdownGracefully();
@@ -101,7 +95,7 @@ public class NettyClientBootstrap {
             log.error("Failed to shutdown: {}", exx.getMessage());
         }
     }
-    
+
     /**
      * Gets new channel.
      *
@@ -126,7 +120,7 @@ public class NettyClientBootstrap {
         }
         return channel;
     }
-    
+
     public void healthCheck() {
         Set<Server> availServerList = null;
         long currentTimeMillis = System.currentTimeMillis();
@@ -145,7 +139,7 @@ public class NettyClientBootstrap {
             }
         }
     }
-    
+
     /**
      * 加载服务器
      *
@@ -158,5 +152,5 @@ public class NettyClientBootstrap {
 //        }
         Set<Server> remoteAvailServers = ServerManager.getRemoteAvailServers();
     }
-    
+
 }

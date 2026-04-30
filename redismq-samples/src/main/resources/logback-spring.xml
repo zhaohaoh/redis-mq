@@ -4,33 +4,34 @@
 <!-- debug:当此属性设置为true时，将打印出logback内部日志信息，实时查看logback运行状态。默认值为false。 -->
 <configuration scan="true" scanPeriod="30 seconds">
     <!--定义日志文件的存储地址,使用绝对路径服务器起始路径下的logs-->
-    <property name="log.path" value="${user.dir}/logs" />
-    <property name="project.name" value="shop-admin" />
-<!--    &lt;!&ndash;应用名称&ndash;&gt;-->
-<!--    <springProperty scope="context" name="appname" source="spring.application.name" defaultValue="springBoot"/>-->
-<!--    &lt;!&ndash;LogStash访问host&ndash;&gt;-->
-<!--    <springProperty name="LOG_STASH_HOST" scope="context" source="logstash.host" defaultValue="localhost"/>-->
-
+    <property name="log.path" value="${user.dir}/logs"/>
+    <property name="project.name" value="shop-admin"/>
+    <!--    &lt;!&ndash;应用名称&ndash;&gt;-->
+    <!--    <springProperty scope="context" name="appname" source="spring.application.name" defaultValue="springBoot"/>-->
+    <!--    &lt;!&ndash;LogStash访问host&ndash;&gt;-->
+    <!--    <springProperty name="LOG_STASH_HOST" scope="context" source="logstash.host" defaultValue="localhost"/>-->
 
 
     <!-- 彩色日志 -->
     <!-- 彩色日志依赖的渲染类 -->
-    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
-    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
-    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter"/>
+    <conversionRule conversionWord="wex"
+                    converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter"/>
+    <conversionRule conversionWord="wEx"
+                    converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter"/>
     <!-- 彩色日志格式 -->
     <property name="CONSOLE_LOG_PATTERN"
-              value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %X{traceId}  %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}" />
+              value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %X{traceId}  %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}"/>
 
 
-<!-- elk 日志输入-->
-<!--    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">-->
-<!--    <destination>192.168.195.195:4560</destination>-->
-<!--    <encoder charset="UTF-8" class="net.logstash.logback.encoder.LogstashEncoder">-->
-<!--        &lt;!&ndash; 增加自定义属性作为项目名，也作为Elasticsearch的index &ndash;&gt;-->
-<!--        <customFields>"appname":${appname}</customFields>-->
-<!--    </encoder>-->
-<!--    </appender>-->
+    <!-- elk 日志输入-->
+    <!--    <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">-->
+    <!--    <destination>192.168.195.195:4560</destination>-->
+    <!--    <encoder charset="UTF-8" class="net.logstash.logback.encoder.LogstashEncoder">-->
+    <!--        &lt;!&ndash; 增加自定义属性作为项目名，也作为Elasticsearch的index &ndash;&gt;-->
+    <!--        <customFields>"appname":${appname}</customFields>-->
+    <!--    </encoder>-->
+    <!--    </appender>-->
 
     <!-- Console 输出设置  输出到控制台-->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -67,16 +68,14 @@
     </appender>
 
 
-
-
     <!-- 日志文件输出设置 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-<!--        配置了file那么下面的<fileNamePattern>输出无效-->
+        <!--        配置了file那么下面的<fileNamePattern>输出无效-->
         <file>${log.path}/${project.name}/${project.name}.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!--日志文件输出的文件名-->
             <fileNamePattern>${log.path}/${project.name}/${project.name}.%d{yyyy-MM-dd.HH}.%i.log</fileNamePattern>
-<!--           滚动日志 满了根据%i递增-->
+            <!--           滚动日志 满了根据%i递增-->
             <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>128MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
@@ -84,8 +83,8 @@
             <maxHistory>30</maxHistory>
         </rollingPolicy>
         <encoder>
-  <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
-<!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>-->
+            <!--格式化输出：%d表示日期，%thread表示线程名，%-5level：级别从左显示5个字符宽度%msg：日志消息，%n是换行符-->
+            <!--            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>-->
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
         </encoder>
     </appender>
@@ -136,13 +135,13 @@
     </logger>
     <logger name="org.springframework.boot" level="INFO"/>
 
-<!--    设置日志打印级别是info  将上面两个aapender加载到这root-->
+    <!--    设置日志打印级别是info  将上面两个aapender加载到这root-->
     <root level="info" additivity="false">
         <!--<appender-ref ref="ASYNC"/>-->
         <appender-ref ref="DEBUG"/>
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
-        <appender-ref ref="ERROR_FILE" />
-<!--        <appender-ref ref="LOGSTASH"/>-->
+        <appender-ref ref="ERROR_FILE"/>
+        <!--        <appender-ref ref="LOGSTASH"/>-->
     </root>
 </configuration>

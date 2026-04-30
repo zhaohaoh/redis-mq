@@ -17,21 +17,21 @@ import lombok.extern.slf4j.Slf4j;
 @ChannelHandler.Sharable
 @Slf4j
 public class ClientHandler extends ChannelDuplexHandler {
-    
+
     private final NettyClientChannelManager nettyClientChannelManager;
-  
-    
+
+
     public ClientHandler(NettyClientChannelManager nettyClientChannelManager) {
         this.nettyClientChannelManager = nettyClientChannelManager;
     }
-    
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         log.error("nettyClient error :" + cause.getLocalizedMessage());
         nettyClientChannelManager.releaseChannel(NetUtil.getAddressFromChannel(ctx.channel()), ctx.channel());
         ctx.close();
     }
-    
+
     /**
      * 在建立连接时发送消息
      *
@@ -45,7 +45,7 @@ public class ClientHandler extends ChannelDuplexHandler {
         //连接成功后，向服务端发送消息
         //        ctx.writeAndFlush("[连接server服务成功]:");
     }
-    
+
     /**
      * 处理新加的消息通道
      *
@@ -61,8 +61,8 @@ public class ClientHandler extends ChannelDuplexHandler {
         log.info("nettyClient :" + channel.remoteAddress() + " new add");
         //        channel.writeAndFlush("[" + channel.remoteAddress() + "] 加入消息通道连接");
     }
-    
-    
+
+
     /**
      * 处理退出消息通道
      *
@@ -88,8 +88,8 @@ public class ClientHandler extends ChannelDuplexHandler {
         }
         ctx.fireChannelWritabilityChanged();
     }
-    
-    
+
+
     /**
      * 退出时发送消息
      */
@@ -101,7 +101,7 @@ public class ClientHandler extends ChannelDuplexHandler {
         }
         nettyClientChannelManager.releaseChannel(NetUtil.getAddressFromChannel(ctx.channel()), ctx.channel());
     }
-    
+
     /**
      * 接受服务端发来的消息
      */
@@ -110,7 +110,7 @@ public class ClientHandler extends ChannelDuplexHandler {
         //设置返回消息
         RemoteMessage remoteMessage = (RemoteMessage) msg;
         RemoteMessageFuture remoteMessageFuture = RpcGlobalCache.REMOTE_FUTURES.remove(remoteMessage.getId());
-        if (remoteMessageFuture!=null){
+        if (remoteMessageFuture != null) {
             remoteMessageFuture.setResultMessage(remoteMessage.getBody());
         }
         super.channelRead(ctx, msg);

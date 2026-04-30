@@ -28,14 +28,15 @@ public class PageResult<T> {
         this.message = message;
         this.success = success;
     }
-    public PageResult(long page,long size) {
+
+    public PageResult(long page, long size) {
         PageResult<T> pageResult = new PageResult<T>(200, "操作成功", true);
         pageResult.setPage(page);
         pageResult.setSize(size);
     }
 
     //定义分页的消息
-    public static <T> PageResult<T> success(long total,List<T> list) {
+    public static <T> PageResult<T> success(long total, List<T> list) {
         PageResult<T> pageResult = new PageResult<T>(200, "操作成功", true);
         pageResult.setList(list);
         pageResult.setTotal(total);

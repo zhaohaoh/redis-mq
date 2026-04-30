@@ -32,27 +32,27 @@ public class DefaultIdWorker {
     private final long workerIdBits = GlobalConfigCache.GLOBAL_CONFIG.maxWorkerIdBits;
     // 机器ID最大值 2的3次方-1  7    机器id 0-7
     private final long maxWorkerId = ~(-1L << workerIdBits);
-    
-    
+
+
     // 毫秒内自增位
     private final long sequenceBits = 10L;
     // 机器ID偏左移12位
     private final long workerIdShift = sequenceBits;
-    
+
     // 时间毫秒左移22位
-    private final long timestampLeftShift = sequenceBits + workerIdBits ;
-    
+    private final long timestampLeftShift = sequenceBits + workerIdBits;
+
     private final long sequenceMask = -1L ^ (-1L << sequenceBits);
     /* 上次生产id时间戳 */
     private long lastTimestamp = -1L;
     // 0，并发控制
     private long sequence = 0L;
-    
+
     private final long workerId;
-    
-    
+
+
     /**
-     * @param workerId     工作机器ID
+     * @param workerId 工作机器ID
      */
     public DefaultIdWorker(long workerId) {
         if (workerId > maxWorkerId || workerId < 0) {
@@ -60,7 +60,7 @@ public class DefaultIdWorker {
         }
         this.workerId = workerId;
     }
-    
+
     /**
      * 获取下一个ID
      *
@@ -83,7 +83,7 @@ public class DefaultIdWorker {
                 throw new RuntimeException(String.format("雪花算法时钟回滚 距离当前时间还差%d milliseconds", offset));
             }
         }
-        
+
         if (lastTimestamp == timestamp) {
             // 当前毫秒内，则+1
             sequence = (sequence + 1) & sequenceMask;
@@ -95,13 +95,13 @@ public class DefaultIdWorker {
             // 不同毫秒内，序列号置为 1 - 3 随机数
             sequence = ThreadLocalRandom.current().nextLong(1, 3);
         }
-        
+
         lastTimestamp = timestamp;
-        
+
         // ID偏移组合生成最终的ID，并返回ID
-        return ((timestamp - twepoch) << timestampLeftShift)   | (workerId << workerIdShift) | sequence;
+        return ((timestamp - twepoch) << timestampLeftShift) | (workerId << workerIdShift) | sequence;
     }
-    
+
     private long tilNextMillis(final long lastTimestamp) {
         long timestamp = this.timeGen();
         while (timestamp <= lastTimestamp) {
@@ -109,10 +109,10 @@ public class DefaultIdWorker {
         }
         return timestamp;
     }
-    
+
     private long timeGen() {
         return System.currentTimeMillis();
     }
 
-    
+
 }

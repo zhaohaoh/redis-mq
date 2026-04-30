@@ -17,25 +17,25 @@ import java.net.InetSocketAddress;
  *
  */
 public class NettyPoolableFactory implements KeyedPooledObjectFactory<AddressInfo, Channel> {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(NettyPoolableFactory.class);
-    
-    
+
+
     private final NettyClientBootstrap clientBootstrap;
-    
+
     /**
      * Instantiates a new Netty key poolable factory.
      *
      */
-    public NettyPoolableFactory( NettyClientBootstrap clientBootstrap) {
+    public NettyPoolableFactory(NettyClientBootstrap clientBootstrap) {
         this.clientBootstrap = clientBootstrap;
     }
-    
+
     @Override
     public void activateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
-    
+
     }
-    
+
     @Override
     public void destroyObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
         Channel channel = pooledObject.getObject();
@@ -45,7 +45,7 @@ public class NettyPoolableFactory implements KeyedPooledObjectFactory<AddressInf
             channel.close();
         }
     }
-    
+
     @Override
     public PooledObject<Channel> makeObject(AddressInfo key) {
         InetSocketAddress address = NetUtil.toInetSocketAddress(key.getTargetAddress());
@@ -55,12 +55,12 @@ public class NettyPoolableFactory implements KeyedPooledObjectFactory<AddressInf
         Channel newChannel = clientBootstrap.getNewChannel(address);
         return new DefaultPooledObject<>(newChannel);
     }
-    
+
     @Override
     public void passivateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) throws Exception {
-    
+
     }
-    
+
     @Override
     public boolean validateObject(AddressInfo addressInfo, PooledObject<Channel> pooledObject) {
         Channel obj = pooledObject.getObject();
@@ -72,8 +72,6 @@ public class NettyPoolableFactory implements KeyedPooledObjectFactory<AddressInf
         }
         return false;
     }
-    
- 
-    
-    
+
+
 }

@@ -15,12 +15,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class SpringStartupListener implements ApplicationListener<ContextRefreshedEvent> {
 
-	private static final Logger logger = LoggerFactory
-			.getLogger(SpringStartupListener.class);
-   
-	@Override
-	public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
+    private static final Logger logger = LoggerFactory
+            .getLogger(SpringStartupListener.class);
+
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent) {
         logger.info("redismq-server starter success");
-	}
+    }
 
 }

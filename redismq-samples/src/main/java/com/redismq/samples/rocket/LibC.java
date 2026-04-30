@@ -34,8 +34,10 @@ public interface LibC extends Library {
     int MS_INVALIDATE = 0x0002;
     /* synchronous memory sync */
     int MS_SYNC = 0x0004;
+
     //锁定内存空间不被swap
     int mlock(Pointer var1, NativeLong var2);
+
     //释放
     int munlock(Pointer var1, NativeLong var2);
 
@@ -43,12 +45,15 @@ public interface LibC extends Library {
      * c语言的指令，预读文件数据到内核缓存中。因为mmap只有发生缺页中断才读取
      */
     int madvise(Pointer var1, NativeLong var2, int var3);
+
     //对指定的数组参数赋值，len是赋值数组的中元素的个数，第二个参数是value
     Pointer memset(Pointer p, int v, long len);
+
     //锁定全部内存空间  flags可取两个值：MCL_CURRENT,MCL_FUTURE
     //MCL_CURRENT: 表示对所有已经映射到进程地址空间的页上锁
     //MCL_FUTURE:  表示对所有将来映射到进程地空间的页都上锁。
     int mlockall(int flags);
+
     //把在该内存段的某个部分或者整段中的修改写回到被映射的文件中（或者从被映射文件里读出）。
     int msync(Pointer p, NativeLong length, int flags);
 }

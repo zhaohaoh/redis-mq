@@ -39,22 +39,22 @@ public class RedisMQAutoConfiguration implements InitializingBean {
 
     @Autowired(required = false)
     private List<ProducerInterceptor> producerInterceptors;
- 
-    
+
+
     @Bean
     public RedisMQClientUtil redisMQClientUtil(RedisClient redisClient) {
         return new RedisMQClientUtil(redisClient);
     }
-    
+
     @Bean
     public RedisMQServerUtil redisMQServerUtil(RedisClient redisClient) {
         return new RedisMQServerUtil(redisClient);
     }
 
-     /**
-       * redis客户端
-       *
-       * @return {@link RedisMQProducer}
+    /**
+     * redis客户端
+     *
+     * @return {@link RedisMQProducer}
      */
     @Bean
     public RedisClient redisClient() {
@@ -62,10 +62,10 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         RedisClient redisClient = new RedissonAdapter(redissonClient);
         return redisClient;
     }
-    
+
     @Bean
     public WorkIdGenerator workIdGenerator(RedisClient redisClient) {
-        return new WorkIdGenerator(redisClient,redisMqProperties.getGlobalConfig().getMaxWorkerIdBits());
+        return new WorkIdGenerator(redisClient, redisMqProperties.getGlobalConfig().getMaxWorkerIdBits());
     }
 
 
@@ -79,19 +79,20 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         redisMQProducer.setProducerInterceptors(producerInterceptors);
         return new RedisMQTemplate(redisMQProducer);
     }
-    
-    @Bean
-    public RedisMQProducer redisMQProducer(RedisMQClientUtil redisMQClientUtil,@Autowired(required = false) RemotingClient remotingClient) {
-        return new RedisMQProducer(redisMQClientUtil,remotingClient);
+
+    @Bean(initMethod = "init",destroyMethod = "destroy")
+    public RedisMQProducer redisMQProducer(RedisMQClientUtil redisMQClientUtil, @Autowired(required = false) RemotingClient remotingClient) {
+        return new RedisMQProducer(redisMQClientUtil, remotingClient);
     }
-    
+
     @Bean
     public QueueManager queueManager() {
         return new QueueManager();
     }
+
     @Bean
-    public ServerManager serverManager(){
-        return  new ServerManager();
+    public ServerManager serverManager() {
+        return new ServerManager();
     }
 
     /**
@@ -108,6 +109,6 @@ public class RedisMQAutoConfiguration implements InitializingBean {
         NettyConfig nettyConfig = redisMqProperties.getNettyConfig();
         nettyConfig.init();
         GlobalConfigCache.NETTY_CONFIG = nettyConfig;
-        GlobalConfigCache.CONSUMER_CONFIG=redisMqProperties.getConsumerConfig();
+        GlobalConfigCache.CONSUMER_CONFIG = redisMqProperties.getConsumerConfig();
     }
 }
