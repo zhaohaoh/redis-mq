@@ -3,6 +3,7 @@ package com.redismq.server.controller;
 import com.alibaba.fastjson.JSONValidator;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMqKeys;
 import com.redismq.common.pojo.Message;
 import com.redismq.common.pojo.PushMessage;
 import com.redismq.common.pojo.Queue;
@@ -16,7 +17,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +30,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
-
 
 @RestController
 @RequestMapping("/queue")
@@ -39,18 +44,15 @@ public class QueueController {
 
     @GetMapping("page")
     public ResponseEntity<PageResult<Queue>> page(QueuePageSelect queuePageSelect) {
-        //队列名就是topic名
         Set<Queue> allQueue = redisMQClientUtil.getQueueList();
-
-        allQueue = allQueue.stream().filter(a -> a.isDelayState() == queuePageSelect.isDelayState()).collect(Collectors.toSet());
-
+        allQueue = allQueue.stream().filter(queue -> queue.isDelayState() == queuePageSelect.isDelayState())
+                .collect(Collectors.toSet());
         int start = (queuePageSelect.getPage() - 1) * queuePageSelect.getSize();
         int end = queuePageSelect.getPage() * queuePageSelect.getSize();
         List<Queue> page = limitPage(new ArrayList<>(allQueue), start, end);
         return ResponseEntity.ok(PageResult.success(allQueue.size(), page));
     }
 
-    //根据队列名称查询虚拟队列
     @GetMapping("vQueueList")
     public ResponseEntity<List<VQueue>> vQueueList(String queueName, Integer virtual) {
         List<VQueue> virtualQueues = new ArrayList<>();
@@ -65,24 +67,19 @@ public class QueueController {
         return ResponseEntity.ok(virtualQueues);
     }
 
-    /**
-     * 指定队列重新拉取消息 TODO前端未接入
-     *
-     * @return {@link ResponseEntity}<{@link String}>
-     */
     @PostMapping("publishPullMessage")
     public ResponseEntity<Void> publishPullMessage(String vQueue) {
         if (vQueue == null) {
             throw new RuntimeException();
         }
-        String vQueueNameByVQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
-        Boolean lock = redisMQClientUtil.isLock(RedisMQConstant.getVirtualQueueLock(vQueue));
-        if (lock) {
+        String vQueueKey = RedisMqKeys.vqueueRoot(vQueue);
+        Boolean lock = redisMQClientUtil.isLock(RedisMqKeys.vqueueLock(vQueue));
+        if (Boolean.TRUE.equals(lock)) {
             throw new RuntimeException("队列正在被锁定");
         }
         PushMessage pushMessage = new PushMessage();
         pushMessage.setTimestamp(System.currentTimeMillis());
-        pushMessage.setQueue(vQueueNameByVQueue);
+        pushMessage.setQueue(vQueueKey);
         redisMQClientUtil.publishPullMessage(pushMessage);
         log.info("publishPullMessage :{}", vQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -101,8 +98,9 @@ public class QueueController {
             }
         }
 
-        Message build = Message.builder().body(message.getBody()).queue(RedisMQConstant.getQueueNameByVirtual(message.getQueue()))
-                .tag(message.getTag()).virtualQueueName(message.getQueue()).build();
+        Message build = Message.builder().body(message.getBody())
+                .queue(RedisMQConstant.getQueueNameByVirtual(message.getQueue())).tag(message.getTag())
+                .virtualQueueName(message.getQueue()).build();
         redisMQTemplate.sendMessage(build);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
@@ -126,24 +124,14 @@ public class QueueController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-
-    /**
-     * 新增队列 暂时先不接前端
-     */
     @PostMapping("addQueue")
     public ResponseEntity<Void> addQueue(@RequestBody Queue queue) {
-        //队列名就是topic名
-        Queue queue1 = redisMQClientUtil.registerQueue(queue);
-
+        redisMQClientUtil.registerQueue(queue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    /**
-     * 删除队列 暂时先不接前端
-     */
     @DeleteMapping("deleteQueue")
     public ResponseEntity<Void> deleteQueue(String queue) {
-        //队列名就是topic名
         Queue removeQueue = redisMQClientUtil.getQueue(queue);
         redisMQClientUtil.removeQueue(removeQueue);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
@@ -151,12 +139,8 @@ public class QueueController {
 
     public static <T> List<T> limitPage(List<T> list, int start, int end) {
         if (list.size() < end) {
-            list = list.subList(start, list.size());
-        } else {
-            list = list.subList(start, end);
+            return list.subList(start, list.size());
         }
-        return list;
+        return list.subList(start, end);
     }
-
-
 }

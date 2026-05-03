@@ -264,11 +264,13 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         lifeExtension();
         consumeSlots = new Semaphore(getMaxConcurrency());
         // 线程池本身负责真正的业务消费。
-        // 这里把阻塞队列容量也压到 maxConcurrency，语义是“最多再缓存一批与最大并发等量的待执行任务”。
-        // 当线程和队列都满时，AbortPolicy 会立刻把背压抛回拉取线程，而不是像 CallerRunsPolicy 那样
-        // 让拉取线程反向去执行业务逻辑，导致调度线程被业务消费拖住。
+        // 这里使用 SynchronousQueue 直接移交任务，避免任务先在队列里堆满而线程池迟迟不扩到 maxConcurrency。
+        // 在当前容器里，consumeSlots 已经限制了“飞行中的任务总数 <= maxConcurrency”，
+        // 因此不需要再额外缓存一大批待执行任务。
+        // 当线程池已经扩满且没有空闲线程时，AbortPolicy 会立刻把背压抛回拉取线程，
+        // 而不是像 CallerRunsPolicy 那样让拉取线程反向去执行业务逻辑，导致调度线程被业务消费拖住。
         work = new ThreadPoolExecutor(getConcurrency(), getMaxConcurrency(), 60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(getMaxConcurrency()),
+                new SynchronousQueue<>(),
                 createThreadFactory(queue.getQueueName()),
                 new ThreadPoolExecutor.AbortPolicy());
         this.remotingClient = remotingClient;
@@ -317,10 +319,9 @@ public class RedisMQListenerContainer extends AbstractMessageListenerContainer {
         return vqOffsetManagers.computeIfAbsent(vQueueName, vq -> {
             VirtualQueueOffsetManager manager = new VirtualQueueOffsetManager();
             String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
-            String offsetGroupCollection = com.redismq.common.constant.RedisMQConstant.getOffsetGroupCollection(groupId);
 
             // 从Redis获取该虚拟队列的已提交偏移量
-            Long vqOffset = redisMQClientUtil.getQueueGroupOffset(offsetGroupCollection, vQueueName);
+            Long vqOffset = redisMQClientUtil.getQueueGroupOffset(groupId, vQueueName);
             Long queueMaxOffset = redisMQClientUtil.getQueueMaxOffset(vQueueName);
 
             // ❌ 暂时禁用: 新消费者组的LATEST跳转会导致startScore过大，拉不到消息

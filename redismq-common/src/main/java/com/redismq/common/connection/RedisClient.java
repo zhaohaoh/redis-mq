@@ -168,7 +168,8 @@ public interface RedisClient {
      * @param end   终止
      * @return {@link Map}<{@link Message}, {@link Double}>
      */
-    Map<Message, Double> zrangeMessage(String key, String group, double min, double max, long start, long end);
+    Map<Message, Double> zrangeMessage(String bodyKey, String messageQueueKey, double min, double max, long start,
+            long end);
 
 
     /**

@@ -8,129 +8,148 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-/**
- * @Author: hzh
- * @Date: 2022/12/26 17:54
- * 生产消息的例子
- */
 @RestController
 @RequestMapping("producer")
 public class ProducerController {
     @Autowired
     private RedisMQTemplate redisMQTemplate;
+
     @Autowired
     private RedisClient redisClient;
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
-    /**
-     * 发送延迟消息
-     */
     @PostMapping("sendDelayMessage")
     public void sendDelayMessage() {
-//        for (int i = 0; i < 100; i++) {
-//            JavaBean javaBean = new JavaBean();
-//            javaBean.setA("ff");
-//            javaBean.setB(222);
-//            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
-//        }
-//        long millis = System.currentTimeMillis()+  Duration.ofSeconds(30).toMillis();
         ExecutorService executorService = Executors.newFixedThreadPool(20);
-
         for (int i = 0; i < 10000; i++) {
-            executorService.submit(new Runnable() {
-                @Override
-                public void run() {
-                    JavaBean javaBean = new JavaBean();
-                    javaBean.setA("ff");
-                    javaBean.setB(222);
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("duplicateId", "id");
-                    Message build = Message.builder().body(javaBean).queue("delaytest1").header(map).build();
-
-                    redisMQTemplate.sendDelayMessage(build, 0L, TimeUnit.MICROSECONDS);
-                }
+            executorService.submit(() -> {
+                Map<String, Object> header = new HashMap<>();
+                header.put("duplicateId", "id");
+                Message message = Message.builder()
+                        .body(buildJavaBean())
+                        .queue("delaytest1")
+                        .header(header)
+                        .build();
+                redisMQTemplate.sendDelayMessage(message, 0L, TimeUnit.MICROSECONDS);
             });
         }
-
+        executorService.shutdown();
     }
 
     @PostMapping("sendDelayMessage2")
     public void sendDelayMessage2() {
-        //        for (int i = 0; i < 100; i++) {
-        //            JavaBean javaBean = new JavaBean();
-        //            javaBean.setA("ff");
-        //            javaBean.setB(222);
-        //            redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis()+Duration.ofSeconds(1111).toMillis());
-        //        }
-        JavaBean javaBean = new JavaBean();
-        javaBean.setA("ff");
-        javaBean.setB(222);
-        redisMQTemplate.sendTimingMessage(javaBean, "delaytest1", System.currentTimeMillis() + Duration.ofSeconds(1).toMillis());
+        redisMQTemplate.sendTimingMessage(
+                buildJavaBean(),
+                "delaytest1",
+                System.currentTimeMillis() + Duration.ofSeconds(1).toMillis()
+        );
     }
 
-    /**
-     * 发送普通消息
-     */
+    public Map<String, Object> sendMessage() {
+        return sendMessage(10, 10, 10);
+    }
+
     @PostMapping("sendMessage")
-    public void sendMessage() {
-        for (int i = 0; i < 10000; i++) {
-            JavaBean javaBean = new JavaBean();
-            javaBean.setA("ff");
-            javaBean.setB(222);
-            redisMQTemplate.sendMessage(javaBean, "test1");
+    public Map<String, Object> sendMessage(@RequestParam(required = false) Integer batchSize,
+                                           @RequestParam(required = false) Integer batchTimes,
+                                           @RequestParam(required = false) Integer concurrency) {
+        int safeBatchSize = normalizePositive(batchSize, 10, "batchSize");
+        int safeBatchTimes = normalizePositive(batchTimes, 10, "batchTimes");
+        int safeConcurrency = normalizePositive(concurrency, safeBatchTimes, "concurrency");
+        int threadCount = Math.min(safeConcurrency, safeBatchTimes);
+        long startTime = System.currentTimeMillis();
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        List<Future<Integer>> futures = new ArrayList<>(safeBatchTimes);
+        try {
+            for (int i = 0; i < safeBatchTimes; i++) {
+                futures.add(executorService.submit(() -> sendNormalMessageBatch(safeBatchSize)));
+            }
+            int sentCount = 0;
+            for (Future<Integer> future : futures) {
+                sentCount += future.get();
+            }
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("queue", "test1");
+            result.put("batchSize", safeBatchSize);
+            result.put("batchTimes", safeBatchTimes);
+            result.put("concurrency", threadCount);
+            result.put("totalMessages", sentCount);
+            result.put("durationMs", System.currentTimeMillis() - startTime);
+            return result;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("send normal message interrupted", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("send normal message failed", e.getCause());
+        } finally {
+            executorService.shutdown();
         }
     }
 
-    /**
-     * 发送顺序消息
-     */
     @PostMapping("sendOrderMessage")
     public void sendOrderMessage() {
-        redisMQTemplate.sendMessage("顺序消息消费", "order");
+        redisMQTemplate.sendMessage("\u987a\u5e8f\u6d88\u606f\u6d88\u8d39", "order");
     }
 
-    /**
-     * 发送定时消费消息 带tag
-     */
     @PostMapping("sendTimingMessage")
     public void sendTimingMessage() {
-        JavaBean javaBean = new JavaBean();
-        javaBean.setA("ff");
-        javaBean.setB(222);
         LocalDateTime time = LocalDateTime.of(2023, 12, 14, 14, 20, 30);
-        long l = time.toInstant(ZoneOffset.ofHours(8)).toEpochMilli();
-        redisMQTemplate.sendTimingMessage(javaBean, "time", "bussiness1", l);
+        long timestamp = time.toInstant(ZoneOffset.ofHours(8)).toEpochMilli();
+        redisMQTemplate.sendTimingMessage(buildJavaBean(), "time", "bussiness1", timestamp);
     }
 
-
-    /**
-     * 发送定时消费消息 带tag
-     */
     @PostMapping("sendMultiTagMessage")
     public void sendMultiTagMessage() {
         for (int i = 0; i < 100; i++) {
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费1", "MultiTag", "bussiness1");
-            redisMQTemplate.sendMessage("多个标签同一Queue消息消费2", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d391", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d392", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d391", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d392", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d391", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d392", "MultiTag", "bussiness2");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d391", "MultiTag", "bussiness1");
+            redisMQTemplate.sendMessage("\u591a\u4e2a\u6807\u7b7e\u540c\u4e00Queue\u6d88\u606f\u6d88\u8d392", "MultiTag", "bussiness2");
         }
     }
 
+    private int sendNormalMessageBatch(int batchSize) {
+        for (int i = 0; i < batchSize; i++) {
+            redisMQTemplate.sendMessage(buildJavaBean(), "test1");
+        }
+        return batchSize;
+    }
+
+    private int normalizePositive(Integer value, int defaultValue, String fieldName) {
+        int actualValue = value == null ? defaultValue : value;
+        if (actualValue <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be greater than 0");
+        }
+        return actualValue;
+    }
+
+    private JavaBean buildJavaBean() {
+        JavaBean javaBean = new JavaBean();
+        javaBean.setA("ff");
+        javaBean.setB(222);
+        return javaBean;
+    }
 }

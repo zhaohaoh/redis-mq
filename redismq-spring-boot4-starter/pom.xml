@@ -10,7 +10,11 @@
     </parent>
     <artifactId>redismq-spring-boot4-starter</artifactId>
     <packaging>jar</packaging>
-
+    
+    <name>redismq-spring-boot4-starter</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
+    <description>redismq-spring-boot4-starter</description>
+    
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>

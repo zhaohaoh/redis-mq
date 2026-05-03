@@ -10,6 +10,9 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
     <artifactId>redismq-rpc</artifactId>
+    <name>redismq-rpc</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
+    <description>redismq rpc</description>
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>

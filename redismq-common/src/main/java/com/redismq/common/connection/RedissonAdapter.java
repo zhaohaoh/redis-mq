@@ -246,17 +246,18 @@ public class RedissonAdapter implements RedisClient {
     }
 
     @Override
-    public Map<Message, Double> zrangeMessage(String key, String group, double min, double max, long start, long end) {
+    public Map<Message, Double> zrangeMessage(String bodyKey, String messageQueueKey, double min, double max,
+            long start, long end) {
         String lua =
                 "local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
-                        + "    local message = redis.call('hget', KEYS[1] .. ':body',data[i]);\n"
+                        + "    local message = redis.call('hget', KEYS[1],data[i]);\n"
                         + "    if (message) then\n" + "        table.insert(result,message);\n"
                         + "        table.insert(result,data[i+1]);\n" + "    else\n"
                         + "        redis.call('zrem', KEYS[2],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
         List<String> keys = new ArrayList<>();
-        keys.add(key);
-        keys.add(key + ":" + group);
+        keys.add(bodyKey);
+        keys.add(messageQueueKey);
 
         Object[] array = new Object[4];
         array[0] = min;

@@ -95,7 +95,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
 
     @Override
     public Object get(String key) {
-        return null;
+        return stringRedisTemplate.opsForValue().get(key);
     }
 
 
@@ -194,7 +194,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
 
     @Override
     public Double zScore(String key, String member) {
-        return null;
+        return stringRedisTemplate.opsForZSet().score(key, member);
     }
 
 
@@ -227,20 +227,24 @@ public class StringRedisTemplateAdapter implements RedisClient {
      * 范围查找消息
      */
     @Override
-    public Map<Message, Double> zrangeMessage(String key, String group, double min, double max, long start, long end) {
+    public Map<Message, Double> zrangeMessage(String bodyKey, String messageQueueKey, double min, double max,
+            long start, long end) {
         String lua =
-                "local data = redis.call('zrangebyscore', KEYS[1],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
+                "local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
-                        + "    local message = redis.call('hget', KEYS[1] .. ':body',data[i]);\n"
+                        + "    local message = redis.call('hget', KEYS[1],data[i]);\n"
                         + "    if (message) then\n" + "        table.insert(result,message);\n"
                         + "        table.insert(result,data[i+1]);\n" + "    else\n"
-                        + "        redis.call('zrem', KEYS[1],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
+                        + "        redis.call('zrem', KEYS[2],  data[i]);\n" + "    end\n" + "end\n" + "return result;";
         Object[] array = new Object[4];
         array[0] = min;
         array[1] = max==0D ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
-        List<?> list = luaList(lua, Collections.singletonList(key), array);
+        List<String> keys = new ArrayList<>();
+        keys.add(bodyKey);
+        keys.add(messageQueueKey);
+        List<?> list = luaList(lua, keys, array);
         Map<Message, Double> newMap = new LinkedHashMap<>();
         for (int i = 0; i < list.size(); i += 2) {
             Object msgObj = list.get(i);
@@ -255,8 +259,7 @@ public class StringRedisTemplateAdapter implements RedisClient {
     public List<?> luaList(String lua, List<String> keys, Object[] args) {
         String[] array = Arrays.stream(args).filter(Objects::nonNull).map(RedisMQStringMapper::toJsonStr)
                 .toArray(a -> new String[args.length]);
-
-        DefaultRedisScript<List<?>> redisScript = new DefaultRedisScript<>();
+        DefaultRedisScript<List> redisScript = new DefaultRedisScript<>(lua, List.class);
         return stringRedisTemplate.execute(redisScript, keys, (Object) array);
     }
 

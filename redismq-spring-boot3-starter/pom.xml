@@ -9,7 +9,11 @@
         <groupId>io.github.zhaohaoh</groupId>
         <version>${revision}</version>
     </parent>
-    <!-- 有很多兼容性问题。暂无法支持-->
+    
+    <name>redismq-spring-boot3-starter</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
+    <description>redismq-spring-boot3-starter</description>
+ 
     <artifactId>redismq-spring-boot3-starter</artifactId>
     <packaging>jar</packaging>
     <dependencies>
@@ -35,7 +39,7 @@
         </dependency>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
-            <artifactId>redismq-spring-boot-autoconfigure</artifactId>
+            <artifactId>redismq-spring-boot3-autoconfigure</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

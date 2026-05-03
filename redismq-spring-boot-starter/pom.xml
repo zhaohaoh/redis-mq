@@ -10,7 +10,11 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
     <artifactId>redismq-spring-boot-starter</artifactId>
-
+    
+    <name>redismq-spring-boot-starter</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
+    <description>redismq-spring-boot-starter</description>
+    
     <dependencies>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>

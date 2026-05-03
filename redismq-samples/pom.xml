@@ -8,9 +8,10 @@
         <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-
+    <name>redismq-samples</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
     <artifactId>redismq-samples</artifactId>
-
+    <description>redismq samples</description>
     <dependencies>
 
         <dependency>

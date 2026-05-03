@@ -13,6 +13,7 @@ public class WorkIdGenerator {
     private final int maxWorkId;
 
     private static final String WORK_ID_ZSET = RedisMQConstant.getWorkIdZset();
+    private static final String WORK_ID_LOCK = RedisMQConstant.getWorkIdLock();
 
     private RedisClient redisClient;
 
@@ -23,13 +24,13 @@ public class WorkIdGenerator {
     }
 
     public Integer getSnowId() {
-        Boolean success = redisClient.lock(WORK_ID_ZSET + "_LOCK", "", Duration.ofSeconds(5));
+        Boolean success = redisClient.lock(WORK_ID_LOCK, "", Duration.ofSeconds(5));
         while (success == null || !success) {
             try {
                 Thread.sleep(100L);
             } catch (InterruptedException e) {
             }
-            success = redisClient.lock(WORK_ID_ZSET + "_LOCK", "", Duration.ofSeconds(5));
+            success = redisClient.lock(WORK_ID_LOCK, "", Duration.ofSeconds(5));
         }
         try {
             Map<Integer, Double> mapDoubleMap = redisClient.zRangeWithScores(WORK_ID_ZSET, 0, 0, Integer.class);
@@ -42,7 +43,7 @@ public class WorkIdGenerator {
             redisClient.zAdd(WORK_ID_ZSET, workId, System.currentTimeMillis());
             return workId;
         } finally {
-            redisClient.unlock(WORK_ID_ZSET + "_LOCK");
+            redisClient.unlock(WORK_ID_LOCK);
         }
     }
 

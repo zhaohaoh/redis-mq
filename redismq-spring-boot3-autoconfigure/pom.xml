@@ -9,18 +9,21 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
-    <artifactId>redismq-spring-boot-autoconfigure</artifactId>
+    <artifactId>redismq-spring-boot3-autoconfigure</artifactId>
     
-    <name>redismq-spring-boot-autoconfigure</name>
+    <name>redismq-spring-boot3-autoconfigure</name>
     <url>https://github.com/zhaohaoh/redis-mq</url>
-    <description>redismq-spring-boot-autoconfigure</description>
+    <description>redismq-spring-boot3-autoconfigure</description>
     
     <dependencies>
         <dependency>
             <groupId>io.github.zhaohaoh</groupId>
             <artifactId>redismq-rpc</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>io.github.zhaohaoh</groupId>
+            <artifactId>redismq-core</artifactId>
+        </dependency>
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
@@ -56,9 +59,43 @@
             <artifactId>redisson-spring-data-35</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>io.github.zhaohaoh</groupId>
-            <artifactId>redismq-core</artifactId>
-        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-shared-autoconfigure-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>../redismq-spring-boot-autoconfigure/src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-shared-autoconfigure-resource</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>add-resource</goal>
+                        </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>../redismq-spring-boot-autoconfigure/src/main/resources</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

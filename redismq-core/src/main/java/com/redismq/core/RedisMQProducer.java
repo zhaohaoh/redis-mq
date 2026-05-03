@@ -5,7 +5,7 @@ import com.redismq.common.config.GlobalConfigCache;
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.constant.MessageType;
 import com.redismq.common.constant.ProducerAck;
-import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMqKeys;
 import com.redismq.common.exception.QueueFullException;
 import com.redismq.common.exception.RedisMqException;
 import com.redismq.common.pojo.*;
@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 
 import static com.redismq.common.config.GlobalConfigCache.GLOBAL_CONFIG;
 import static com.redismq.common.config.GlobalConfigCache.PRODUCER_CONFIG;
-import static com.redismq.common.constant.GlobalConstant.SPLITE;
 import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
 import static com.redismq.common.constant.MessageType.SEND_MESSAGE_FAIL;
 import static com.redismq.common.constant.MessageType.SEND_MESSAGE_SUCCESS;
@@ -342,13 +341,16 @@ public class RedisMQProducer {
                 + "    for messageZset in messageZsets:gmatch(\"([^,]+)\") do\n"
                 + "        redis.call('zadd', messageZset, ARGV[i],ARGV[i+1]);\n" + "    end\n"
                 + "    redis.call(\"hset\", messageBodyHashKey, ARGV[i+2],ARGV[i+3] )\n" + "end\n" + "return size;";
-        pushMessage.setQueue(RedisMQConstant.getVQueueNameByVQueue(pushMessage.getQueue()));
+        String vqueue = RedisMqKeys.extractVqueueName(pushMessage.getQueue());
+        pushMessage.setQueue(RedisMqKeys.vqueueRoot(vqueue));
         List<String> list = new ArrayList<>();
         // 消息详情key名字 doSendMessage  发送的队列名称增加分组名group   2024-11-27
         Set<String> group = redisMQClientUtil.getGroups();
-        String queueGroups = group.stream().map(g -> pushMessage.getQueue() + SPLITE + g).collect(Collectors.joining(","));
+        redisMQClientUtil.registerMessageGroups(vqueue, group);
+        String queueGroups = group.stream().map(g -> RedisMqKeys.groupMessages(vqueue, g))
+                .collect(Collectors.joining(","));
         list.add(queueGroups);
-        list.add(pushMessage.getQueue() + ":body");
+        list.add(RedisMqKeys.vqueueBody(vqueue));
         Long size = -2L;
 
         //第一个参数是发布订阅的消息

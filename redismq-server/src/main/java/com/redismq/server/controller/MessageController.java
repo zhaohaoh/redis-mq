@@ -1,7 +1,7 @@
 package com.redismq.server.controller;
 
 import com.redismq.common.connection.RedisMQClientUtil;
-import com.redismq.common.constant.RedisMQConstant;
+import com.redismq.common.constant.RedisMqKeys;
 import com.redismq.common.pojo.Message;
 import com.redismq.server.pojo.MQMessageQueryDTO;
 import com.redismq.server.pojo.MessageVO;
@@ -33,10 +33,10 @@ public class MessageController {
      */
     @PostMapping("page")
     public ResponseEntity<PageResult<MessageVO>> page(@RequestBody MQMessageQueryDTO mqMessageDTO) {
-        String vQueue = mqMessageDTO.getVirtualQueueName();
-        vQueue = RedisMQConstant.getVQueueNameByVQueue(vQueue);
+        String vQueue = RedisMqKeys.extractVqueueName(mqMessageDTO.getVirtualQueueName());
         Long total = redisMQClientUtil.queueSize(vQueue);
-        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue, mqMessageDTO.getStartOffset(), mqMessageDTO.getEndOffset());
+        List<Pair<Message, Double>> pairs = redisMQClientUtil.pullMessageWithScope(vQueue,
+                mqMessageDTO.getStartOffset(), mqMessageDTO.getSize());
         List<MessageVO> messages = pairs.stream().map(m -> {
             MessageVO messageVO = new MessageVO();
             BeanUtils.copyProperties(m.getKey(), messageVO);
@@ -56,7 +56,7 @@ public class MessageController {
      */
     @PostMapping("deleteMessage")
     public ResponseEntity deleteMessage(@RequestBody Message message) {
-        Boolean success = redisMQClientUtil.removeMessage(message.getVirtualQueueName(), message.getId());
+        Boolean success = redisMQClientUtil.removeMessageForAllGroups(message.getVirtualQueueName(), message.getId());
         return ResponseEntity.ok(success);
     }
 

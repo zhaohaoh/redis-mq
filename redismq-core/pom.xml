@@ -7,7 +7,9 @@
         <groupId>io.github.zhaohaoh</groupId>
         <version>${revision}</version>
     </parent>
-
+    <name>redismq-core</name>
+    <url>https://github.com/zhaohaoh/redis-mq</url>
+    <description>redismq core</description>
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
     <artifactId>redismq-core</artifactId>

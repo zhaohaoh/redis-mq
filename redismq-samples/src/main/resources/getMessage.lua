@@ -2,7 +2,7 @@ local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 
 
 local result = {}
 for i=1, #data, 2 do
-    local message = redis.call('hget', KEYS[1] .. ':body',data[i]);
+    local message = redis.call('hget', KEYS[1], data[i]);
     if (message) then
         table.insert(result,message);
         table.insert(result,data[i+1]);
@@ -15,7 +15,7 @@ return result;
 
 --
 --for i, v in pairs (data) do
---    local d=  redis.call('hget', KEYS[1] .. ':body', v);
+--    local d=  redis.call('hget', KEYS[1], v);
 --    table.insert(result1,d);
 --    table.insert(result2,v);
 --end
