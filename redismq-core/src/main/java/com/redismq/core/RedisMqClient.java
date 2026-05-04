@@ -106,6 +106,10 @@ public class RedisMqClient {
      */
     private boolean isSub;
     /**
+     * 上一次参与 rebalance 的 client 列表签名
+     */
+    private volatile String lastClientSignature = "";
+    /**
      * 订阅/取消订阅必须复用同一个 listener 实例，否则 removeMessageListener 无法精准移除。
      */
     private RedisPullListener pullListener;
@@ -244,8 +248,12 @@ public class RedisMqClient {
         Boolean success = redisMQStoreUtil.lock(lockKey, Duration.ofSeconds(CLIENT_RABALANCE_TIME));
         if (success != null && success) {
             Long count = removeExpireClients();
-            if (count != null && count > 0) {
+            List<Client> clients = allClient();
+            String currentClientSignature = buildClientSignature(clients);
+            boolean clientChanged = !currentClientSignature.equals(lastClientSignature);
+            if ((count != null && count > 0) || clientChanged) {
                 log.info("doRebalance removeExpireClients count=:{}", count);
+                log.info("doRebalance clientChanged:{} clientSignature:{}", clientChanged, currentClientSignature);
                 rebalance();
             }
         }
@@ -257,8 +265,7 @@ public class RedisMqClient {
     public void rebalance() {
         // 广播 rebalance 事件，让其他节点也刷新自己的分片视图。
         // 新实现不再要求其他节点立刻 pauseAll + unlock，而是让每个节点自行进入 quiesce 收敛。
-        publishRebalance();
-        doRebalance();
+        doRebalance(true);
     }
     
     
@@ -273,21 +280,50 @@ public class RedisMqClient {
      * 这样做的关键点是：不再粗暴地 pauseAll + unlock，避免已在执行中的消息被其他节点抢走而重复消费。
      */
     public void doRebalance() {
+        doRebalance(false);
+    }
+
+    private void doRebalance(boolean publish) {
         synchronized (rebalanceMonitor) {
             registerClient();
+            if (publish) {
+                // 先让当前节点写入 Redis 再通知其他节点重算
+                publishRebalance();
+            }
             Map<String, List<String>> previousAssignments = snapshotCurrentAssignments();
             try {
                 Thread.sleep(REBALANCE_SETTLE_MILLIS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            rebalance.rebalance(allClient(), clientId);
+            List<Client> clients = allClient();
+            lastClientSignature = buildClientSignature(clients);
+            rebalance.rebalance(clients, clientId);
             applyAssignments(previousAssignments, snapshotCurrentAssignments());
         }
     }
     
     private void publishRebalance() {
         redisMQStoreUtil.publishRebalance(clientId);
+    }
+
+    private String buildClientSignature(List<Client> clients) {
+        if (CollectionUtils.isEmpty(clients)) {
+            return "";
+        }
+        String groupId = GlobalConfigCache.CONSUMER_CONFIG.getGroupId();
+        return clients.stream()
+                .filter(client -> groupId.equals(client.getGroupId()))
+                .map(client -> client.getClientId() + ":" + buildQueueSignature(client.getQueues()))
+                .sorted()
+                .collect(Collectors.joining("|"));
+    }
+
+    private String buildQueueSignature(List<String> queues) {
+        if (CollectionUtils.isEmpty(queues)) {
+            return "";
+        }
+        return queues.stream().sorted().collect(Collectors.joining(","));
     }
     
     
