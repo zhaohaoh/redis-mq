@@ -21,7 +21,7 @@
         <revision>0.5.1</revision>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <seata.version>2.0.0</seata.version>
-        <redisson.version>4.3.1</redisson.version>
+        <redisson.version>4.4.0</redisson.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
         <maven-javadoc-plugin.version>3.7.0</maven-javadoc-plugin.version>
