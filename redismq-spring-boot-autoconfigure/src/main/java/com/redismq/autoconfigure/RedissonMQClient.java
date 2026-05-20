@@ -14,6 +14,7 @@ import org.redisson.config.Config;
 import org.redisson.config.SentinelServersConfig;
 import org.redisson.config.SingleServerConfig;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.time.Duration;
@@ -71,9 +72,14 @@ public class RedissonMQClient {
             }
 
             config = new Config();
-            SentinelServersConfig c = config.useSentinelServers().setMasterName(redisProperties.getSentinel().getMaster()).addSentinelAddress(nodes).setDatabase(redisProperties.getDatabase()).setUsername(username)
-                    .setPassword(redisProperties.getPassword())
-                    .setClientName(clientName);
+            SentinelServersConfig c = config.useSentinelServers().setMasterName(redisProperties.getSentinel().getMaster()).addSentinelAddress(nodes).setDatabase(redisProperties.getDatabase()).setClientName(clientName);
+            if (StringUtils.hasText(username)) {
+                c.setUsername(username);
+            }
+            if (StringUtils.hasText(redisProperties.getPassword())) {
+                c.setPassword(redisProperties.getPassword());
+            }
+
             if (connectTimeout != null) {
                 c.setConnectTimeout(connectTimeout);
             }
@@ -89,8 +95,15 @@ public class RedissonMQClient {
                 List<String> nodesObject = (List) ReflectionUtils.invokeMethod(method, clusterObject);
                 String[] nodes = convert(nodesObject);
                 config = new Config();
-                ClusterServersConfig c = config.useClusterServers().addNodeAddress(nodes).setUsername(username).setPassword(redisProperties.getPassword())
-                        .setClientName(clientName);
+                ClusterServersConfig c = config.useClusterServers().addNodeAddress(nodes).setClientName(clientName);
+
+                if (StringUtils.hasText(username)) {
+                    c.setUsername(username);
+                }
+                if (StringUtils.hasText(redisProperties.getPassword())) {
+                    c.setPassword(redisProperties.getPassword());
+                }
+
                 if (connectTimeout != null) {
                     c.setConnectTimeout(connectTimeout);
                 }
@@ -106,9 +119,16 @@ public class RedissonMQClient {
                     prefix = "rediss://";
                 }
 
-                SingleServerConfig c = config.useSingleServer().setAddress(prefix + redisProperties.getHost() + ":" + redisProperties.getPort()).setDatabase(redisProperties.getDatabase()).setUsername(username)
-                        .setPassword(redisProperties.getPassword())
+                SingleServerConfig c = config.useSingleServer().setAddress(prefix + redisProperties.getHost() + ":" + redisProperties.getPort()).setDatabase(redisProperties.getDatabase())
                         .setClientName(clientName);
+
+                if (StringUtils.hasText(username)) {
+                    c.setUsername(username);
+                }
+                if (StringUtils.hasText(redisProperties.getPassword())) {
+                    c.setPassword(redisProperties.getPassword());
+                }
+
                 if (connectTimeout != null) {
                     c.setConnectTimeout(connectTimeout);
                 }
@@ -127,8 +147,8 @@ public class RedissonMQClient {
     }
 
     private static String[] convert(List<String> nodesObject) {
-        List<String> nodes = new ArrayList(nodesObject.size());
-        Iterator var3 = nodesObject.iterator();
+        List<String> nodes = new ArrayList<>(nodesObject.size());
+        Iterator<?> var3 = nodesObject.iterator();
 
         while (true) {
             while (var3.hasNext()) {
