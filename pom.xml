@@ -18,10 +18,10 @@
     </modules>
 
     <properties>
-        <revision>0.5.1</revision>
+        <revision>0.5.3</revision>
         <commons-lang3.version>3.20.0</commons-lang3.version>
         <seata.version>2.0.0</seata.version>
-        <redisson.version>4.4.0</redisson.version>
+        <redisson.version>4.7.0</redisson.version>
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
         <maven-javadoc-plugin.version>3.7.0</maven-javadoc-plugin.version>
@@ -128,7 +128,7 @@
             </dependency>
             <dependency>
                 <groupId>org.redisson</groupId>
-                <artifactId>redisson-spring-data-40</artifactId>
+                <artifactId>redisson-spring-data-41</artifactId>
                 <version>${redisson.version}</version>
             </dependency>
             <dependency>

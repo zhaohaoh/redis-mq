@@ -2,6 +2,7 @@ package com.redismq.common.connection;
 
 import com.redismq.common.pojo.Message;
 import com.redismq.common.serializer.RedisMQStringMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.*;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.client.protocol.ScoredEntry;
@@ -12,6 +13,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class RedissonAdapter implements RedisClient {
 
     private final RedissonClient redissonClient;
@@ -204,7 +206,7 @@ public class RedissonAdapter implements RedisClient {
         }
         Map<T, Double> newMap = new HashMap<>(16);
         for (ScoredEntry<String> typedTuple : scoredEntries) {
-            T t = RedisMQStringMapper.toBean(typedTuple.getValue(), tClass);
+            T t = RedisMQStringMapper.toBean(String.valueOf(typedTuple.getValue()), tClass);
             newMap.put(t, typedTuple.getScore());
         }
         return newMap;
@@ -247,7 +249,7 @@ public class RedissonAdapter implements RedisClient {
 
     @Override
     public Map<Message, Double> zrangeMessage(String bodyKey, String messageQueueKey, double min, double max,
-            long start, long end) {
+                                              long start, long end) {
         String lua =
                 "local data = redis.call('zrangebyscore', KEYS[2],ARGV[1], ARGV[2],'WITHSCORES', 'LIMIT', ARGV[3], ARGV[4]);\n"
                         + "\n" + "local result = {}\n" + "for i=1, #data, 2 do\n"
@@ -261,7 +263,7 @@ public class RedissonAdapter implements RedisClient {
 
         Object[] array = new Object[4];
         array[0] = min;
-        array[1] = max == 0D ? Double.MAX_VALUE : max;
+        array[1] = Double.compare(max, 0D) == 0 ? Double.MAX_VALUE : max;
         array[2] = start;
         array[3] = end == 0L ? Long.MAX_VALUE : end;
         List<?> list = luaList(lua, keys, array);
