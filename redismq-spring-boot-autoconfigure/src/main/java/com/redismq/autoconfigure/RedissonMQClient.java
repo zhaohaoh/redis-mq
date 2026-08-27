@@ -16,7 +16,9 @@ import org.redisson.config.SingleServerConfig;
 import org.springframework.util.StringUtils;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class RedissonMQClient {
 
@@ -31,7 +33,7 @@ public class RedissonMQClient {
         String username = redisProperties.getUsername();
 
         Config config;
-        if (Objects.nonNull(redisProperties.getSentinel())) {
+        if (Objects.nonNull(redisProperties.getSentinel()) && redisProperties.getSentinel().getNodes() != null && redisProperties.getSentinel().getNodes().size() > 0) {
             List<String> sentinelNodes = redisProperties.getSentinel().getNodes();
             String[] nodes = convert(sentinelNodes);
 
@@ -48,7 +50,7 @@ public class RedissonMQClient {
                 c.setConnectTimeout(connectTimeout);
             }
             c.setTimeout(timeout);
-        } else if (Objects.nonNull(redisProperties.getCluster())) {
+        } else if (Objects.nonNull(redisProperties.getCluster()) && redisProperties.getCluster().getNodes() != null && redisProperties.getCluster().getNodes().size() > 0) {
             List<String> clusterNodes = redisProperties.getCluster().getNodes();
             String[] nodes = convert(clusterNodes);
             config = new Config();
