@@ -33,7 +33,8 @@ public class RedissonMQClient {
         String username = redisProperties.getUsername();
 
         Config config;
-        if (Objects.nonNull(redisProperties.getSentinel()) && redisProperties.getSentinel().getNodes() != null && redisProperties.getSentinel().getNodes().size() > 0) {
+        if (Objects.nonNull(redisProperties.getSentinel())) {
+            validateSentinel(redisProperties);
             List<String> sentinelNodes = redisProperties.getSentinel().getNodes();
             String[] nodes = convert(sentinelNodes);
 
@@ -52,8 +53,12 @@ public class RedissonMQClient {
             if (StringUtils.hasText(redisProperties.getPassword())) {
                 config.setPassword(redisProperties.getPassword());
             }
+            if (StringUtils.hasText(redisProperties.getSentinel().getPassword())) {
+                c.setSentinelPassword(redisProperties.getSentinel().getPassword());
+            }
             c.setTimeout(timeout);
-        } else if (Objects.nonNull(redisProperties.getCluster()) && redisProperties.getCluster().getNodes() != null && redisProperties.getCluster().getNodes().size() > 0) {
+        } else if (Objects.nonNull(redisProperties.getCluster())) {
+            validateCluster(redisProperties);
             List<String> clusterNodes = redisProperties.getCluster().getNodes();
             String[] nodes = convert(clusterNodes);
             config = new Config();
@@ -105,6 +110,21 @@ public class RedissonMQClient {
             }
         }
         return nodes.toArray(new String[0]);
+    }
+
+    private static void validateSentinel(RedisProperties redisProperties) {
+        if (redisProperties.getSentinel().getNodes() == null || redisProperties.getSentinel().getNodes().isEmpty()) {
+            throw new IllegalArgumentException("spring.redismq.client.sentinel.nodes must not be empty");
+        }
+        if (!StringUtils.hasText(redisProperties.getSentinel().getMaster())) {
+            throw new IllegalArgumentException("spring.redismq.client.sentinel.master must not be empty");
+        }
+    }
+
+    private static void validateCluster(RedisProperties redisProperties) {
+        if (redisProperties.getCluster().getNodes() == null || redisProperties.getCluster().getNodes().isEmpty()) {
+            throw new IllegalArgumentException("spring.redismq.client.cluster.nodes must not be empty");
+        }
     }
 
 }
