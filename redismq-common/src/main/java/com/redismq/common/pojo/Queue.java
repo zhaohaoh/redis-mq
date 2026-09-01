@@ -1,7 +1,10 @@
 package com.redismq.common.pojo;
 
 import com.redismq.common.config.GlobalConfigCache;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * @author hzh
@@ -9,7 +12,10 @@ import lombok.Data;
  * redis队列    默认值都为空。如果不为空说明被注解或者配置填充了属性则替换DefaultRedisListenerContainerFactory中的默认值
  */
 @Data
-public class Queue {
+@AllArgsConstructor
+public class Queue implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     public Queue() {
     }
 

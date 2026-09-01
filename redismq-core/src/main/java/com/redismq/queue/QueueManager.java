@@ -3,6 +3,7 @@ package com.redismq.queue;
 
 import com.redismq.common.connection.RedisMQClientUtil;
 import com.redismq.common.pojo.Queue;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -16,7 +17,7 @@ import static com.redismq.common.constant.GlobalConstant.V_QUEUE_SPLITE;
  * @Author: hzh
  * @Date: 2021/11/25 16:03
  */
-
+@Slf4j
 public class QueueManager {
 
     /**

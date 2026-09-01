@@ -18,6 +18,7 @@ import com.redismq.utils.RedisMQTemplate;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -54,13 +55,24 @@ public class RedisMQAutoConfiguration implements InitializingBean {
     }
 
     /**
+     * RedissonClient 客户端
+     *
+     * @return {@link RedissonClient}
+     */
+    @ConditionalOnMissingBean
+    @Bean
+    public RedissonClient redissonClient() {
+        return RedissonMQClient.redisMQRedisson(redisProperties);
+    }
+
+    /**
      * redis客户端
      *
-     * @return {@link RedisMQProducer}
+     * @return {@link RedisClient}
      */
+    @ConditionalOnMissingBean
     @Bean
-    public RedisClient redisClient() {
-        RedissonClient redissonClient = RedissonMQClient.redisMQRedisson(redisProperties);
+    public RedisClient redisClient(RedissonClient redissonClient) {
         return new RedissonAdapter(redissonClient);
     }
 
